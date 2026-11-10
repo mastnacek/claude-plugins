@@ -11,6 +11,10 @@ declare module "claude-code" {
 			memoryState: { enabled: boolean; source: "globální" | "projekt" | "lokální" | "výchozí" } | null;
 			/** True once /uma claude-memory changed autoMemoryEnabled in this session (it takes effect next session). */
 			memoryChanged: boolean;
+			/** Persisted switches (`$.store`, across sessions): recall into prompts and the write approval mode. Written only by uma-command. */
+			settings: { recall: boolean; writeGate: "ask" | "off" };
+			/** Recall's memory of this session: ids already inserted (anti-echo) and whether the last run failed (log once per series). */
+			recallSession: { session: string; ids: string[]; failing: boolean };
 		};
 	}
 }

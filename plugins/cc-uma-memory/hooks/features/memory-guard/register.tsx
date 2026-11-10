@@ -2,16 +2,15 @@
 // (UMA is the one memory) and keeps its state visible as a tag under the prompt.
 //
 //   start                  reads the three settings layers into memoryState
-//   command.run {uma}      runs a line (claude-memory [on|off] [--global], help)
+//   command.run {uma}      answers `claude-memory [on|off] [--global]`, passes the rest down
 //   ui.render PromptHint   adds the tag [UMA] / [UMA ⚠ CC] (+ ↻ once changed) to its tail
-//   ui.render CommandOutput draws the whole multi-line output in its row
-//   prompt.autocomplete    completes subcommands and --global
 //
-// A plugin's command text goes into the model's requests, so the model gets
-// only the output's first line; the full text lives in $.state and is drawn by
-// the CommandOutput hook ($.ui.log is one line and draws "\n" as "�").
+// The command itself (registration, help, drawing multi-line output,
+// completion) is the uma-command slice's. A plugin's command text goes into the
+// model's requests, so the model gets only the output's first line; the full
+// text goes to $.state (`commandOutputs`), which uma-command draws.
 
-import type { EngineInterface, On, PromptAutocompleteSuggestion } from "claude-code";
+import type { EngineInterface, On } from "claude-code";
 import { atom, read, update } from "claude-code";
 import { addToTail, buildBadge } from "./badge";
 import { effectiveState, setAutoMemory } from "./settings";
@@ -26,14 +25,6 @@ type $ = EngineInterface;
 
 const COMMAND = "uma";
 const MAX_OUTPUTS = 20;
-
-const HELP = [
-	"/uma — paměť UMA",
-	"/uma claude-memory                 stav automatické paměti Claude Code — ne UMA — a odkud pochází",
-	"/uma claude-memory off [--global]  vypne ji (projekt: .claude/settings.local.json, --global: ~/.claude/settings.json)",
-	"/uma claude-memory on [--global]   zapne ji",
-	"/uma help                          tato nápověda",
-].join("\n");
 
 type Paths = { global: string | undefined; project: string; local: string };
 
@@ -107,33 +98,13 @@ async function runMemory($: $, words: string[]): Promise<string> {
 	return [`Automatická paměť Claude: ${wanted ? "zapnuta" : "vypnuta"} → ${path}`, verdict(state)].join("\n");
 }
 
-async function runCommand($: $, args: string): Promise<string> {
-	const words = args.trim().split(/\s+/).filter(Boolean);
-	const [sub, ...rest] = words;
-	if (sub === undefined || sub === "help") return HELP;
-	if (sub === "claude-memory") return runMemory($, rest);
-	return `Neznámý podpříkaz „${sub}“.\n${HELP}`;
-}
-
-function completions(text: string, token: string): PromptAutocompleteSuggestion[] {
-	const m = /^\/uma\s+(.*)$/s.exec(text);
-	if (!m) return [];
-	const words = (m[1] ?? "").split(/\s+/);
-	const prefix = token.toLowerCase();
-	let options: Array<[string, string?]>;
-	if (words.length <= 1) options = [["claude-memory", "automatická paměť Claude Code — ne UMA"], ["help", "nápověda"]];
-	else if (words[0] === "claude-memory" && words.length <= 3) options = [["on"], ["off"], ["--global"]];
-	else return [];
-	return options
-		.filter(([name]) => name.startsWith(prefix))
-		.map(([name, description]) => (description ? { text: name, description } : { text: name }));
-}
-
 export function registerMemoryGuard(on: On): void {
-	on("command.run", { command: COMMAND }, async ($, e) => {
-		const output = (await runCommand($, e.args)).trimEnd();
-		const [summary = "", ...rest] = output.split("\n");
-		if (rest.length > 0) await update($, commandOutputsAtom, (o) => capOutputs({ ...o, [summary]: output }));
+	on("command.run", { command: COMMAND }, async ($, e, next) => {
+		const [sub, ...rest] = e.args.trim().split(/\s+/).filter(Boolean);
+		if (sub !== "claude-memory") return next(e);
+		const output = (await runMemory($, rest)).trimEnd();
+		const [summary = "", ...more] = output.split("\n");
+		if (more.length > 0) await update($, commandOutputsAtom, (o) => capOutputs({ ...o, [summary]: output }));
 		return { text: summary };
 	});
 
@@ -142,33 +113,6 @@ export function registerMemoryGuard(on: On): void {
 		if (!state) return next(e);
 		const badge = buildBadge(state.enabled, await read($, memoryChangedAtom));
 		return next({ ...e, props: { ...e.props, tail: addToTail(e.props.tail, badge) } });
-	});
-
-	on("ui.render", { component: "CommandOutput" }, async ($, e, next) => {
-		if (e.props.command !== COMMAND || e.props.isErrored) return next(e);
-		// The row's text may come headed with the plugin's name ("uma: …").
-		const outputs = await read($, commandOutputsAtom);
-		const text = e.props.text.trim();
-		const key = Object.keys(outputs).find((k) => text === k || text.endsWith(`: ${k}`));
-		const full = key ? outputs[key] : undefined;
-		if (!full) return next(e);
-		const { Box, Text } = $.ui.resolve(e);
-		return (
-			<Box flexDirection="column">
-				{full.split("\n").map((line, i) => (
-					<Text key={String(i)} dimColor={i > 0}>
-						{line || " "}
-					</Text>
-				))}
-			</Box>
-		);
-	});
-
-	on("prompt.autocomplete", async ($, e, next) => {
-		const mine = completions(e.text, e.token);
-		if (mine.length === 0) return next(e);
-		const below = await next(e);
-		return { ...below, suggestions: [...mine, ...below.suggestions] };
 	});
 }
 
@@ -180,13 +124,8 @@ function capOutputs(record: Record<string, string>): Record<string, string> {
 	return next;
 }
 
-/** Session start, run by the root: registers the command and computes the state. */
+/** Session start, run by the root: clears the old status line and computes the state. */
 export async function startMemoryGuard($: EngineInterface): Promise<void> {
-	await $.command.register({
-		name: COMMAND,
-		description: "Paměť UMA: vypnutí a zapnutí automatické paměti Claude",
-		argumentHint: "claude-memory [on|off] [--global] | help",
-	});
 	// Version 0.1.0 drew a status line; clear what it left behind.
 	await $.ui.status(undefined);
 	await refreshState($);

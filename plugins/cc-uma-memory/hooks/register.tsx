@@ -7,6 +7,9 @@
 
 import type { EngineInterface, Register } from "claude-code";
 import { registerMemoryGuard, startMemoryGuard } from "./features/memory-guard/register";
+import { registerRecall } from "./features/recall/register";
+import { registerUmaCommand, startUmaCommand } from "./features/uma-command/register";
+import { registerWriteGate } from "./features/write-gate/register";
 
 /** One slice failing to start leaves the others working. */
 async function guarded($: EngineInterface, slice: string, started: Promise<void>): Promise<void> {
@@ -19,9 +22,13 @@ async function guarded($: EngineInterface, slice: string, started: Promise<void>
 
 export const register: Register = (on) => {
 	on("session.start", async ($, e, next) => {
+		await guarded($, "uma-command", startUmaCommand($));
 		await guarded($, "memory-guard", startMemoryGuard($));
 		return next(e);
 	});
 
+	registerUmaCommand(on);
 	registerMemoryGuard(on);
+	registerRecall(on);
+	registerWriteGate(on);
 };
