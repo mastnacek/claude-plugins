@@ -151,6 +151,38 @@ test("a failed translation sends the original prompt", async ($, on) => {
 	expect(submitted.text).toBe(CZ_PROMPT);
 });
 
+test("a translation rejected as too short still counts its cost", async ($, on) => {
+	mock.store(on);
+	engineBottom(on);
+	mock.env(on, { OPENROUTER_API_KEY: "test-key" });
+	const clock = mock.clock(on);
+	// The test engine keeps no $.state: an in-memory one, so the cost written can be read back.
+	const state = new Map<string, { value: unknown; version: number }>();
+	const name = (e: { plugin: string; key: string }) => `${e.plugin}:${e.key}`;
+	on("state.get", (_$, e) => ({ value: state.get(name(e)) ?? { value: undefined, version: 0 } }));
+	on("state.set", (_$, e) => {
+		const version = (state.get(name(e))?.version ?? 0) + 1;
+		state.set(name(e), { value: (e as { value: unknown }).value, version });
+		return { value: { isSet: true as const, version } };
+	});
+	let calls = 0;
+	on("http.fetch", async (_$, e) => {
+		if (e.url.includes("chat/completions")) {
+			calls += 1;
+			return { value: reply("Fix it.") };
+		}
+		return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ data: { total_credits: 10, total_usage: 8 } }) } };
+	});
+	const long = `${CZ_PROMPT}. ${"Přihlášení selže po zadání hesla, formulář se vyprázdní a nic se nestane. ".repeat(6)}`;
+	const pending = $.prompt.submit({ text: long, origin: { kind: "composer" }, wait: false });
+	await clock.advance(2000);
+	const submitted = await pending;
+	expect(submitted.text, "the original goes out").toBe(long);
+	expect(calls, "at least one paid call").toBeGreaterThan(0);
+	const cost = Number(state.get("cc-prompt-translate:sessionCostUsd")?.value ?? 0);
+	expect(Math.round(cost * 1e6), "the paid calls are counted (micro-USD)").toBe(calls * 100);
+});
+
 test("with log on, each prompt leaves its lines in the day's log", async ($, on) => {
 	mock.store(on, { config: { log: true } });
 	engineBottom(on);

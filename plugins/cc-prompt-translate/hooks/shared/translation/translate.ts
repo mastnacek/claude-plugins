@@ -306,6 +306,20 @@ async function callWithRetries(
 	return response;
 }
 
+/** Adds the answered calls' cost and tokens to the session totals. */
+async function chargeFor($: $, paid: readonly TranslationUsage[]): Promise<void> {
+	if (paid.length === 0) return; // no call was answered: nothing was billed
+	const costUsd = paid.reduce((sum, u) => sum + (u.costUsd ?? 0), 0);
+	if (costUsd > 0) await update($, sessionCostAtom, (c) => c + costUsd);
+	const inputTokens = paid.reduce((sum, u) => sum + u.input, 0);
+	const outputTokens = paid.reduce((sum, u) => sum + u.output, 0);
+	await update($, telemetryAtom, (t) => ({
+		inputTokens: t.inputTokens + inputTokens,
+		outputTokens: t.outputTokens + outputTokens,
+	}));
+	void refreshCredit($); // the call was paid for: the credit shown is stale
+}
+
 // ---------------------------------------------------------------------------
 // translate()
 // ---------------------------------------------------------------------------
@@ -380,21 +394,12 @@ export async function translate(
 		retries.push("short");
 		result = await attempt("off");
 	}
+	// Every answered call is paid, kept or not: a translation rejected as too
+	// short or as losing segments still costs, so it is counted before degrading.
+	await chargeFor($, paid);
 	if ("failed" in result) return result.failed;
 	if (result.short) return degrade(result.short);
 	const { restored, appended } = result;
-
-	const costUsd = paid.reduce((sum, u) => sum + (u.costUsd ?? 0), 0);
-	if (costUsd > 0) await update($, sessionCostAtom, (c) => c + costUsd);
-
-	const inputTokens = paid.reduce((sum, u) => sum + u.input, 0);
-	const outputTokens = paid.reduce((sum, u) => sum + u.output, 0);
-	await update($, telemetryAtom, (t) => ({
-		inputTokens: t.inputTokens + inputTokens,
-		outputTokens: t.outputTokens + outputTokens,
-	}));
-
-	void refreshCredit($); // the call was paid for: the credit shown is stale
 	report({ outChars: restored.length, appended });
 	return { text: restored };
 }
