@@ -4,6 +4,9 @@
 
 declare module "claude-code" {
 	interface PluginState {
-		"cc-theme-switcher": {};
+		"cc-theme-switcher": {
+			/** A /tts output's first line (what the model reads) → the whole output, drawn in its row. */
+			commandOutputs: Record<string, string>;
+		};
 	}
 }

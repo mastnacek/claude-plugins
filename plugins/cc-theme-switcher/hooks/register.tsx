@@ -5,13 +5,25 @@
 // each slice's start. `on` / `$` go only to functions called by name: every
 // slice is wired by an explicit call, never a loop over a list.
 
-import type { Register } from "claude-code";
+import type { EngineInterface, Register } from "claude-code";
+import { startRotation } from "./features/rotation/register";
+import { registerTtsCommand, startTtsCommand } from "./features/tts-command/register";
+
+/** One slice failing to start leaves the others working. */
+async function guarded($: EngineInterface, slice: string, started: Promise<void>): Promise<void> {
+	try {
+		await started;
+	} catch (error) {
+		$.ui.log(`${slice}: start selhal: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
 
 export const register: Register = (on) => {
-	on("session.start", async (_$, e, next) => {
-		// await startXxx($);  — one line per slice that needs a start
+	on("session.start", async ($, e, next) => {
+		await guarded($, "tts-command", startTtsCommand($));
+		await guarded($, "rotation", startRotation($));
 		return next(e);
 	});
 
-	// registerXxx(on);  — one line per slice
+	registerTtsCommand(on);
 };
