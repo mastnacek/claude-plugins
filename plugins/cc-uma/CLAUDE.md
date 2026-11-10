@@ -37,3 +37,4 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 ## Řezy
 
 <!-- Jeden řádek na řez: název — co dělá jednou větou. -->
+- memory-guard — `/uma claude-memory [on|off] [--global]` vypne/zapne automatickou paměť Claude (`autoMemoryEnabled`) a stav drží pod promptem. Příkaz `/uma` zatím registruje tento řez; až přibudou další podpříkazy, vyčlení se do vlastního řezu.

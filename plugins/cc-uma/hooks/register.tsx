@@ -5,13 +5,23 @@
 // each slice's start. `on` / `$` go only to functions called by name: every
 // slice is wired by an explicit call, never a loop over a list.
 
-import type { Register } from "claude-code";
+import type { EngineInterface, Register } from "claude-code";
+import { registerMemoryGuard, startMemoryGuard } from "./features/memory-guard/register";
+
+/** One slice failing to start leaves the others working. */
+async function guarded($: EngineInterface, slice: string, started: Promise<void>): Promise<void> {
+	try {
+		await started;
+	} catch (error) {
+		$.ui.log(`cc-uma: ${slice}: start selhal: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
 
 export const register: Register = (on) => {
-	on("session.start", async (_$, e, next) => {
-		// await startXxx($);  — one line per slice that needs a start
+	on("session.start", async ($, e, next) => {
+		await guarded($, "memory-guard", startMemoryGuard($));
 		return next(e);
 	});
 
-	// registerXxx(on);  — one line per slice
+	registerMemoryGuard(on);
 };
