@@ -73,14 +73,8 @@ function fakeFs(files: Record<string, string>): DriftFs & { written: Record<stri
 }
 
 describe("runDrift", () => {
-	test("no argument: help; unknown: help with a note", async () => {
-		const fs = fakeFs({});
-		expect(await runDrift(fs, "")).toContain("/reverse-spec check");
-		expect(await runDrift(fs, "foo")).toContain('Unknown subcommand "foo"');
-	});
-
 	test("not a migration project: one sentence pointing at the skill", async () => {
-		const out = await runDrift(fakeFs({}), "check");
+		const out = await runDrift(fakeFs({}));
 		expect(out).toContain("spec/rules/ is missing");
 		expect(out).toContain("reverse-spec");
 		expect(out.split("\n")).toHaveLength(1);
@@ -91,7 +85,7 @@ describe("runDrift", () => {
 			"spec/rules/BR-A-001.yaml": GOOD,
 			"tests/features/sub/a.feature": "@BR-A-001\nScenario: x",
 		});
-		const out = await runDrift(fs, "check");
+		const out = await runDrift(fs);
 		expect(out).toContain("No problems.");
 		expect(out).toContain("confirmed 1 · inferred 0 · gap 0");
 		expect(fs.written["spec/confidence.md"]).toContain("| 1 | 0 | 0 |");

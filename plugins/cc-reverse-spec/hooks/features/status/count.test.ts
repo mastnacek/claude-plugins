@@ -40,7 +40,7 @@ describe("countSpec", () => {
 describe("statusText / affectsStatus", () => {
 	test("text", () => {
 		expect(statusText({ confirmed: 3, inferred: 2, gap: 1, untested: 0 })).toBe("spec ✔3 ~2 ?1");
-		expect(statusText({ confirmed: 3, inferred: 2, gap: 1, untested: 4 })).toBe("spec ✔3 ~2 ?1 · 4 bez testu");
+		expect(statusText({ confirmed: 3, inferred: 2, gap: 1, untested: 4 })).toBe("spec ✔3 ~2 ?1 · 4 untested");
 	});
 	test("paths", () => {
 		expect(affectsStatus("spec/rules/a.yaml")).toBe(true);

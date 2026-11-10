@@ -40,7 +40,7 @@ export async function countSpec(fs: StatusFs): Promise<Counts> {
 }
 
 export function statusText(c: Counts): string {
-	return `spec ✔${c.confirmed} ~${c.inferred} ?${c.gap}${c.untested > 0 ? ` · ${c.untested} bez testu` : ""}`;
+	return `spec ✔${c.confirmed} ~${c.inferred} ?${c.gap}${c.untested > 0 ? ` · ${c.untested} untested` : ""}`;
 }
 
 /** Does a write to this project-relative path change the numbers? */

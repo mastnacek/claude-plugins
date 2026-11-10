@@ -29,7 +29,7 @@ rule, naming of domain terms) — the plugin injects that file into every
 session, so it replaces a project `CLAUDE.md`.
 
 Done when: `legacy/`, `spec/rules/`, `spec/invariants.md` and
-`traceability.md` exist and `/reverse-spec check` runs.
+`traceability.md` exist and `/spec-check` runs.
 
 ## Step 1 — Lock behaviour
 
@@ -108,8 +108,8 @@ Done when: the module meets its numeric exit criteria written in
   generator or a harness recording.
 - `spec/invariants.md` is added to the system prompt of every session in
   this project.
-- The status line shows `spec ✔confirmed ~inferred ?gap · N without test`.
-- `/reverse-spec check` reports rules without `confidence`, `source` or
+- The status line shows `spec ✔confirmed ~inferred ?gap · N untested`.
+- `/spec-check` reports rules without `confidence`, `source` or
   `verified_by`, and rule IDs no `.feature` file tags. Run it after every
   step; treat its findings as red.
 

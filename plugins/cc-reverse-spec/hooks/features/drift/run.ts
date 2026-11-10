@@ -1,22 +1,17 @@
-// run.ts — /reverse-spec: one line in, the text to show out.
+// run.ts — /spec-check: one line in, the text to show out.
 
 import { analyse, renderConfidenceFile, renderMessage } from "./check";
 import type { SourceFile } from "./check";
 import { isMigrationProject } from "../../shared/project";
 import type { StatFs } from "../../shared/project";
 
-export const COMMAND = "reverse-spec";
+export const COMMAND = "spec-check";
 
 export type DriftFs = StatFs & {
 	list: (path: string) => Promise<{ name: string; kind: string }[]>;
 	read: (path: string) => Promise<string>;
 	write: (path: string, text: string) => Promise<void>;
 };
-
-const HELP = [
-	"/reverse-spec check — verify spec/rules against tests/features and write spec/confidence.md",
-	"Rules need confidence, source and verified_by; every rule ID needs a @<ID> scenario.",
-].join("\n");
 
 const NOT_MIGRATION = "spec/rules/ is missing — this is not a migration project; see skill reverse-spec, step 0.";
 
@@ -31,9 +26,7 @@ async function readAll(fs: DriftFs, dir: string, keep: (name: string) => boolean
 	return out;
 }
 
-export async function runDrift(fs: DriftFs, args: string): Promise<string> {
-	const sub = args.trim().split(/\s+/)[0] ?? "";
-	if (sub !== "check") return sub ? `Unknown subcommand "${sub}".\n${HELP}` : HELP;
+export async function runDrift(fs: DriftFs): Promise<string> {
 	if (!(await isMigrationProject(fs))) return NOT_MIGRATION;
 
 	const rules = await readAll(fs, "spec/rules", (n) => n.endsWith(".yaml"), false);

@@ -1,4 +1,4 @@
-// drift — /reverse-spec check: do the rules, their evidence and their tests
+// drift — /spec-check: do the rules, their evidence and their tests
 // still agree? Reports to the model and writes spec/confidence.md.
 
 import type { EngineInterface, On } from "claude-code";
@@ -17,15 +17,19 @@ function fsOf($: EngineInterface) {
 }
 
 export async function startDrift($: EngineInterface): Promise<void> {
-	await $.command.register({
-		name: COMMAND,
-		description: "Check the reverse-engineered spec: rules, evidence, tests",
-		argumentHint: "check",
-	});
+	try {
+		await $.command.register({
+			name: COMMAND,
+			description: "Check the reverse-engineered spec: rules, evidence, tests",
+		});
+	} catch (error) {
+		// One line: a log row draws "\n" as "�". A failed start must not stop the others.
+		$.ui.log(`drift: start failed: ${String(error instanceof Error ? error.message : error).replace(/\s+/g, " ")}`);
+	}
 }
 
 export function registerDrift(on: On): void {
-	on("command.run", { command: COMMAND }, async ($, e) => ({ text: await runDrift(fsOf($), e.args) })).catch(($, e) => ({
-		text: "reverse-spec: the check failed; see the debug log.",
+	on("command.run", { command: COMMAND }, async ($) => ({ text: await runDrift(fsOf($)) })).catch(($, e) => ({
+		text: "spec-check: the check failed; see the debug log.",
 	}));
 }

@@ -1,5 +1,5 @@
 // status — the status line of a migration project: spec ✔confirmed ~inferred
-// ?gap [· N bez testu]. Counted at session start and after a write under
+// ?gap [· N untested]. Counted at session start and after a write under
 // spec/ or tests/features/; never after other tool calls.
 
 import type { EngineInterface, On } from "claude-code";
@@ -28,7 +28,13 @@ async function refresh($: EngineInterface): Promise<void> {
 
 /** Session start, run by the root. */
 export async function startStatus($: EngineInterface): Promise<void> {
-	await refresh($);
+	try {
+		if (!(await isMigrationProject(fsOf($)))) return;
+		$.ui.status(statusText(await countSpec(fsOf($))));
+	} catch (error) {
+		// One line: a log row draws "\n" as "�". A failed start must not stop the others.
+		$.ui.log(`status: start failed: ${String(error instanceof Error ? error.message : error).replace(/\s+/g, " ")}`);
+	}
 }
 
 async function touched($: EngineInterface, path: string | undefined): Promise<boolean> {

@@ -2,8 +2,8 @@
 
 ## Proč existuje
 
-Stav spec je vidět na první pohled: `spec ✔3 ~2 ?1 · 4 bez testu` pod
-promptem. Kdyby zmizel, čísla by byla jen v `/reverse-spec check`.
+Stav spec je vidět na první pohled: `spec ✔3 ~2 ?1 · 4 untested` pod
+promptem. Kdyby zmizel, čísla by byla jen v `/spec-check`.
 
 ## Co dělá
 
@@ -30,3 +30,4 @@ promptem. Kdyby zmizel, čísla by byla jen v `/reverse-spec check`.
 - Chyba při počítání se spolkne — stavový řádek nestojí za pád tool callu.
 - Zápis přes `Bash` (a smazání souboru) status nepřepočítá; obnoví ho další zápis nebo `session.start`.
 - `relative.ts` je opis z `guard`; měnit společně.
+- `startStatus` chybu zaloguje jedním řádkem (`$.ui.log`) místo spolknutí; po zápisu nástroje se chyba mlčky spolkne.

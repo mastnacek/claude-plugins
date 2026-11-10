@@ -1,6 +1,6 @@
 # Confidence summary
 
-Updated by `/reverse-spec check`.
+Updated by `/spec-check`.
 
 | confirmed | inferred | gap |
 |---|---|---|

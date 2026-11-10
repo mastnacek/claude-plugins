@@ -83,7 +83,7 @@ export function renderConfidenceFile(r: Report): string {
 	const lines = [
 		"# Confidence summary",
 		"",
-		"Updated by `/reverse-spec check`.",
+		"Updated by `/spec-check`.",
 		"",
 		"| confirmed | inferred | gap |",
 		"|---|---|---|",
