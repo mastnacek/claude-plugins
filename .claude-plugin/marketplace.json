@@ -1,0 +1,13 @@
+{
+  "name": "cc-prompt-translate-czk",
+  "description": "Claude Code plugin: translate prompts to English and answers back to Czech",
+  "owner": {
+    "name": "mastnacek"
+  },
+  "plugins": [
+    {
+      "name": "prompt-translate",
+      "source": "./"
+    }
+  ]
+}
