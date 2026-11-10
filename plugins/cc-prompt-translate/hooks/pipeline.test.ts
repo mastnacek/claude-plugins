@@ -41,6 +41,11 @@ test("prompt → EN, answer → CZ, both drawn", async ($, on) => {
 	const clock = mock.clock(on);
 	const requests: Array<{ model: string; user: string; system: string }> = [];
 	let drawnAnswer = "";
+	let tail: string | undefined;
+	on("ui.render", { component: "PromptHint" }, async (_$, e, next) => {
+		tail = e.props.tail;
+		return next(e);
+	});
 	on("ui.render", { component: "AssistantMessage" }, async (_$, e, next) => {
 		drawnAnswer = e.props.text;
 		return next(e);
@@ -99,17 +104,16 @@ test("prompt → EN, answer → CZ, both drawn", async ($, on) => {
 	expect(await user.find({ type: "Text", text: /login does not work/ }), "translation drawn in the same frame").toBeDefined();
 	expect(await user.find({ type: "Text", text: /Kč|\$0\./ }), "no cost in the frame").toBeUndefined();
 
-	// The indicator: flag, and the credit coloured by level ($2 left → "low").
+	// The indicator: it goes into the hint's tail ($2 left → "46 Kč", not critical).
 	for (const surface of ["terminal", "desktop"] as const) {
-		const hint = await $.ui.mount({
+		tail = undefined;
+		await $.ui.mount({
 			plugin: "cc-prompt-translate",
 			surface,
 			component: "PromptHint",
-			props: { isDraft: false, isWorking: false, hint: "? for shortcuts" },
+			props: { isDraft: false, isWorking: false, hint: "? for shortcuts", tail: "[other]" },
 		});
-		const credit = await hint.find({ type: "Text", text: /^ 46 Kč$/ });
-		expect(credit, `credit on ${surface}`).toBeDefined();
-		expect((credit as { props?: { color?: string } } | undefined)?.props?.color, `credit colour on ${surface}`).toBe("warning");
+		expect(tail, `tail on ${surface}`).toBe("[other] [🇬🇧 46 Kč]");
 	}
 });
 
