@@ -4,8 +4,9 @@ Plugin pro Claude Code: prompt odchází do modelu anglicky, finální odpověď
 vykreslí česky. Uložená zpráva zůstává anglicky, takže kontext modelu se nikdy
 nemíchá. Port pi-prompt-translate-czk; uživatelský popis je v `README.md`.
 
-Obecná pravidla pro všechny pluginy (pasti enginu, kdy nový řez, hluboké
-vs. mělké moduly, git a vydání) jsou v kořenovém `../../CLAUDE.md`.
+Obecná pravidla pro všechny pluginy: kořenový `../../CLAUDE.md`; pasti enginu,
+kdy nový řez a hluboké vs. mělké moduly v `../../docs/architektura.md`, git
+a vydání v `../../docs/git-a-vydani.md`.
 
 Struktura je čitelná ze stromu. Každý řez má vlastní `CLAUDE.md` s kontraktem
 a tabulkou **„Nepatří sem“** — než do řezu sáhneš, přečti ji. Je kratší
@@ -64,4 +65,4 @@ Pravidla (hlídá `scripts/vsa-check.sh`):
 
 Pasti enginu, které tvar řezů určují (jedna událost bez matcheru na plugin,
 `on`/`$` jen do funkce volané jménem, atom deklarovaný v souboru, který ho
-používá), jsou v kořenovém `CLAUDE.md`.
+používá), jsou v `../../docs/architektura.md`.
