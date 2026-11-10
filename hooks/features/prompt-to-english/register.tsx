@@ -44,7 +44,9 @@ export function registerPromptToEnglish(on: On): void {
 			translateResponses: config.translateResponses,
 		};
 
-		if (config.autodetect && config.boost === "off") {
+		// Holds with boost on too: an English prompt or plain code is sent as
+		// written (no rewrite of what the person wrote in English, no paid call).
+		if (config.autodetect) {
 			const detection = detectLanguageOrCode(source);
 			if (detection.isEnglishOrCode) {
 				await debug($, `prompt detected as ${detection.reason}; not translated`);
@@ -97,7 +99,7 @@ export function registerPromptToEnglish(on: On): void {
 		// as a diff, each in its own colour, with a rule between them.
 		const { Box, Text } = $.ui.resolve(e);
 		const tags = [
-			record.boost !== "off" ? `boost: ${record.boost}` : "",
+			record.boost !== "off" ? `boost: ${record.boost === "boost" ? "on" : record.boost}` : "",
 			record.conversationContext ? "s historií" : "",
 		].filter(Boolean);
 		const ruleWidth = Math.max(8, Math.min(100, (e.viewport?.columns ?? 80) - 6));

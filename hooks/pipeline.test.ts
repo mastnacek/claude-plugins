@@ -70,6 +70,7 @@ test("prompt → EN, answer → CZ, both drawn", async ($, on) => {
 	expect(submitted.text).toBe(EN_PROMPT);
 	expect(submitted.context?.some((c) => c.includes("[prompt-translate]")) ?? false, "no English note by default").toBe(false);
 	expect(requests[0]?.model).toBe("google/gemini-3.1-flash-lite");
+	expect(requests[0]?.system, "boost is the default level").toContain("lightly edit it into a clear prompt");
 
 	await $.turn.complete({ answer: EN_ANSWER, durationMs: 10, isAborted: false, turnId: "t1", reason: "answer" });
 	await clock.advance(10);
