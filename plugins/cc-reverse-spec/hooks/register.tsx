@@ -6,12 +6,20 @@
 // slice is wired by an explicit call, never a loop over a list.
 
 import type { Register } from "claude-code";
+import { registerDrift, startDrift } from "./features/drift/register";
+import { registerGuard } from "./features/guard/register";
+import { registerInvariants } from "./features/invariants/register";
+import { registerStatus, startStatus } from "./features/status/register";
 
 export const register: Register = (on) => {
-	on("session.start", async (_$, e, next) => {
-		// await startXxx($);  — one line per slice that needs a start
+	on("session.start", async ($, e, next) => {
+		await startDrift($);
+		await startStatus($);
 		return next(e);
 	});
 
-	// registerXxx(on);  — one line per slice
+	registerInvariants(on);
+	registerGuard(on);
+	registerDrift(on);
+	registerStatus(on);
 };

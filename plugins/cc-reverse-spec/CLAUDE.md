@@ -37,3 +37,7 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 ## Řezy
 
 <!-- Jeden řádek na řez: název — co dělá jednou větou. -->
+- `invariants` — `spec/invariants.md` jde jako sekce systémového promptu migračního projektu (`spec/rules/` existuje).
+- `guard` — odmítne `Edit`/`Write`/`NotebookEdit` pod `legacy/` a `generated/` a řekne, co dělat místo toho.
+- `drift` — `/reverse-spec check`: pravidla × důkazy × testy, zapíše `spec/confidence.md`.
+- `status` — stavový řádek `spec ✔ ~ ?` s počty důvěry a pravidly bez testu.

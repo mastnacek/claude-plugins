@@ -102,8 +102,13 @@ Done when: the module meets its numeric exit criteria written in
 
 ## Gates the plugin enforces
 
-- Edits under `legacy/` and `generated/` are refused (hook). Change the
-  generator or the spec instead.
+- Edits under `legacy/` and `generated/` are refused (hook on `Edit`,
+  `Write`, `NotebookEdit`). Change the generator or the spec instead; shell
+  commands are not guarded, so write those folders only through the
+  generator or a harness recording.
+- `spec/invariants.md` is added to the system prompt of every session in
+  this project.
+- The status line shows `spec ✔confirmed ~inferred ?gap · N without test`.
 - `/reverse-spec check` reports rules without `confidence`, `source` or
   `verified_by`, and rule IDs no `.feature` file tags. Run it after every
   step; treat its findings as red.
