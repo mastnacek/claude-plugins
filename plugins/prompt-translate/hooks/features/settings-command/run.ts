@@ -8,13 +8,13 @@ import {
 	clearGlobalConfig,
 	effectiveModel,
 	getConfig,
-	hasGlobalConfig,
-	normalizeLanguage,
+	loadGlobalConfig,
 	parseModelSetting,
 	parseUntilDate,
 	saveConfig,
 	setConfig,
 } from "../../shared/config";
+import { normalizeLanguage } from "../../shared/languages";
 import { extractRecentContext } from "../../shared/recent-context";
 import { DEFAULT_CONFIG, EMPTY_TELEMETRY } from "../../shared/types";
 import type { BoostLevel, HistoryMode, PendingTranslation, Telemetry, TranslateConfig } from "../../shared/types";
@@ -124,16 +124,11 @@ export async function runCommand($: $, args: string): Promise<string> {
 
 	if (!sub || sub === "help") return buildHelpText(config, await read($, sessionCostAtom));
 
-	if (sub === "on" || sub === "enable" || sub === "off" || sub === "disable") {
-		const on = sub === "on" || sub === "enable";
-		if (!on) await update($, pendingAtom, () => null);
-		const where = await persist((c) => ({ ...c, enabled: on }));
-		return `překlad promptů ${onOff(on)} (cíl: ${config.targetLanguage}) — ${where}`;
-	}
-
-	const toggle = TOGGLES.find((t) => t.aliases.includes(sub));
+	// `/prompt-translate on|off` is the prompt toggle without its name.
+	const bare = sub === "on" || sub === "enable" ? true : sub === "off" || sub === "disable" ? false : undefined;
+	const toggle = bare === undefined ? TOGGLES.find((t) => t.aliases.includes(sub)) : TOGGLES.find((t) => t.key === "enabled");
 	if (toggle) {
-		const value = parseOnOff(rest[0]);
+		const value = bare ?? parseOnOff(rest[0]);
 		const current = config[toggle.key] as boolean;
 		if (value === undefined) return `${toggle.label}: ${onOff(current)}\nPoužití: /prompt-translate ${sub} on|off [--global]`;
 		if (toggle.key === "enabled" && !value) await update($, pendingAtom, () => null);
@@ -233,8 +228,9 @@ export async function runCommand($: $, args: string): Promise<string> {
 			return "globální konfigurace smazána";
 		}
 		if (!v || v === "show") {
-			return (await hasGlobalConfig($))
-				? `globální konfigurace:\n${JSON.stringify(await $.store.get("config"), null, 2)}`
+			const global = await loadGlobalConfig($);
+			return Object.keys(global).length > 0
+				? `globální konfigurace:\n${JSON.stringify(global, null, 2)}`
 				: "žádná globální konfigurace (platí výchozí hodnoty)";
 		}
 		return "Použití: /prompt-translate global [show|off]";
@@ -253,7 +249,7 @@ async function statusText($: $, config: TranslateConfig): Promise<string> {
 		`model=${config.translateModel}`,
 		`dočasný=${config.temporaryModel ? `${config.temporaryModel} do ${config.temporaryModelUntil}` : "žádný"}`,
 		`aktivní=${eff.setting}`,
-		`globální=${(await hasGlobalConfig($)) ? "ano" : "ne"}`,
+		`globální=${Object.keys(await loadGlobalConfig($)).length > 0 ? "ano" : "ne"}`,
 		`modelSezení=${current}`,
 		`thinking=${config.translateReasoning ? "on (low)" : "off"}`,
 		`boost=${config.boost}`,

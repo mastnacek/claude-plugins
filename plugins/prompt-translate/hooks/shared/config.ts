@@ -19,8 +19,6 @@ type $ = EngineInterface;
 
 const GLOBAL_KEY = "config";
 
-export { normalizeLanguage };
-
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -79,10 +77,6 @@ export async function projectConfigPath($: $): Promise<string> {
 export async function loadGlobalConfig($: $): Promise<Record<string, unknown>> {
 	const stored = await $.store.get(GLOBAL_KEY);
 	return isRecord(stored) ? stored : {};
-}
-
-export async function hasGlobalConfig($: $): Promise<boolean> {
-	return isRecord(await $.store.get(GLOBAL_KEY));
 }
 
 export async function clearGlobalConfig($: $): Promise<void> {

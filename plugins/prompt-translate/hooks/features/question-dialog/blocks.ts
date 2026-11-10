@@ -1,4 +1,4 @@
-// tool-ui.ts — translating the AskUserQuestion dialog the model opens.
+// blocks.ts — translating the AskUserQuestion dialog the model opens.
 //
 // The model writes the dialog in English; the person reads it. The tool input is
 // rewritten before the dialog draws, so the questions, the option labels and their
