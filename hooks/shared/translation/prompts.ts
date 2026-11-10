@@ -1,14 +1,12 @@
 /**
- * System prompts and prompt-building logic for pi-prompt-translate.
+ * System prompts for translating a prompt into English (internal to
+ * shared/translation: only translate.ts reads them).
  *
  * Four prompt-translation modes (selected via the `boost` config level):
  *  - PROMPT_TRANSLATE_SYSTEM_PROMPT ("off")  — plain faithful translation
  *  - PROMPT_BOOST_SYSTEM_PROMPT   ("boost") — faithful clarity edit, no restructuring
  *  - PROMPT_PLUS_SYSTEM_PROMPT    ("plus")  — imperative + light structure, strict fidelity
  *  - PROMPT_MEGA_SYSTEM_PROMPT    ("mega")  — full restructure into ordered tasks
- *
- * Plus the English-only instruction appended to the agent system prompt for
- * translated turns, with helpers to keep it idempotent across turns.
  */
 
 export const KEEP_TERM_RULE =

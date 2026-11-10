@@ -163,7 +163,7 @@ async function callOpenRouter(
 	const headers: Record<string, string> = {
 		Authorization: `Bearer ${apiKey}`,
 		"Content-Type": "application/json",
-		"HTTP-Referer": "https://github.com/mastnacek/pi-prompt-translate-czk",
+		"HTTP-Referer": "https://github.com/mastnacek/cc-prompt-translate-czk",
 		"X-Title": "Claude Code Prompt Translate",
 	};
 	try {

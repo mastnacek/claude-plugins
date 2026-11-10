@@ -66,7 +66,7 @@ Settings are saved to `.claude/prompt-translate.json` in the project; add `--glo
 
 ## Development
 
-The plugin is a Claude Code hooks module (`hooks/register.tsx`). Load a working copy with `claude --plugin-dir <folder>` or `CLAUDE_CODE_PLUGIN_DIRS`; check it with `claude plugin validate .` and `claude plugin test .`.
+The plugin is a Claude Code hooks module organised as vertical slices: `hooks/register.tsx` wires the slices in `hooks/features/` (one folder per feature), which share the core in `hooks/shared/`. `CLAUDE.md` has the rules. Load a working copy with `claude --plugin-dir <folder>` or `CLAUDE_CODE_PLUGIN_DIRS`; check it with `claude plugin validate .`, `claude plugin test .` and `scripts/vsa-check.sh`.
 
 ## License
 

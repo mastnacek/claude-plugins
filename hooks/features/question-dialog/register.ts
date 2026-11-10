@@ -6,6 +6,7 @@
 import type { On } from "claude-code";
 import { getConfig } from "../../shared/config";
 import { debug } from "../../shared/log";
+import { withProgress } from "../../shared/progress";
 import { detectLanguageOrCode } from "../../shared/translation/detect";
 import { translate } from "../../shared/translation/translate";
 import { collectQuestionFields, formatBlocks, labelsDistinct, parseBlocks } from "./blocks";
@@ -21,7 +22,7 @@ export function registerQuestionDialog(on: On): void {
 		const texts = fields.map((f) => f.get());
 		if (texts.every((t) => !detectLanguageOrCode(t).isEnglishOrCode)) return next(e); // already not English
 		try {
-			const result = await translate($, formatBlocks(texts), config.targetLanguage, "tool");
+			const result = await withProgress($, () => translate($, formatBlocks(texts), config.targetLanguage, "tool"));
 			if (result.degraded) return next(e);
 			const parsed = parseBlocks(result.text, fields.length);
 			if (!parsed) {
