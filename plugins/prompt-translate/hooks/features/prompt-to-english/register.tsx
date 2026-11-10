@@ -14,6 +14,7 @@ import { getConfig } from "../../shared/config";
 import { warn, debug } from "../../shared/log";
 import { withProgress } from "../../shared/progress";
 import { archiveField, restoreField } from "../../shared/session-archive";
+import { clip, logEvent } from "../../shared/usage-log";
 import { capRecord, textKey } from "../../shared/state";
 import { detectLanguageOrCode } from "../../shared/translation/detect";
 import { translate } from "../../shared/translation/translate";
@@ -47,6 +48,13 @@ export function registerPromptToEnglish(on: On): void {
 		// Holds with boost on too: an English prompt or plain code is sent as
 		// written (no rewrite of what the person wrote in English, no paid call).
 		const detection = detectLanguageOrCode(source);
+		// Diacritics decide reliably; mistakes happen in ASCII-only text, so only that is kept.
+		void logEvent($, {
+			kind: "detect",
+			reason: detection.reason,
+			skipped: detection.isEnglishOrCode,
+			...(detection.reason === "diacritics" ? {} : { text: clip(source) }),
+		});
 		if (detection.isEnglishOrCode) {
 			await debug($, `prompt detected as ${detection.reason}; not translated`);
 			await update($, pendingAtom, () => pending);

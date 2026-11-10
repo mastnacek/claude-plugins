@@ -51,6 +51,7 @@ The default translation model runs on [OpenRouter](https://openrouter.ai) (`open
 /prompt-translate ui on|off                  translate AskUserQuestion dialogs
 /prompt-translate note on|off                hidden "work in English" note on every prompt
 /prompt-translate stats                      price, OpenRouter credit, ČNB USD→CZK rate, tokens
+/prompt-translate log on|off                 evaluation log in ~/.claude/prompt-translate/log/ (off by default)
 /prompt-translate reset | global show|off
 ```
 

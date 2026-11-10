@@ -1,6 +1,6 @@
 {
   "name": "prompt-translate",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Překládá prompty do angličtiny a finální odpovědi zpět do češtiny (port pi-prompt-translate-czk)",
   "author": { "name": "mastnacek" },
   "homepage": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/prompt-translate",

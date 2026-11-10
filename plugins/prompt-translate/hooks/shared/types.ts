@@ -48,6 +48,7 @@ export const DEFAULT_CONFIG: TranslateConfig = {
 	showOriginal: true,
 	translateToolUi: true,
 	englishNote: false,
+	log: false,
 	debug: false,
 };
 

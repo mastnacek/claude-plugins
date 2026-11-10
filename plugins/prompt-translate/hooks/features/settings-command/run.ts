@@ -38,6 +38,7 @@ const TOGGLES: Toggle[] = [
 	{ key: "showOriginal", label: "rámeček originál/překlad", aliases: ["original", "frame", "diff", "showoriginal", "source"] },
 	{ key: "translateToolUi", label: "překlad dialogů AskUserQuestion", aliases: ["ui", "tool-ui", "card"] },
 	{ key: "englishNote", label: "skrytá poznámka „pracuj anglicky“ u každého promptu", aliases: ["note", "english-note"] },
+	{ key: "log", label: "log pro vyhodnocení (~/.claude/prompt-translate/log/)", aliases: ["log"] },
 	{ key: "debug", label: "debug", aliases: ["debug"] },
 ];
 
@@ -56,6 +57,7 @@ const SUBCOMMANDS: Record<string, string> = {
 	ui: "překlad AskUserQuestion on|off",
 	note: "poznámka „pracuj anglicky“ u promptu on|off",
 	stats: "cena, kredit, kurz, tokeny",
+	log: "log pro vyhodnocení on|off",
 	debug: "debug on|off",
 	global: "show|off",
 	reset: "výchozí nastavení",

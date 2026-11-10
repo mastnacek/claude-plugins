@@ -7,6 +7,7 @@ import type { On } from "claude-code";
 import { getConfig } from "../../shared/config";
 import { debug } from "../../shared/log";
 import { withProgress } from "../../shared/progress";
+import { logEvent } from "../../shared/usage-log";
 import { detectLanguageOrCode } from "../../shared/translation/detect";
 import { translate } from "../../shared/translation/translate";
 import { collectQuestionFields, formatBlocks, labelsDistinct, parseBlocks } from "./blocks";
@@ -26,11 +27,13 @@ export function registerQuestionDialog(on: On): void {
 			if (result.degraded) return next(e);
 			const parsed = parseBlocks(result.text, fields.length);
 			if (!parsed) {
+				void logEvent($, { kind: "dialog", failed: "markers", fields: fields.length });
 				await debug($, "AskUserQuestion left untranslated (marker contract broken)");
 				return next(e);
 			}
 			fields.forEach((f, i) => f.set(parsed[i] as string));
 			if (!labelsDistinct(copy)) {
+				void logEvent($, { kind: "dialog", failed: "labels", fields: fields.length });
 				await debug($, "AskUserQuestion left untranslated (labels collided)");
 				return next(e);
 			}

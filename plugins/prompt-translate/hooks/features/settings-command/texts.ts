@@ -48,6 +48,7 @@ export function buildHelpText(config: TranslateConfig): string {
 		`  /prompt-translate original on|off     — rámeček originál/překlad (${choice(onOff, config.showOriginal)})`,
 		`  /prompt-translate ui on|off           — překlad dialogů AskUserQuestion (${choice(onOff, config.translateToolUi)})`,
 		`  /prompt-translate note on|off         — skrytá poznámka „pracuj anglicky“ u promptu (${choice(onOff, config.englishNote)})`,
+		`  /prompt-translate log on|off          — log pro vyhodnocení do ~/.claude/prompt-translate/log/ (${choice(onOff, config.log)})`,
 		`  /prompt-translate debug on|off        — podrobné logování (${choice(onOff, config.debug)})`,
 		"  /prompt-translate stats               — cena, kredit, kurz, tokeny",
 		"  /prompt-translate global show|off     — globální konfigurace",

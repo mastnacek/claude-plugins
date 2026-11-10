@@ -9,6 +9,7 @@ import { atom, update } from "claude-code";
 import { getConfig, modelBackend } from "../config";
 import { fmtSmallAmount, getOpenRouterApiKey, getUsdToCzkRate, refreshCredit } from "../credit";
 import { debug, warn } from "../log";
+import { clip, logEvent } from "../usage-log";
 import {
 	KEEP_TERM_RULE,
 	PROMPT_BOOST_SYSTEM_PROMPT,
@@ -267,6 +268,7 @@ async function callWithRetries(
 	user: string,
 	payloadText: string,
 	wanted: ThinkLevel,
+	retries: string[],
 ): Promise<CallResult> {
 	let think = wanted;
 	const run = () => callModel($, setting, system, user, estimateMaxTokens(payloadText, think !== "off"), think);
@@ -275,6 +277,7 @@ async function callWithRetries(
 	if (!response.ok && isTransient(response.error, response.status)) {
 		await debug($, `transient error (${response.error}); retrying once in 1s`);
 		await $.clock.sleep(1000);
+		retries.push("transient");
 		response = await run();
 	}
 	if (!response.ok) {
@@ -282,10 +285,12 @@ async function callWithRetries(
 		if (mandatory && think === "off") {
 			await debug($, "reasoning mandatory; retrying with thinking low");
 			think = "low";
+			retries.push("think-required");
 			response = await run();
 		} else if (think !== "off" && /thinking|effort|max_?tokens|unsupported|invalid|bad request|400/i.test(response.error)) {
 			await debug($, `error with thinking ${think} (${response.error}); retrying without thinking`);
 			think = "off";
+			retries.push("think-rejected");
 			response = await run();
 		}
 	}
@@ -294,6 +299,7 @@ async function callWithRetries(
 	if (response.ok && response.truncated && think !== "off") {
 		await debug($, `translation truncated with thinking ${think}; retrying without thinking`);
 		think = "off";
+		retries.push("truncated");
 		response = await run();
 	}
 	return response;
@@ -317,9 +323,28 @@ export async function translate(
 
 	const protectedInput = purpose === "prompt" ? protectPromptSegments(text) : protectFinalAnswerSegments(text);
 
+	// One log line per translation (only with `log on`): quality, speed, retries.
+	const started = performance.now();
+	const retries: string[] = [];
+	const report = (outcome: Record<string, unknown>): void => {
+		void logEvent($, {
+			kind: "translation",
+			purpose,
+			model,
+			think: config.think,
+			...(purpose === "prompt" ? { boost: config.boost } : {}),
+			ms: Math.round(performance.now() - started),
+			chars: text.length,
+			segments: protectedInput.segments.length,
+			retries,
+			...outcome,
+		});
+	};
+
 	// Fail closed on placeholders, fail open on the model: the masked text never escapes.
 	const degrade = (reason: string): TranslationResult => {
 		warn($, `${reason} — posílám původní text bez překladu`);
+		report({ degraded: reason, text: clip(text) });
 		return { text, degraded: true };
 	};
 
@@ -327,7 +352,7 @@ export async function translate(
 	const system = systemPromptFor(purpose, config, targetLanguage, tag);
 	const user = purpose === "tool" ? protectedInput.text : buildUserContent(protectedInput.text, tag, conversationContext);
 
-	const response = await callWithRetries($, model, system, user, protectedInput.text, config.think);
+	const response = await callWithRetries($, model, system, user, protectedInput.text, config.think, retries);
 	if (!response.ok) return degrade(`${purpose} translation failed: ${response.error}`);
 	if (response.truncated) return degrade(`${purpose} translation truncated at maxTokens`);
 
@@ -347,5 +372,6 @@ export async function translate(
 	}));
 
 	void refreshCredit($); // the call was paid for: the credit shown is stale
+	report({ outChars: restored.length, appended: stats.appended });
 	return { text: restored };
 }

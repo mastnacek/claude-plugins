@@ -142,3 +142,43 @@ test("a failed translation sends the original prompt", async ($, on) => {
 	const submitted = await pending;
 	expect(submitted.text).toBe(CZ_PROMPT);
 });
+
+test("with log on, each prompt leaves its lines in the day's log", async ($, on) => {
+	mock.store(on, { config: { log: true } });
+	engineBottom(on);
+	mock.env(on, { OPENROUTER_API_KEY: "test-key", HOME: "/home/t" });
+	mock.clock(on);
+	const files = new Map<string, string>();
+	on("fs.exists", (_$, e) => ({ value: files.has(e.path) }));
+	on("fs.read", (_$, e) => ({ value: files.get(e.path) ?? "" }));
+	on("fs.write", (_$, e) => {
+		files.set(e.path, e.text);
+		return { value: undefined };
+	});
+	on("session.cwd", () => ({ value: "/work" }));
+	on("session.start", (_$, e) => ({ cwd: e.cwd }));
+	on("command.register", () => ({ value: { command: "prompt-translate" } }));
+	on("http.fetch", async (_$, e) =>
+		e.url.includes("chat/completions")
+			? { value: reply(EN_PROMPT) }
+			: { value: { status: 404, ok: false, headers: {}, text: "{}" } },
+	);
+
+	await $.session.start({ cwd: "/work", surface: "terminal", isInteractive: true });
+	await $.prompt.submit({ text: CZ_PROMPT, origin: { kind: "composer" }, wait: false });
+	await $.prompt.submit({ text: "Please add tests for the parser.", origin: { kind: "composer" }, wait: false });
+	for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
+
+	const log = [...files].find(([path]) => path.startsWith("/home/t/.claude/prompt-translate/log/"));
+	expect(log?.[0]).toMatch(/\/\d{4}-\d{2}-\d{2}\.jsonl$/);
+	const lines = (log?.[1] ?? "").trim().split("\n").map((l) => JSON.parse(l) as Record<string, unknown>);
+
+	// Czech with diacritics: translated; its text is not kept (diacritics decide reliably).
+	expect(lines[0]).toMatchObject({ kind: "detect", reason: "diacritics", skipped: false });
+	expect(lines[0]?.text).toBeUndefined();
+	expect(lines[1]).toMatchObject({ kind: "translation", purpose: "prompt", boost: "boost", think: "low", retries: [], appended: 0 });
+	expect(typeof lines[1]?.ms).toBe("number");
+	// ASCII English: skipped, its text kept so a wrong skip can be judged.
+	expect(lines[2]).toMatchObject({ kind: "detect", reason: "english_detected", skipped: true, text: "Please add tests for the parser." });
+	expect(lines).toHaveLength(3);
+});

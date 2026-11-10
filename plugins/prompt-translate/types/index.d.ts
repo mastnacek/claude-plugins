@@ -23,6 +23,8 @@ export type TranslateConfig = {
 	translateToolUi: boolean;
 	/** Add a hidden "work in English" note to every translated prompt (off: CLAUDE.md says it). */
 	englishNote: boolean;
+	/** Write ~/.claude/prompt-translate/log/<day>.jsonl for evaluating quality, speed and autodetection. */
+	log: boolean;
 	debug: boolean;
 };
 
