@@ -1,0 +1,7 @@
+.claude-plugin/types/
+.DS_Store
+*.log
+.mcpb-cache/
+
+# local per-project settings of the plugin
+.claude/prompt-translate.json

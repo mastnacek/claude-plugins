@@ -1,10 +1,10 @@
 {
   "name": "prompt-translate",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Překládá prompty do angličtiny a finální odpovědi zpět do češtiny (port pi-prompt-translate-czk)",
   "author": { "name": "mastnacek" },
-  "homepage": "https://github.com/mastnacek/cc-prompt-translate-czk",
-  "repository": "https://github.com/mastnacek/cc-prompt-translate-czk",
+  "homepage": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/prompt-translate",
+  "repository": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/prompt-translate",
   "license": "MIT",
   "keywords": ["translation", "czech", "prompt", "openrouter"],
   "types": "./types/index.d.ts"

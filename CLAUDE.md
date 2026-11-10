@@ -1,64 +1,28 @@
-# cc-prompt-translate-czk
+# mastnacek/claude-plugins
 
-Plugin pro Claude Code: prompt odchází do modelu anglicky, finální odpověď se
-vykreslí česky. Uložená zpráva zůstává anglicky, takže kontext modelu se nikdy
-nemíchá. Port pi-prompt-translate-czk; uživatelský popis je v `README.md`.
-
-Struktura je čitelná ze stromu. Každý řez má vlastní `CLAUDE.md` s kontraktem
-a tabulkou **„Nepatří sem“** — než do řezu sáhneš, přečti ji. Je kratší
-a přesnější než tenhle soubor.
-
-## Příkazy
-
-```sh
-claude plugin validate .        # validátor enginu: atomy, on/$, registrace
-claude plugin test .            # všechny *.test.ts (i ve složkách řezů)
-scripts/vsa-check.sh            # hranice řezů (viz níž)
-npx -y -p typescript tsc -p . --noEmit   # typy; chyby v *.test.ts jsou starší dluh
-```
-
-**Brána před commitem: všechny čtyři.** Typy hooků musí být čisté, testy zelené,
-`vsa-check` OK.
-
-Vývoj naživo: `claude plugin disable prompt-translate@cc-prompt-translate-czk`
-a pak `claude --plugin-dir .` (hot reload). **Nikdy obě kopie najednou** —
-každý prompt by se přeložil dvakrát. Vývojová kopie má vlastní `$.store`, takže
-nevidí překlady uložené instalovanou kopií; to není chyba.
-
-`.claude/prompt-translate.json` je lokální nastavení — necommitovat (je
-v `.gitignore`).
-
-## Architektura: vertical slices + hluboké moduly
+Marketplace vlastních pluginů pro Claude Code. Jeden repozitář, každý plugin ve
+vlastní složce `plugins/<plugin>/` s vlastním `CLAUDE.md`, `README.md`,
+testy a verzí. Uživatel přidá marketplace jednou a instaluje pluginy zvlášť.
 
 ```
-hooks/
-  register.tsx                  kořen kompozice — jen zapojí řezy
-  pipeline.test.ts              end-to-end přes všechny řezy
-  features/<řez>/               jedna funkce = jedna složka (hooky, logika, testy, CLAUDE.md)
-    prompt-to-english/  answer-to-target/  question-dialog/
-    command-arguments/  indicator/         settings-command/
-  shared/                       jádro, které řezy používají; nezná je
-    translation/                HLUBOKÝ modul: translate(), detectLanguageOrCode()
-    config.ts credit.ts log.ts progress.ts session-archive.ts state.ts …
-types/index.d.ts                kontrakt $.state — jediné místo, kde se řezy „potkají“
+.claude-plugin/marketplace.json   seznam pluginů ("source": "./plugins/<plugin>")
+plugins/<plugin>/                 jeden plugin = jedna složka, nic sdíleného mezi nimi
 ```
 
-Pravidla (hlídá `scripts/vsa-check.sh`):
+Pluginy: `prompt-translate` (překlad promptů do EN a odpovědí zpět do češtiny).
 
-1. **Řez neimportuje z jiného řezu.** Řez musí jít smazat jako složka.
-   Konstantu, kterou potřebují dva řezy, radši zduplikuj (viz `OWN_COMMAND`
-   v `command-arguments`) — duplicita je levnější než špatná abstrakce.
-2. **Závislosti míří dolů:** `register.tsx → features → shared`. `shared/`
-   nezná řezy ani kořen.
-3. **Řezy spolu mluví jen přes `$.state`**, ne voláním: prompt nastaví
-   `pending` a odpověď ho přečte; překlad nastaví `translating` a indikátor ho
-   kreslí. Kdo hodnotu píše a kdo čte, stojí v `CLAUDE.md` řezu (Kontrakt).
-4. **Vnitřnosti hlubokého modulu jsou soukromé:** zvenku jen
-   `translation/translate.ts` a `translation/detect.ts`; `protect.ts`
-   a `prompts.ts` ne.
-5. **Síť (`$.http.fetch`) jen v `shared/`.**
+## Nový plugin
 
-### Pasti enginu, které tvar určují
+1. Složka `plugins/<plugin>/` s `.claude-plugin/plugin.json` (`name` = název
+   složky, `version` od `0.1.0`, `homepage`/`repository` na tento repozitář).
+2. Položka v `.claude-plugin/marketplace.json`:
+   `{ "name": "<plugin>", "source": "./plugins/<plugin>", "description": "…" }`.
+3. `claude plugin validate plugins/<plugin>` a `claude plugin validate .`
+   (marketplace).
+4. Pluginy mezi sebou nesdílí kód ani soubory — plugin musí jít ze složky
+   vyjmout a fungovat sám. Společné jsou jen tyhle zásady.
+
+## Pasti enginu (hooks moduly)
 
 Na tyhle narazíš při každém novém řezu; validátor je odmítne, ale hláška
 neřekne, jak to postavit správně:
@@ -143,7 +107,11 @@ stačí hluboké moduly.
   hodinu?). Emoji: 🐛 fix, ✨ feat, ♻️ refactor, 🔖 snapshot, 📝 docs,
   🔧 config, 📦 deps, 🔥 remove.
 - Commituj až po bráně; tvrzení v těle („testy zelené“) jen z výstupu.
-- **Vydání:** zvedni `version` v `.claude-plugin/plugin.json`, push na `main`,
-  pak `claude plugin marketplace update cc-prompt-translate-czk`
-  a `claude plugin update prompt-translate@cc-prompt-translate-czk`. Bez
-  zvednuté verze update nic nestáhne.
+- **Vydání:** zvedni `version` v `plugins/<plugin>/.claude-plugin/plugin.json`
+  a pushni na `main`. Marketplace má auto-update: Claude Code novou verzi
+  stáhne po startu příštího sezení (načte ji `/reload-plugins`). Hned teď:
+  `claude plugin marketplace update mastnacek` a
+  `claude plugin update <plugin>@mastnacek`. **Bez zvednuté verze se nic
+  nestáhne.** Verze se zvedá jen u pluginu, který se změnil.
+- **Commit se týká jednoho pluginu**; subject začni jeho jménem, pokud to není
+  zřejmé (`✨ feat(prompt-translate): …`).

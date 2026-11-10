@@ -1,13 +1,14 @@
 {
-  "name": "cc-prompt-translate-czk",
-  "description": "Claude Code plugin: translate prompts to English and answers back to Czech",
+  "name": "mastnacek",
+  "description": "Vlastní pluginy pro Claude Code od mastnacek",
   "owner": {
     "name": "mastnacek"
   },
   "plugins": [
     {
       "name": "prompt-translate",
-      "source": "./"
+      "source": "./plugins/prompt-translate",
+      "description": "Překládá prompty do angličtiny a finální odpovědi zpět do češtiny"
     }
   ]
 }
