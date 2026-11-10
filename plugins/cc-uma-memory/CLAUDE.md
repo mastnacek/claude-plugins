@@ -24,6 +24,13 @@ Vývoj naživo: `claude --plugin-dir .` (hot reload). Je-li plugin zároveň
 nainstalovaný z marketplace, nejdřív `claude plugin disable cc-uma-memory@mastnacek`,
 jinak běží dvakrát.
 
+## MCP server
+
+`.mcp.json` v kořeni pluginu deklaruje server `uma` (`uma mcp serve --allow-writes`,
+binárka z `PATH`); nástroje jsou `mcp__plugin_cc-uma-memory_uma__*`. Pocházejí z Rust
+jádra sdíleného s pi (`pi-uma/core`) — nové nástroje se přidávají tam, ne v pluginu.
+Schvalování zápisu zatím řeší oprávnění MCP nástrojů v Claude Code.
+
 ## Architektura
 
 ```

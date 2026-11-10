@@ -1,7 +1,7 @@
 {
   "name": "cc-uma-memory",
   "version": "0.2.1",
-  "description": "UMA (Universal Memory Architecture) pro Claude Code — paměť sdílená s pi",
+  "description": "UMA (Universal Memory Architecture) pro Claude Code — paměťové nástroje přes MCP server uma (sdílené s pi) a vypnutí vlastní paměti Claude",
   "author": { "name": "mastnacek" },
   "homepage": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-uma-memory",
   "repository": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-uma-memory",

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "uma": {
+      "command": "uma",
+      "args": ["mcp", "serve", "--allow-writes"]
+    }
+  }
+}
