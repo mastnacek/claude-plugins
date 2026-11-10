@@ -15,6 +15,8 @@ anglicky, nic jiného se nerozbije.
 - `startAnswerToTarget` — obnoví `finals` z archivu a dopřeloží odpověď, kterou přerušil reload (`recoverMissedAnswer`).
 - Překládá se jen finální odpověď (`reason === "answer"`), text mezi voláními nástrojů zůstává anglicky.
 
+- `already-target.ts` — `isAlreadyCzechOrSlovak`: odpověď, která už je česky nebo slovensky (podíl slov s diakritikou bez kódu a cest ≥ 15 %), se nepřekládá; jednotlivé citované české slovo v anglické odpovědi o tom nerozhoduje.
+
 ## Kontrakt
 
 - **Čte:** `pending`, `finals`, `originals`, `config`.

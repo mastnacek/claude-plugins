@@ -182,3 +182,25 @@ test("with log on, each prompt leaves its lines in the day's log", async ($, on)
 	expect(lines[2]).toMatchObject({ kind: "detect", reason: "english_detected", skipped: true, text: "Please add tests for the parser." });
 	expect(lines).toHaveLength(3);
 });
+
+test("an answer already in Czech is not sent for translation", async ($, on) => {
+	mock.store(on);
+	engineBottom(on);
+	mock.env(on, { OPENROUTER_API_KEY: "test-key" });
+	const clock = mock.clock(on);
+	let chatCalls = 0;
+	on("http.fetch", async (_$, e) => {
+		if (e.url.includes("chat/completions")) {
+			chatCalls++;
+			return { value: reply(EN_PROMPT) };
+		}
+		return { value: { status: 404, ok: false, headers: {}, text: "{}" } };
+	});
+
+	await $.prompt.submit({ text: CZ_PROMPT, origin: { kind: "composer" }, wait: false });
+	expect(chatCalls, "the prompt was translated").toBe(1);
+	await $.turn.complete({ answer: CZ_ANSWER + " Přihlášení teď funguje správně.", durationMs: 10, isAborted: false, turnId: "t1", reason: "answer" });
+	await clock.advance(10);
+	for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
+	expect(chatCalls, "no second call for an answer already in Czech").toBe(1);
+});

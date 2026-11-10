@@ -18,7 +18,9 @@ import { withProgress } from "../../shared/progress";
 import { archiveField, restoreField } from "../../shared/session-archive";
 import { capRecord, textKey } from "../../shared/state";
 import { translate } from "../../shared/translation/translate";
+import { logEvent } from "../../shared/usage-log";
 import type { OriginalRecord, PendingTranslation } from "../../shared/types";
+import { canCheck, isAlreadyCzechOrSlovak } from "./already-target";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const pendingAtom = atom({ plugin: "prompt-translate", key: "pending" } as const, null as PendingTranslation | null);
@@ -28,6 +30,13 @@ const originalsAtom = atom({ plugin: "prompt-translate", key: "originals" } as c
 type $ = EngineInterface;
 
 async function translateAnswer($: $, answer: string, pending: PendingTranslation): Promise<void> {
+	// A model told to answer in Czech (Claude Code's `language` setting) already did:
+	// a translation would be a paid call returning the same text.
+	if (canCheck(pending.targetLanguage) && isAlreadyCzechOrSlovak(answer)) {
+		void logEvent($, { kind: "answer", skipped: "already-target", chars: answer.length });
+		await debug($, "answer already in the target language; not translated");
+		return;
+	}
 	try {
 		const result = await withProgress($, () => translate($, answer, pending.targetLanguage, "answer"));
 		if (result.degraded) return;
