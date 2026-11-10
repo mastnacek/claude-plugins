@@ -1,0 +1,19 @@
+# Copy, rename to the real ID (BR-<AREA>-<NNN>), delete this example.
+# Schema: skill reverse-spec, references/rule-schema.md
+id: BR-XXX-000
+title: One sentence what the rule decides
+confidence: gap            # confirmed | inferred | gap
+source:
+  - file: legacy/<file>
+    lines: "0-0"
+glossary: []
+inputs: []
+behavior:
+  - ears: WHEN
+    text: >
+      WHEN <condition>, THE system SHALL <result>.
+constraints: []
+side_effects: []
+compare: {}
+open_questions: []
+verified_by: []
