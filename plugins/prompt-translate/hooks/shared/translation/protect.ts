@@ -1,45 +1,9 @@
 /**
  * Segment protection: the parts of a prompt or final answer that must survive
- * translation untouched (headers, <file> blocks, @ triggers, mentions, paths, URLs,
- * placeholders), and the restore/clean steps that put them back.
- * Split out of `translate.ts`.
+ * translation untouched (<file> blocks, code, @ mentions, paths, URLs, tables),
+ * and the restore/clean steps that put them back.
  */
-// (ported) at-words integration dropped: knownWords defaults to [].
 import type { ProtectedSegment, ProtectedText } from "../types";
-
-function shouldProtectTagName(tagName: string): boolean {
-	const normalized = tagName.toLowerCase();
-	return normalized.includes("action") || normalized === "pi-autoprompt-next";
-}
-
-/**
- * Czech case endings a name can pick up in running text (`herder` → `do
- * herderu`, `o herderovi`, `s herderem`). Longest first: JS alternation is
- * ordered, so `ovi` has to precede `o` and `em` before `e`.
- */
-const CZ_CASE_ENDINGS = [
-	"ovi",
-	"ého",
-	"ému",
-	"ých",
-	"ům",
-	"ech",
-	"ách",
-	"ami",
-	"emi",
-	"em",
-	"ou",
-	"u",
-	"a",
-	"e",
-	"o",
-	"ě",
-	"y",
-	"ý",
-	"i",
-	"í",
-	"ů",
-].join("|");
 
 /** One or more consecutive pipe-grid rows. */
 const TABLE_BLOCK = /(?:^[ \t]*\|[^\n]*\|[ \t]*$\n?)+/gm;
@@ -64,10 +28,8 @@ function protectTables(text: string, addSegment: (value: string) => string): str
 		isTableBlock(match) ? addSegment(match.replace(/\n$/, "")) : match,
 	);
 }
-export function protectPromptSegments(
-	text: string,
-	knownWords: string[] = [],
-): ProtectedText {
+
+export function protectPromptSegments(text: string): ProtectedText {
 	const segments: ProtectedSegment[] = [];
 	let protectedText = text;
 	const addSegment = (value: string) => {
@@ -75,11 +37,6 @@ export function protectPromptSegments(
 		segments.push({ placeholder, value });
 		return placeholder;
 	};
-
-	// 1. Protect pi-read-all headers if present
-	protectedText = protectedText.replace(/\[pi-read-all\]:[^\n]*\n*/g, (match) =>
-		addSegment(match),
-	);
 
 	// 2. Protect any <file ...>...</file>, <context>...</context>, <document>...</document>, <code ...>...</code>
 	protectedText = protectedText.replace(
@@ -96,12 +53,6 @@ export function protectPromptSegments(
 	);
 	protectedText = protectedText.replace(/`[^`\n]+`/g, (match) =>
 		addSegment(match),
-	);
-
-	// 4. Protect @! trigger paths (pi-read-all)
-	protectedText = protectedText.replace(
-		/@!"[^"\n]+"|@![^\s"(){}[\];,]+/g,
-		(match) => addSegment(match),
 	);
 
 	// 5. Protect standard @ file mentions (@src/file.ts, @"quoted file.ts")
@@ -135,15 +86,9 @@ export function protectPromptSegments(
 		(match) => addSegment(match),
 	);
 
-	// 9. Protect clipboard image filenames if pasted bare (pi-clipboard-*.png)
-	protectedText = protectedText.replace(
-		/(?<=^|[\s<>"'`{}()[\]])pi-clipboard-[a-zA-Z0-9-]+\.[a-zA-Z0-9]+(?=[.,;:!?]*(?:\s|[<>"'`{}()[\]]|$))/g,
-		(match) => addSegment(match),
-	);
-
 	// 10. User-written `!term!` markers: the explicit "do not translate this"
-	// syntax. Rewritten into the same <keep> tags rule 12 emits, so there is one
-	// restore path (`stripKeepTags`). Placed after rules 1-9 so a marker inside
+	// syntax. Rewritten into <keep> tags the model sees and passes through;
+	// `stripKeepTags` drops them afterwards. Placed after the masking rules so a marker inside
 	// code, a path or a URL is already masked and never reaches this pattern.
 	//
 	// `[^\s!]+` (no whitespace) is load-bearing, not cosmetic: with `[^!]+` a
@@ -156,43 +101,6 @@ export function protectPromptSegments(
 		(_match, term: string) => `<keep>${term}</keep>`,
 	);
 
-	// 11. Protect ? symbol queries (?myFunc, ?varName from pi-at-words)
-	protectedText = protectedText.replace(
-		/(?<=[ \t([{]|^)\?[A-Za-z0-9_]{2,}/g,
-		(match) => addSegment(match),
-	);
-
-	// 12. Mark (not mask) confirmed ?words / symbols from @-mentioned files.
-	// Rules 1-10 hide opaque payloads the model must not read. These are the
-	// opposite: names the model MUST see to understand the sentence, it just
-	// must not translate them. A placeholder would erase that context.
-	if (knownWords && knownWords.length > 0) {
-		const alts = [...knownWords]
-			.filter(
-				(w): w is string =>
-					typeof w === "string" && /^[A-Za-z_][A-Za-z0-9_]*$/.test(w),
-			)
-			.sort((a, b) => b.length - a.length)
-			.join("|");
-		if (alts) {
-			// Without a case ending in the pattern, `?herder` protects the nominative
-			// only: "do herderu" slipped through, and the model invented "the herder
-			// directory". Match the ending too, but wrap ONLY the stem so the model
-			// drops the Czech suffix instead of being handed "herderu".
-			// ponytail: fixed ending list, not a Czech morphology engine — add endings
-			// here as they turn up; worst case is a term left untranslated.
-			const re = new RegExp(
-				`(?<![A-Za-z0-9_])(${alts})(?:(${CZ_CASE_ENDINGS}))?(?![A-Za-z0-9_])`,
-				"g",
-			);
-			protectedText = protectedText.replace(
-				re,
-				(_match, stem: string, ending?: string) =>
-					`<keep>${stem}</keep>${ending ?? ""}`,
-			);
-		}
-	}
-
 	return { text: protectedText, segments };
 }
 
@@ -204,17 +112,6 @@ export function protectFinalAnswerSegments(text: string): ProtectedText {
 		segments.push({ placeholder, value });
 		return placeholder;
 	};
-
-	protectedText = protectedText.replace(
-		/<([A-Za-z][\w:-]*)\b[^>]*>[\s\S]*?<\/\1>/g,
-		(match, tagName: string) =>
-			shouldProtectTagName(tagName) ? addSegment(match) : match,
-	);
-	protectedText = protectedText.replace(
-		/<([A-Za-z][\w:-]*)\b[^>]*\/>/g,
-		(match, tagName: string) =>
-			shouldProtectTagName(tagName) ? addSegment(match) : match,
-	);
 
 	// Markdown tables, same reason and same trade-off.
 	protectedText = protectTables(protectedText, addSegment);
@@ -258,12 +155,6 @@ export function protectFinalAnswerSegments(text: string): ProtectedText {
 	);
 	protectedText = protectedText.replace(
 		/(?<=^|[\s<>"'`{}()[\]])(?:\.{1,2}[\\/])[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?]/g,
-		(match) => addSegment(match),
-	);
-
-	// Protect clipboard image filenames if present
-	protectedText = protectedText.replace(
-		/(?<=^|[\s<>"'`{}()[\]])pi-clipboard-[a-zA-Z0-9-]+\.[a-zA-Z0-9]+(?=[.,;:!?]*(?:\s|[<>"'`{}()[\]]|$))/g,
 		(match) => addSegment(match),
 	);
 
@@ -345,7 +236,7 @@ export function restoreProtectedSegments(
 }
 
 /**
- * Drop the visible <keep> markers added by rule 11, keeping the wrapped term.
+ * Drop the visible <keep> markers added for `!term!`, keeping the wrapped term.
  * The term itself is never re-inserted from a segment table: the model already
  * had it in view, so the worst case is a mangled term, not silently lost content.
  */

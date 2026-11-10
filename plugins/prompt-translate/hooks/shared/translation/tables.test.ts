@@ -26,7 +26,7 @@ describe("markdown table protection", () => {
 			"The middle one matters.",
 		].join("\n");
 
-		const { text: masked, segments } = protectPromptSegments(text, []);
+		const { text: masked, segments } = protectPromptSegments(text);
 
 		// One segment for the whole grid, not one per inline code span.
 		expect(segments).toHaveLength(1);
@@ -55,14 +55,14 @@ describe("markdown table protection", () => {
 
 	it("leaves a lone pipe row alone — it is prose, not a table", () => {
 		const text = "Výsledek: | a | b | pokračuje větou.";
-		const { segments } = protectPromptSegments(text, []);
+		const { segments } = protectPromptSegments(text);
 		expect(segments).toHaveLength(0);
 	});
 
 	it("does not mistake an ASCII diagram for a table", () => {
 		// `| --- |` is only a separator on row 2; a diagram has no such row.
 		const diagram = ["+---+---+", "| a | b |", "+---+---+"].join("\n");
-		const { segments } = protectPromptSegments(diagram, []);
+		const { segments } = protectPromptSegments(diagram);
 		expect(segments).toHaveLength(0);
 	});
 

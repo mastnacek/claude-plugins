@@ -1,9 +1,6 @@
 /**
  * Protection and restoration: the segments a prompt must not have translated
- * (headers, <file> blocks, @ triggers, mentions, paths, URLs, placeholders).
- *
- * Split out of `translate.test.ts` (line-limit campaign); the context, telemetry
- * and display tests live in `translate-context.test.ts`.
+ * (<file> blocks, code, @ mentions, paths, URLs, placeholders).
  */
 import { describe, expect, test as it } from "claude-code/testing";
 import { cleanTranslationOutput, protectFinalAnswerSegments, protectPromptSegments, restoreProtectedSegments, stripKeepTags } from "./protect";
@@ -16,11 +13,9 @@ const createTranslationContext = (_system: string, text: string, context?: strin
 });
 
 describe("protectPromptSegments & restoreProtectedSegments", () => {
-	it("protects pi-read-all headers and <file> blocks from translation", () => {
+	it("protects <file> blocks from translation", () => {
 		const prompt = [
 			"Vysvětli mi prosím tento kód a jak funguje:",
-			"",
-			'[pi-read-all]: Loaded 1 file from "src/index.ts"',
 			"",
 			'<file path="src/index.ts" lines="10" size="100 B" tokens="~25">',
 			"export function calculate() {",
@@ -40,7 +35,7 @@ describe("protectPromptSegments & restoreProtectedSegments", () => {
 			"Vysvětli mi prosím tento kód a jak funguje:",
 		);
 		expect(protectedResult.text).toContain("Díky moc za pomoc!");
-		expect(protectedResult.segments.length).toBeGreaterThanOrEqual(2);
+		expect(protectedResult.segments.length).toBe(1);
 
 		const translatedPrompt = protectedResult.text
 			.replace(
@@ -55,27 +50,21 @@ describe("protectPromptSegments & restoreProtectedSegments", () => {
 		);
 
 		expect(restored).toContain("Please explain this code and how it works:");
-		expect(restored).toContain(
-			'[pi-read-all]: Loaded 1 file from "src/index.ts"',
-		);
 		expect(restored).toContain("export function calculate()");
 		expect(restored).toContain("// Důležitý komentář v češtině");
 		expect(restored).toContain("Thanks a lot for the help!");
 	});
 
-	it("protects @! triggers and markdown code blocks in prompt", () => {
+	it("protects markdown code blocks and inline code in prompt", () => {
 		const prompt =
-			'Analyzuj @!src/core/ a @!"src/my folder/" spolu s ```const x = 10;``` a inline `fooBar()`';
+			"Analyzuj ```const x = 10;``` a inline `fooBar()`";
 		const protectedResult = protectPromptSegments(prompt);
 
-		expect(protectedResult.text).not.toContain("@!src/core/");
-		expect(protectedResult.text).not.toContain('@!"src/my folder/"');
 		expect(protectedResult.text).not.toContain("const x = 10;");
 		expect(protectedResult.text).not.toContain("`fooBar()`");
 
 		const translated = protectedResult.text
 			.replace("Analyzuj", "Analyze")
-			.replace("spolu s", "together with")
 			.replace("a inline", "and inline");
 
 		const restored = restoreProtectedSegments(
@@ -83,30 +72,22 @@ describe("protectPromptSegments & restoreProtectedSegments", () => {
 			protectedResult.segments,
 		);
 
-		expect(restored).toContain("@!src/core/");
-		expect(restored).toContain('@!"src/my folder/"');
 		expect(restored).toContain("```const x = 10;```");
 		expect(restored).toContain("`fooBar()`");
 	});
 
-	it("protects standard @ mentions, ? symbol queries, and confirmed at-words", () => {
+	it("protects standard @ mentions", () => {
 		const prompt =
-			'Vezmi soubor @data/config.json a @"src/my file.ts", prohledej ?seznam_uzivatelu a zkontroluj pole vysledekHledani';
-		const knownAtWords = ["vysledekHledani", "seznam_uzivatelu"];
+			'Vezmi soubor @data/config.json a @"src/my file.ts"';
 
-		const protectedResult = protectPromptSegments(prompt, knownAtWords);
+		const protectedResult = protectPromptSegments(prompt);
 
 		expect(protectedResult.text).not.toContain("@data/config.json");
 		expect(protectedResult.text).not.toContain('@"src/my file.ts"');
-		expect(protectedResult.text).not.toContain("?seznam_uzivatelu");
-		// at-words are now marked visibly, not masked into a placeholder
-		expect(protectedResult.text).toContain("<keep>vysledekHledani</keep>");
 
 		const translated = protectedResult.text
 			.replace("Vezmi soubor", "Take file")
-			.replace("a", "and")
-			.replace("prohledej", "search")
-			.replace("a zkontroluj pole", "and check array");
+			.replace(" a ", " and ");
 
 		const restored = restoreProtectedSegments(
 			translated,
@@ -115,49 +96,10 @@ describe("protectPromptSegments & restoreProtectedSegments", () => {
 
 		expect(restored).toContain("@data/config.json");
 		expect(restored).toContain('@"src/my file.ts"');
-		expect(restored).toContain("?seznam_uzivatelu");
-		expect(restored).toContain("vysledekHledani");
-	});
-
-	it("marks at-words as visible <keep> terms instead of hiding them", () => {
-		const prompt = "Uprav herder v src/herder.ts";
-		const { text } = protectPromptSegments(prompt, ["herder"]);
-
-		// the model must SEE the term - that is the whole point of rule 11
-		expect(text).toContain("<keep>herder</keep>");
-		expect(text).toContain("src/<keep>herder</keep>.ts");
-
-		// tags stripped, term kept as-is
-		const translated = "Update <keep>herder</keep> in src/<keep>herder</keep>.ts";
-		expect(stripKeepTags(translated)).toBe(
-			"Update herder in src/herder.ts",
-		);
-
-		// decorative degradation: model drops a tag, the term survives
-		expect(stripKeepTags("Update herder in src/herder.ts")).toBe(
-			"Update herder in src/herder.ts",
-		);
-	});
-
-	it("wraps only the stem of a Czech-inflected at-word", () => {
-		// "do herderu" used to slip through unprotected and the model invented
-		// "the herder directory" (see docs/2026-09-29-translation-probe.md).
-		const w = (text: string) => protectPromptSegments(text, ["herder"]).text;
-
-		expect(w("Přepni se do herderu")).toBe(
-			"Přepni se do <keep>herder</keep>u",
-		);
-		expect(w("v herderu")).toBe("v <keep>herder</keep>u");
-		expect(w("s herderem")).toBe("s <keep>herder</keep>em");
-		expect(w("o herderovi")).toBe("o <keep>herder</keep>ovi");
-		expect(w("herder spadl")).toBe("<keep>herder</keep> spadl");
-
-		// a longer word that merely starts with the term stays untouched
-		expect(w("herdermann")).toBe("herdermann");
 	});
 
 	it("rewrites user-written !term! markers into <keep> tags", () => {
-		const p = (text: string) => protectPromptSegments(text, []).text;
+		const p = (text: string) => protectPromptSegments(text).text;
 
 		expect(p("Přejmenuj modul na !objednávka!.")).toBe(
 			"Přejmenuj modul na <keep>objednávka</keep>.",
@@ -176,7 +118,7 @@ describe("protectPromptSegments & restoreProtectedSegments", () => {
 		expect(p("`!x!`")).not.toContain("<keep>");
 	});
 
-	it("protects embedded filesystem and clipboard image paths from translation", () => {
+	it("protects embedded filesystem paths from translation", () => {
 		const prompt =
 			"Zkontroluj prosím tento obrázek C:\\Users\\jaroslav\\AppData\\Local\\Temp\\pi-clipboard-26b2afd7-f1b0-4065-b499-4aa304611b87.png a také D:/01_programovani/pi/plugins/test.ts a /tmp/pi-clipboard-123.png.";
 		const protectedResult = protectPromptSegments(prompt);
@@ -267,13 +209,12 @@ describe("protectPromptSegments & restoreProtectedSegments", () => {
 
 	it("protects URLs and file paths in final answer segments", () => {
 		const answer =
-			"Here is the result. Documentation: https://docs.example.com/guide. Image saved at C:\\Temp\\output.png and /tmp/report.pdf. <action>Do not touch</action>";
+			"Here is the result. Documentation: https://docs.example.com/guide. Image saved at C:\\Temp\\output.png and /tmp/report.pdf.";
 		const protectedResult = protectFinalAnswerSegments(answer);
 
 		expect(protectedResult.text).not.toContain("https://docs.example.com/guide");
 		expect(protectedResult.text).not.toContain("C:\\Temp\\output.png");
 		expect(protectedResult.text).not.toContain("/tmp/report.pdf");
-		expect(protectedResult.text).not.toContain("<action>Do not touch</action>");
 
 		const translated = protectedResult.text
 			.replace(
@@ -291,7 +232,6 @@ describe("protectPromptSegments & restoreProtectedSegments", () => {
 		expect(restored).toContain("https://docs.example.com/guide");
 		expect(restored).toContain("C:\\Temp\\output.png");
 		expect(restored).toContain("/tmp/report.pdf");
-		expect(restored).toContain("<action>Do not touch</action>");
 	});
 
 

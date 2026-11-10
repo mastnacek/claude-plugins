@@ -16,7 +16,7 @@ const original = [
 ].join("\n");
 
 function degrade(originalText: string): TranslationResult {
-  const { text: masked } = protectPromptSegments(originalText, []);
+  const { text: masked } = protectPromptSegments(originalText);
   // A failure means nothing comes back from the model, so nothing is restored.
   // The caller must still receive the ORIGINAL, never the masked form.
   void masked;
@@ -39,7 +39,7 @@ describe("degraded translation", () => {
   });
 
   it("the success shape is not degraded", () => {
-    const { segments } = protectPromptSegments(original, []);
+    const { segments } = protectPromptSegments(original);
     const ok: TranslationResult = {
       text: restoreProtectedSegments("__PI_PROMPT_TRANSLATE_PROTECTED_0__", segments),
     };
