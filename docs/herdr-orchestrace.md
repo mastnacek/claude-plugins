@@ -30,22 +30,43 @@ souhlasu, ve vlastním panelu jen na tu jednu úlohu, a pak panel zavři.
 
 ## Panely
 
+Rozložení: **orchestrátor vlevo na celou výšku, vpravo programátor nahoře
+a tester pod ním.** Každý panel nese jméno své role.
+
+```
+┌──────────────────────┬──────────────────────┐
+│                      │ programátor (Sonnet) │
+│ orchestrátor (Opus)  ├──────────────────────┤
+│                      │ tester (Haiku)       │
+└──────────────────────┴──────────────────────┘
+```
+
 ```sh
 herdr pane current                                   # tvoje pane_id (např. wD:p1)
-herdr pane list                                      # existující panely
-herdr pane split --pane <moje> --direction right --cwd <složka>   # programátor
-herdr pane split --pane <moje> --direction down  --cwd <složka>   # tester
+herdr pane list                                      # existující panely a jejich jména
+herdr pane split --pane <moje> --direction right --cwd <složka>          # programátor
+herdr pane split --pane <programátor> --direction down --cwd <test-složka>  # tester pod ním
+herdr pane rename <moje> "orchestrátor (Opus)"
+herdr pane rename <programátor> "programátor (Sonnet)"
+herdr pane rename <tester> "tester (Haiku)"
 herdr pane send-text <pane> "claude --model sonnet"; herdr pane send-keys <pane> Enter
 herdr pane wait-output <pane> --match "shortcuts" --timeout 40000  # agent je připravený
 herdr pane close <pane>                              # po /exit
 ```
+
+- Tester vzniká **rozdělením panelu programátora** (`--direction down`).
+  `herdr pane move` uvnitř jedné karty panel nepřesune (`changed: false`) —
+  špatně umístěný panel ukonči, zavři a vytvoř znovu.
+- Šířku panelů neměň: celé okno může být úzké (uživatel ho mívá i na malém
+  displeji) a rozšíření jednoho panelu ubere uživateli jeho.
 
 - **Programátor** běží ve složce, kterou mění (repozitář pluginu nebo jádra).
 - **Tester** běží ve vlastní testovací složce ve scratchpadu s pluginem
   načteným z vývojové kopie: `claude --model haiku --plugin-dir <cesta k pluginu>`.
   Je-li stejný plugin nainstalovaný z marketplace, nejdřív
   `claude plugin disable <plugin>@mastnacek`, jinak běží dvakrát.
-- Nová složka vyvolá dialog důvěry: `send-keys Down`, pak `Enter`.
+- Nová složka vyvolá dialog důvěry: `send-keys Down`, pak `Enter`. V úzkém
+  panelu se text dialogu zalomí — hledej ho přes `--source recent-unwrapped`.
 
 ## Zadání jako od člověka
 
@@ -64,6 +85,9 @@ herdr pane read <pane> --source recent | grep -v '^\s*$' | tail -40
 - Šedý text ve vstupním poli je návrh Claude Code, ne zadání; psaní ho přepíše.
 - Dlouhé zadání nejdřív zapiš do souboru ve scratchpadu a agentovi pošli
   jen „Přečti a proveď zadání v <cesta>“.
+- Závěrečnou zprávu agenta čti z jeho přepisu, ne z úzkého panelu:
+  nejnovější `~/.claude/projects/<cesta-cwd>/*.jsonl` (bez vlastního sezení),
+  `jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text'`.
 
 ## Zadání programátorovi
 
@@ -85,6 +109,15 @@ Scénář = kroky, které má provést jako uživatel, a očekávaný výsledek
 každého kroku. Tester odpoví tabulkou krok → výsledek → OK/chyba.
 Ověř tvrzení testera v datech (log, soubory, přepis sezení v
 `~/.claude/projects/`), ne jen v jeho shrnutí.
+
+- **Příkazy pluginu (`/…`) píšeš do testerova pole ty**, jako uživatel —
+  agent si je sám zadat nemůže.
+- **Rozhraní (stavový řádek, rámečky, dialogy) tester nevidí**: čti ho
+  z jeho panelu (`herdr pane read`). Agenta se ptej na to, co vidí jen on
+  (obsah svého system promptu, výsledky nástrojů).
+- Změna, která platí od příštího sezení: tester `/exit` a spustit znovu.
+- Test, který sahá na globální nastavení (`~/.claude/settings.json`), začíná
+  zálohou do scratchpadu a končí jejím vrácením.
 
 ## Konec
 

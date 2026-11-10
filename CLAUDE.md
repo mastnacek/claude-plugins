@@ -31,8 +31,9 @@ pi rozšíření podle `docs/port-z-pi.md`.
 
 ## Kam sáhnout
 
-- **Práce v herdr** (vždy): programátor = Claude Code se Sonnetem a tester =
-  Claude Code s Haiku, každý ve vlastním panelu; ty orchestruješ → `docs/herdr-orchestrace.md`
+- **Práce v herdr** (vždy): ty orchestruješ vlevo; vpravo nad sebou programátor
+  (Claude Code, Sonnet) a tester (Claude Code, Haiku), panely pojmenované
+  podle rolí → `docs/herdr-orchestrace.md`
 - **Nový plugin, krok za krokem** → `docs/novy-plugin.md`
 - **Port rozšíření z pi** (tabulka pi → Claude Code, co zahodit) → `docs/port-z-pi.md`
 - **Kód hooků:** řezy, hluboké moduly, pasti enginu, kdy nový řez → `docs/architektura.md`
