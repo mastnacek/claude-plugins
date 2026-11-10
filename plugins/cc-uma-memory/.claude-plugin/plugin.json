@@ -1,6 +1,6 @@
 {
   "name": "cc-uma-memory",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "UMA (Universal Memory Architecture) pro Claude Code — paměť sdílená s pi",
   "author": { "name": "mastnacek" },
   "homepage": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-uma-memory",

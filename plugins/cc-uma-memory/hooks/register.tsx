@@ -13,7 +13,7 @@ async function guarded($: EngineInterface, slice: string, started: Promise<void>
 	try {
 		await started;
 	} catch (error) {
-		$.ui.log(`cc-uma-memory: ${slice}: start selhal: ${error instanceof Error ? error.message : String(error)}`);
+		$.ui.log(`${slice}: start selhal: ${error instanceof Error ? error.message : String(error)}`);
 	}
 }
 
