@@ -15,7 +15,7 @@ import { atom, read, update } from "claude-code";
 import { cachedBalance, cachedUsdToCzkRate, getOpenRouterBalance, getUsdToCzkRate } from "./lib/balance";
 import { COMMAND, completions, runCommand } from "./lib/commands";
 import { effectiveModel, expireTemporaryModel, getConfig, loadConfig, modelBackend } from "./lib/config";
-import { formatCost, formatTokens, shortModelLabel, statusLine } from "./lib/format";
+import { statusLine } from "./lib/format";
 import { detectLanguageOrCode } from "./lib/language";
 import { capRecord, textKey } from "./lib/state";
 import { collectQuestionFields, formatBlocks, labelsDistinct, parseBlocks } from "./lib/tool-ui";
@@ -31,6 +31,7 @@ const originalsAtom = atom({ plugin: "prompt-translate", key: "originals" } as c
 const sessionCostAtom = atom({ plugin: "prompt-translate", key: "sessionCostUsd" } as const, 0);
 const translatingAtom = atom({ plugin: "prompt-translate", key: "translating" } as const, false);
 const badgeAtom = atom({ plugin: "prompt-translate", key: "badge" } as const, null as Badge | null);
+const commandOutputsAtom = atom({ plugin: "prompt-translate", key: "commandOutputs" } as const, {} as Record<string, string>);
 
 
 type $ = EngineInterface;
@@ -123,20 +124,35 @@ async function restoreSession($: $): Promise<void> {
 	}
 }
 
-async function translateAnswer($: $, answer: string, pending: PendingTranslation): Promise<void> {
+// Translations in flight; the indicator shows "⟳ překládám…" while any runs.
+// No toasts: the frame and the answer switching language say it is done.
+let inFlight = 0;
+
+async function withProgress<T>($: $, work: () => Promise<T>): Promise<T> {
+	inFlight += 1;
 	await update($, translatingAtom, () => true);
 	await refreshStatus($);
 	try {
-		const result = await translate($, answer, pending.targetLanguage, "answer");
+		return await work();
+	} finally {
+		inFlight = Math.max(0, inFlight - 1);
+		if (inFlight === 0) {
+			await update($, translatingAtom, () => false);
+			await refreshStatus($);
+		}
+	}
+}
+
+async function translateAnswer($: $, answer: string, pending: PendingTranslation): Promise<void> {
+	try {
+		const result = await withProgress($, () => translate($, answer, pending.targetLanguage, "answer"));
 		if (result.degraded) return;
 		await update($, finalsAtom, (f) => capRecord({ ...f, [textKey(answer)]: result.text }));
 		$.ui.invalidate("ui.render");
-		$.ui.toast(`odpověď → ${pending.targetLanguage} ${formatCost(result.costUsd, result.costCzk)}`.trim());
 		await persistSession($);
 	} catch (error) {
 		warn($, `překlad odpovědi selhal, zůstává anglicky: ${error instanceof Error ? error.message : String(error)}`);
 	} finally {
-		await update($, translatingAtom, () => false);
 		await refreshBalance($);
 	}
 }
@@ -207,11 +223,20 @@ export const register: Register = (on) => {
 		const line = await next(e);
 		const { Box, Text } = $.ui.resolve(e);
 		const color = badge.level === "critical" ? "error" : badge.level === "low" ? "warning" : "success";
+		// One tag, [🇬🇧 49 Kč]: the flag and the credit left belong together.
 		return (
 			<Box flexDirection="row">
 				{line}
-				<Text>{`  ${badge.flag}`}</Text>
-				{badge.credit ? <Text color={color}>{` 💳 ${badge.credit}`}</Text> : null}
+				<Text>
+					<Text dimColor>{"  ["}</Text>
+					{badge.flag}
+					{badge.translating ? (
+						<Text dimColor>{" ⟳ překládám…"}</Text>
+					) : badge.credit ? (
+						<Text color={color}>{` ${badge.credit}`}</Text>
+					) : null}
+					<Text dimColor>{"]"}</Text>
+				</Text>
 			</Box>
 		);
 	});
@@ -264,7 +289,7 @@ export const register: Register = (on) => {
 			}
 		}
 
-		const result = await translate($, source, "English", "prompt", conversationContext);
+		const result = await withProgress($, () => translate($, source, "English", "prompt", conversationContext));
 		if (result.degraded) return next(e);
 		const english = result.text;
 
@@ -294,9 +319,6 @@ export const register: Register = (on) => {
 		};
 		await update($, originalsAtom, (o) => capRecord({ ...o, [textKey(english)]: record }));
 		await update($, pendingAtom, () => pending);
-		$.ui.toast(
-			`prompt → EN${conversationContext ? " [s historií]" : ""} ${formatCost(result.costUsd, result.costCzk)}`.trim(),
-		);
 		void persistSession($);
 		void refreshBalance($);
 		return next(withNote({ ...e, text: english }, config.englishNote, englishOnlyNote(pending, true)));
@@ -337,21 +359,17 @@ export const register: Register = (on) => {
 			record.boost !== "off" ? `boost: ${record.boost}` : "",
 			record.conversationContext ? "s historií" : "",
 		].filter(Boolean);
-		const meta = config.diff
-			? [formatTokens(record.usage), formatCost(record.costUsd, record.costCzk), shortModelLabel(record.model)]
-					.filter(Boolean)
-					.join(" · ")
-			: "";
 		const ruleWidth = Math.max(8, Math.min(100, (e.viewport?.columns ?? 80) - 6));
 		return (
 			<Box flexDirection="column" borderStyle="round" borderColor="suggestion" paddingX={1}>
-				<Box flexDirection="row">
+				{/* Tags only: cost and model are in /prompt-translate stats. One Text of
+				    nested spans wraps as one paragraph in a narrow frame. */}
+				<Text>
 					<Text bold color="suggestion">
 						🔄 překlad
 					</Text>
 					{badges.length > 0 ? <Text color="warning">{` [${badges.join(", ")}]`}</Text> : null}
-					{meta ? <Text dimColor>{`  ${meta}`}</Text> : null}
-				</Box>
+				</Text>
 				<Box flexDirection="row" marginTop={1}>
 					<Text bold color="diffRemoved">{"- "}</Text>
 					<Text color="diffRemoved">{record.source}</Text>
@@ -400,11 +418,34 @@ export const register: Register = (on) => {
 
 	// ----------------------------------------------------------------- commands
 	on("command.run", { command: "prompt-translate" }, async ($, e) => {
-		const output = await runCommand($, e.args);
-		// Logged, not returned: a log row never reaches the model.
-		for (let i = 0; i < output.length; i += 1900) $.ui.log(output.slice(i, i + 1900));
+		const output = (await runCommand($, e.args)).trimEnd();
+		// A plugin's command text goes into requests, so the model gets only the
+		// first line; the CommandOutput hook below draws the whole output in that
+		// row. ($.ui.log is no way out: a log row is one line, "\n" draws as "�".)
+		const [summary = "", ...rest] = output.split("\n");
+		if (rest.length > 0) await update($, commandOutputsAtom, (o) => capRecord({ ...o, [summary]: output }, 20));
 		await refreshBalance($);
-		return {};
+		return { text: summary };
+	});
+
+	on("ui.render", { component: "CommandOutput" }, async ($, e, next) => {
+		if (e.props.command !== COMMAND || e.props.isErrored) return next(e);
+		// The row's text may come headed with the plugin's name ("prompt-translate: …").
+		const outputs = await read($, commandOutputsAtom);
+		const text = e.props.text.trim();
+		const key = Object.keys(outputs).find((k) => text === k || text.endsWith(`: ${k}`));
+		const full = key ? outputs[key] : undefined;
+		if (!full) return next(e);
+		const { Box, Text } = $.ui.resolve(e);
+		return (
+			<Box flexDirection="column">
+				{full.split("\n").map((line, i) => (
+					<Text key={String(i)} dimColor={i > 0}>
+						{line || " "}
+					</Text>
+				))}
+			</Box>
+		);
 	});
 
 	// A skill's or command's free-text arguments → English (the slash scaffold stays).
@@ -420,9 +461,8 @@ export const register: Register = (on) => {
 		}
 		if (source !== "plugin" && source !== "user") return next(e);
 		if (detectLanguageOrCode(e.args).isEnglishOrCode) return next(e);
-		const result = await translate($, e.args, "English", "prompt");
+		const result = await withProgress($, () => translate($, e.args, "English", "prompt"));
 		if (result.degraded) return next(e);
-		$.ui.toast(`/${e.command} argumenty → EN ${formatCost(result.costUsd, result.costCzk)}`.trim());
 		return next({ ...e, args: result.text });
 	});
 

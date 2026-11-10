@@ -72,7 +72,8 @@ export type Telemetry = {
 export type BalanceInfo = { remaining: number; total: number; used: number };
 
 /** The indicator at the end of the hint line: the flag, and the credit coloured by level. */
-export type Badge = { flag: string; credit: string; level: "ok" | "low" | "critical" };
+/** The indicator at the end of the prompt hint: `[🇬🇧 49 Kč]`, or `[🇬🇧 ⟳ překládám…]` while a translation runs. */
+export type Badge = { flag: string; credit: string; level: "ok" | "low" | "critical"; translating?: boolean };
 
 declare module "claude-code" {
 	interface PluginState {
@@ -87,8 +88,10 @@ declare module "claude-code" {
 			telemetry: Shaped<Telemetry>;
 			/** The indicator drawn at the end of the hint line under the prompt. */
 			badge: Badge | null;
-			/** True while an answer translation runs (status line hint). */
+			/** True while a prompt, answer or command-argument translation runs (drawn in the indicator). */
 			translating: boolean;
+			/** A /prompt-translate output's first line (what the model reads) → the whole output, drawn in its row. */
+			commandOutputs: Record<string, string>;
 		};
 	}
 }

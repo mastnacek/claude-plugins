@@ -63,14 +63,14 @@ export function statusLine(options: {
 }): Badge | null {
 	// Deliberately minimal: on/off, and the OpenRouter credit left. The rest is in
 	// /prompt-translate status.
-	const { config, rate, balance } = options;
+	const { config, rate, balance, translating } = options;
 	if (!config.enabled) return null;
-	if (!balance) return { flag: "🇬🇧", credit: "", level: "ok" };
+	if (!balance) return { flag: "🇬🇧", credit: "", level: "ok", translating };
 	const credit =
 		typeof rate === "number" && rate > 0
 			? `${(balance.remaining * rate).toFixed(0)} Kč`
 			: `$${balance.remaining.toFixed(2)}`;
-	return { flag: "🇬🇧", credit, level: balanceLevel(balance.remaining) };
+	return { flag: "🇬🇧", credit, level: balanceLevel(balance.remaining), translating };
 }
 
 // pi's thresholds (USD): above $3 healthy, $1–3 time to refill, below $1 critical.
@@ -106,7 +106,7 @@ export function buildHelpText(config: TranslateConfig, sessionCostUsd: number): 
 		`  /prompt-translate think on|off        — reasoning překladového modelu (${choice(["on", "off"], config.translateReasoning)})`,
 		`  /prompt-translate confirm on|off      — potvrzení před odesláním (${choice(["on", "off"], config.confirm)})`,
 		`  /prompt-translate history <mode>      — historie konverzace (${choice(["off", "ask", "auto", "always"], config.historyMode)}) | inspect`,
-		`  /prompt-translate diff on|off         — porovnání originál/EN s tokeny (${choice(["on", "off"], config.diff)})`,
+		`  /prompt-translate diff on|off         — rámeček originál/EN (${choice(["on", "off"], config.diff)})`,
 		`  /prompt-translate detect on|off       — autodetekce angličtiny/kódu (${choice(["on", "off"], config.autodetect)})`,
 		`  /prompt-translate original on|off     — zobrazení původního promptu (${choice(["on", "off"], config.showOriginal)})`,
 		`  /prompt-translate ui on|off           — překlad dialogů AskUserQuestion (${choice(["on", "off"], config.translateToolUi)})`,

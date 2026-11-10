@@ -96,6 +96,7 @@ test("prompt → EN, answer → CZ, both drawn", async ($, on) => {
 	});
 	expect(await user.find({ type: "Text", text: /nefunguje přihlášení/ }), "original drawn").toBeDefined();
 	expect(await user.find({ type: "Text", text: /login does not work/ }), "translation drawn in the same frame").toBeDefined();
+	expect(await user.find({ type: "Text", text: /Kč|\$0\./ }), "no cost in the frame").toBeUndefined();
 
 	// The indicator: flag, and the credit coloured by level ($2 left → "low").
 	for (const surface of ["terminal", "desktop"] as const) {
@@ -105,7 +106,7 @@ test("prompt → EN, answer → CZ, both drawn", async ($, on) => {
 			component: "PromptHint",
 			props: { isDraft: false, isWorking: false, hint: "? for shortcuts" },
 		});
-		const credit = await hint.find({ type: "Text", text: /💳 46 Kč/ });
+		const credit = await hint.find({ type: "Text", text: /^ 46 Kč$/ });
 		expect(credit, `credit on ${surface}`).toBeDefined();
 		expect((credit as { props?: { color?: string } } | undefined)?.props?.color, `credit colour on ${surface}`).toBe("warning");
 	}

@@ -28,8 +28,8 @@ The default translation model runs on [OpenRouter](https://openrouter.ai) (`open
 
 - **Prompt → English.** Your prompt is translated by a small, cheap model in one call. Code blocks, inline code, URLs, file paths, `@file` mentions and tables are masked and restored byte-identical. A prompt already in English (or pure code) is detected and passed through.
 - **Answer → your language.** When the turn ends, the final answer is translated in the background and drawn in place of the English. The stored message stays English, so the model's context is never mixed.
-- **Diff frame.** Each translated prompt is drawn as one frame: your original (`-`) and the English (`+`) in diff colours, with tokens, cost and model.
-- **Indicator.** `🇬🇧 💳 46 Kč` at the end of the hint line under the prompt: translation is on, and the OpenRouter credit left, green / yellow / red by balance.
+- **Diff frame.** Each translated prompt is drawn as one frame: your original (`-`) and the English (`+`) in diff colours, tagged `[boost: …]` / `[s historií]` when they applied. Tokens and cost are in `/prompt-translate stats`.
+- **Indicator.** `[🇬🇧 46 Kč]` at the end of the hint line under the prompt: translation is on, and the OpenRouter credit left, green / yellow / red by balance. While a prompt or answer is being translated it reads `[🇬🇧 ⟳ překládám…]`; no pop-up notifications. With a Claude model it is just `[🇬🇧]`.
 - **Prompt boost.** `off`, `on`, `plus`, `mega`: from faithful translation to a restructured, ordered task list, in the same single call.
 - **Conversation history.** `off`, `ask`, `auto` (when the prompt says "to", "tohle", "předchozí"…), `always`: recent turns are attached so pronouns translate correctly.
 - **AskUserQuestion dialogs** the model opens are translated into your language.
