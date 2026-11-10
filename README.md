@@ -5,11 +5,13 @@ Claude Code plugins by mastnacek, in one marketplace.
 ```
 /plugin marketplace add mastnacek/claude-plugins
 /plugin install cc-prompt-translate@mastnacek
+/plugin install cc-uma-memory@mastnacek
 ```
 
 | Plugin | What it does |
 |---|---|
 | [cc-prompt-translate](plugins/cc-prompt-translate) | Translates your prompts into English before they reach the model and the final answer back into Czech (or your language). |
+| [cc-uma-memory](plugins/cc-uma-memory) | UMA (Universal Memory Architecture) for Claude Code, memory shared with pi. So far: turns Claude Code's own auto memory off (`/uma claude-memory`) and shows its state under the prompt. |
 
 Each plugin lives in `plugins/<name>/` with its own README, tests and version.
 

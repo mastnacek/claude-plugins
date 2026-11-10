@@ -41,8 +41,9 @@ scripts/new-plugin.sh <název> "<popis jednou větou>"
 ```
 
 Skript zkopíruje `templates/plugin/` do `plugins/<název>/`, doplní název, popis
-a rok, přidá položku do `.claude-plugin/marketplace.json` a spustí oba
-validátory. Kostra obsahuje:
+a rok, přidá položku do `.claude-plugin/marketplace.json` a řádek do tabulky
+pluginů v `README.md` (popis tam pak přepiš anglicky, jako ostatní řádky)
+a spustí oba validátory. Kostra obsahuje:
 
 ```
 .claude-plugin/plugin.json   verze 0.1.0, homepage na tento repozitář

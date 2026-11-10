@@ -4,7 +4,8 @@
 #   scripts/new-plugin.sh <název> "<popis jednou větou>"
 #
 # Zkopíruje šablonu do plugins/<název>/, doplní název, popis a rok, přidá
-# položku do .claude-plugin/marketplace.json a spustí oba validátory.
+# položku do .claude-plugin/marketplace.json a řádek do tabulky v README.md
+# a spustí oba validátory.
 # Spouštěj z kořene repozitáře.
 set -euo pipefail
 
@@ -49,6 +50,13 @@ market = pathlib.Path(".claude-plugin/marketplace.json")
 data = json.loads(market.read_text())
 data["plugins"].append({"name": name, "source": f"./plugins/{name}", "description": description})
 market.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+
+# Row in the plugin table of the repository README (after its last row).
+readme = pathlib.Path("README.md")
+lines = readme.read_text().split("\n")
+last = max(i for i, l in enumerate(lines) if l.startswith("| ["))
+lines.insert(last + 1, f"| [{name}](plugins/{name}) | {description} |")
+readme.write_text("\n".join(lines))
 PY
 
 mkdir -p "$target/hooks/features" "$target/hooks/shared"

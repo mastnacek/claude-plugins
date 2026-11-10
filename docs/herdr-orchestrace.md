@@ -19,6 +19,8 @@ přes `scripts/agent.sh`, nikdy holým `claude`. Hook platí jen v sezeních
 s kořenem v tomto repozitáři — tester ve scratchpadu repozitář neměnit.
 
 Existující panel s agentem dané role použij znovu; nový otevři jen, když chybí.
+**Každá nová práce začíná v čistém sezení**: v panelu `/exit` a znovu
+`scripts/agent.sh <role>` — agent nenese kontext ani předpoklady z minulého úkolu.
 
 ## Eskalace na Fable — rozhoduje uživatel
 
