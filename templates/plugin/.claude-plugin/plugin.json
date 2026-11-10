@@ -1,0 +1,10 @@
+{
+  "name": "__NAME__",
+  "version": "0.1.0",
+  "description": "__DESCRIPTION__",
+  "author": { "name": "mastnacek" },
+  "homepage": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/__NAME__",
+  "repository": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/__NAME__",
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}
