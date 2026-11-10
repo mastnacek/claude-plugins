@@ -34,6 +34,8 @@ neřekne, jak to postavit správně:
   Importovaný atom validátor nepřečte. Sdílí se klíč (literál), ne objekt.
 - **`$.ui.log` je jeden řádek** (`\n` se kreslí jako `�`) a **text příkazu
   pluginu jde modelu do kontextu** — vzor obchvatu: `plugins/cc-prompt-translate/hooks/features/settings-command`.
+  Jméno pluginu přidává engine sám před `$.ui.log`, `$.ui.status` i výstup
+  příkazu; text začni rovnou zprávou.
 - **Mění-li se tvar hodnoty v `$.state`, změň `shape` atomu** (`"config-1"` →
   `"config-2"`) ve všech souborech, které atom deklarují: po reloadu zůstává
   stará hodnota a nový kód by ji četl jako novou.
