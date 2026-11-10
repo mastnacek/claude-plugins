@@ -16,7 +16,7 @@ nikdy nevyhodí výjimku, ale vrátí původní text s příznakem `degraded`.
 ## Kontrakt
 
 - **Skrývá:** `protect.ts` (maskování a vrácení kódu, cest, URL, tabulek) a `prompts.ts` (systémové prompty podle `boost`) jsou **interní**; mimo složku je nikdo neimportuje (`scripts/vsa-check.sh`, pravidlo 3).
-- **Skrývá také:** backendy OpenRouter (`$.http.fetch`) a Claude (`$.model.complete`), opakování, zálohu na `translateModel`, reasoning, limit tokenů, cenu v Kč.
+- **Skrývá také:** backendy OpenRouter (`$.http.fetch`) a Claude (`$.model.complete`), opakování, reasoning (`think`: off/low/medium/high, při chybě nebo useknutí bez něj), limit tokenů, cenu v Kč.
 - **Čte:** `config`. **Píše:** `sessionCostUsd`, `telemetry`, `credit` (přes `refreshCredit`). `translating` nezapisuje, to dělá volající přes `withProgress`.
 - **Shared:** `config`, `credit`, `log`, `types`.
 

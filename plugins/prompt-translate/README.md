@@ -26,7 +26,7 @@ The default translation model runs on [OpenRouter](https://openrouter.ai) (`open
 
 ## What it does
 
-- **Prompt → English.** Your prompt is translated by a small, cheap model in one call. Code blocks, inline code, URLs, file paths, `@file` mentions and tables are masked and restored byte-identical. A prompt already in English (or pure code) is detected and passed through.
+- **Prompt → English.** Your prompt is translated by a small, cheap model in one call. Code blocks, inline code, URLs, file paths, `@file` mentions and tables are masked and restored byte-identical. A prompt already in English (or pure code) is always detected and passed through untouched.
 - **Answer → your language.** When the turn ends, the final answer is translated in the background and drawn in place of the English. The stored message stays English, so the model's context is never mixed.
 - **Translation frame.** Each translated prompt is drawn as one frame: your original (`-`) and the English (`+`) in diff colours, tagged `[boost: …]` / `[s historií]` when they applied, with the attached history below. One switch: `/prompt-translate original on|off`. Tokens and cost are in `/prompt-translate stats`.
 - **Indicator.** `[🇬🇧 46 Kč]` at the end of the hint line under the prompt: translation is on, and the OpenRouter credit left, green / yellow / red by balance. While a prompt or answer is being translated it reads `[🇬🇧 ⟳ překládám…]`; no pop-up notifications. With a Claude model it is just `[🇬🇧]`.
@@ -42,17 +42,16 @@ The default translation model runs on [OpenRouter](https://openrouter.ai) (`open
 /prompt-translate on|off                     prompt translation
 /prompt-translate responses on|off           answer translation
 /prompt-translate lang <language>            target language for answers
-/prompt-translate model <m> [until DATE]     openrouter/<vendor>/<model> | haiku | sonnet | current
+/prompt-translate model <m>                  openrouter/<vendor>/<model> | haiku | sonnet | current
 /prompt-translate boost off|on|plus|mega     prompt enhancement
 /prompt-translate history off|ask|auto|always|inspect
-/prompt-translate think on|off               reasoning on the translation model
+/prompt-translate think off|low|medium|high  reasoning of the translation model (default low)
 /prompt-translate confirm on|off             confirm the translation before sending
 /prompt-translate original on|off            the original/translation frame
-/prompt-translate detect on|off              skip prompts already in English
 /prompt-translate ui on|off                  translate AskUserQuestion dialogs
 /prompt-translate note on|off                hidden "work in English" note on every prompt
-/prompt-translate balance [refresh]          OpenRouter credit and the ČNB USD→CZK rate
-/prompt-translate stats | status | reset | global show|off
+/prompt-translate stats                      price, OpenRouter credit, ČNB USD→CZK rate, tokens
+/prompt-translate reset | global show|off
 ```
 
 Settings are saved to `.claude/prompt-translate.json` in the project; add `--global` to save them for every project.

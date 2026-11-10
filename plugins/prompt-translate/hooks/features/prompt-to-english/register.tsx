@@ -46,13 +46,11 @@ export function registerPromptToEnglish(on: On): void {
 
 		// Holds with boost on too: an English prompt or plain code is sent as
 		// written (no rewrite of what the person wrote in English, no paid call).
-		if (config.autodetect) {
-			const detection = detectLanguageOrCode(source);
-			if (detection.isEnglishOrCode) {
-				await debug($, `prompt detected as ${detection.reason}; not translated`);
-				await update($, pendingAtom, () => pending);
-				return next(withNote(e, config.englishNote, englishOnlyNote(pending, false)));
-			}
+		const detection = detectLanguageOrCode(source);
+		if (detection.isEnglishOrCode) {
+			await debug($, `prompt detected as ${detection.reason}; not translated`);
+			await update($, pendingAtom, () => pending);
+			return next(withNote(e, config.englishNote, englishOnlyNote(pending, false)));
 		}
 
 		const conversationContext = await conversationContextFor($, config, source);

@@ -13,8 +13,8 @@ jede s uloženou konfigurací, jen ji nejde měnit zevnitř.
 - `command.run {prompt-translate}` — provede řádek (`runCommand` v `run.ts`), obnoví kredit; modelu vrátí jen první řádek výstupu.
 - `ui.render CommandOutput` — nakreslí celý víceřádkový výstup z `commandOutputs`.
 - `prompt.autocomplete` — doplňuje podpříkazy a hodnoty (`completions`).
-- `run.ts` — přepínače, `lang`, `model … [until]`, `boost`, `history` (+ `inspect`), `balance`, `stats`, `status`, `global`, `reset`; ukládá do `.claude/prompt-translate.json` nebo s `--global` pro všechny projekty.
-- `texts.ts` — text nápovědy, telemetrie a krátké popisky modelů.
+- `run.ts` — přepínače, `lang`, `model`, `boost`, `think`, `history` (+ `inspect`), `stats`, `global`, `reset`; ukládá do `.claude/prompt-translate.json` nebo s `--global` pro všechny projekty.
+- `texts.ts` — text nápovědy (`help`: příkazy a aktuální nastavení), statistik (`stats`: cena, kredit, kurz, tokeny; u modelu Claude jen tokeny) a krátké popisky modelů.
 
 ## Kontrakt
 

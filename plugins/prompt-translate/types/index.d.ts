@@ -4,22 +4,21 @@ export type BoostLevel = "off" | "boost" | "plus" | "mega";
 
 export type HistoryMode = "off" | "ask" | "auto" | "always";
 
+/** Reasoning effort of the translation model; `off` sends none. */
+export type ThinkLevel = "off" | "low" | "medium" | "high";
+
 export type TranslateConfig = {
 	enabled: boolean;
 	translateResponses: boolean;
 	targetLanguage: string;
 	/** `openrouter/<vendor>/<model>`, `current`, or a Claude alias / id (`haiku`). */
 	translateModel: string;
-	/** Temporary override, active through the end of `temporaryModelUntil` (YYYY-MM-DD). */
-	temporaryModel?: string;
-	temporaryModelUntil?: string;
-	translateReasoning: boolean;
+	think: ThinkLevel;
 	boost: BoostLevel;
 	historyMode: HistoryMode;
 	confirm: boolean;
 	/** The frame in place of a translated prompt: original, English and any attached history. */
 	showOriginal: boolean;
-	autodetect: boolean;
 	/** Translate AskUserQuestion dialogs the model opens into the target language. */
 	translateToolUi: boolean;
 	/** Add a hidden "work in English" note to every translated prompt (off: CLAUDE.md says it). */
@@ -40,16 +39,8 @@ export type PendingTranslation = {
 	translateResponses: boolean;
 };
 
+/** Tokens the translation model used this session (shown by /prompt-translate stats). */
 export type Telemetry = {
-	totalRequests: number;
-	promptRequests: number;
-	answerRequests: number;
-	toolRequests: number;
-	openRouterRequests: number;
-	claudeRequests: number;
-	cachedTokens: number;
-	cacheWriteTokens: number;
-	promptAnswerCacheHits: number;
 	inputTokens: number;
 	outputTokens: number;
 };

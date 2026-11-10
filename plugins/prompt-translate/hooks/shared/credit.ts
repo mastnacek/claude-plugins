@@ -4,7 +4,7 @@
 
 import type { EngineInterface } from "claude-code";
 import { atom, read, update } from "claude-code";
-import { effectiveModel, getConfig, modelBackend } from "./config";
+import { getConfig, modelBackend } from "./config";
 import type { BalanceInfo, CreditInfo } from "./types";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
@@ -32,7 +32,7 @@ export async function refreshCredit($: $): Promise<void> {
 	let next: CreditInfo = {};
 	try {
 		const config = await getConfig($);
-		const openRouter = modelBackend(effectiveModel(config).setting) === "openrouter";
+		const openRouter = modelBackend(config.translateModel) === "openrouter";
 		const [rate, balance] = await Promise.all([getUsdToCzkRate($), openRouter ? getOpenRouterBalance($) : undefined]);
 		next = { rate, remainingUsd: balance?.remaining };
 	} catch {

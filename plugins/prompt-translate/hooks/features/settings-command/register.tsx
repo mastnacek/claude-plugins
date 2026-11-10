@@ -1,4 +1,4 @@
-// settings-command — /prompt-translate: every setting, status, stats, balance.
+// settings-command — /prompt-translate: every setting, help and stats.
 //
 //   start                         registers the command
 //   command.run {prompt-translate} runs a line (./run.ts)

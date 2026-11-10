@@ -6,24 +6,24 @@ import { atom, read, update } from "claude-code";
 import { clearBalanceCache, getOpenRouterBalance, getUsdToCzkRate } from "../../shared/credit";
 import {
 	clearGlobalConfig,
-	effectiveModel,
 	getConfig,
 	loadGlobalConfig,
+	modelBackend,
 	parseModelSetting,
-	parseUntilDate,
 	saveConfig,
 	setConfig,
+	THINK_LEVELS,
 } from "../../shared/config";
 import { normalizeLanguage } from "../../shared/languages";
 import { extractRecentContext } from "../../shared/recent-context";
 import { DEFAULT_CONFIG, EMPTY_TELEMETRY } from "../../shared/types";
 import type { BoostLevel, HistoryMode, PendingTranslation, Telemetry, TranslateConfig } from "../../shared/types";
-import { buildHelpText, formatTelemetry, shortModelLabel } from "./texts";
+import { buildHelpText, buildStatsText, shortModelLabel } from "./texts";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const pendingAtom = atom({ plugin: "prompt-translate", key: "pending" } as const, null as PendingTranslation | null);
 const sessionCostAtom = atom({ plugin: "prompt-translate", key: "sessionCostUsd" } as const, 0);
-const telemetryAtom = atom({ plugin: "prompt-translate", key: "telemetry" } as const, EMPTY_TELEMETRY as Telemetry, { shape: "telemetry-2" });
+const telemetryAtom = atom({ plugin: "prompt-translate", key: "telemetry" } as const, EMPTY_TELEMETRY as Telemetry, { shape: "telemetry-3" });
 
 type $ = EngineInterface;
 
@@ -34,9 +34,7 @@ type Toggle = { key: keyof TranslateConfig; label: string; aliases: string[] };
 const TOGGLES: Toggle[] = [
 	{ key: "enabled", label: "překlad promptů", aliases: ["input", "prompt", "prompts"] },
 	{ key: "translateResponses", label: "překlad odpovědí", aliases: ["responses", "response", "reply", "replies", "output"] },
-	{ key: "translateReasoning", label: "reasoning překladového modelu", aliases: ["think", "thinking", "reason", "reasoning"] },
 	{ key: "confirm", label: "potvrzení překladu", aliases: ["confirm"] },
-	{ key: "autodetect", label: "autodetekce angličtiny/kódu", aliases: ["detect", "autodetect"] },
 	{ key: "showOriginal", label: "rámeček originál/překlad", aliases: ["original", "frame", "diff", "showoriginal", "source"] },
 	{ key: "translateToolUi", label: "překlad dialogů AskUserQuestion", aliases: ["ui", "tool-ui", "card"] },
 	{ key: "englishNote", label: "skrytá poznámka „pracuj anglicky“ u každého promptu", aliases: ["note", "english-note"] },
@@ -44,23 +42,20 @@ const TOGGLES: Toggle[] = [
 ];
 
 const SUBCOMMANDS: Record<string, string> = {
-	help: "nápověda",
-	status: "úplný stav",
+	help: "příkazy a aktuální nastavení",
 	on: "zapne překlad promptů",
 	off: "vypne překlad promptů",
 	responses: "překlad odpovědí on|off",
 	lang: "cílový jazyk odpovědí",
-	model: "překladový model [until YYYY-MM-DD]",
+	model: "překladový model",
 	boost: "off|on|plus|mega",
-	think: "reasoning on|off",
+	think: "reasoning off|low|medium|high",
 	confirm: "potvrzení on|off",
 	history: "off|ask|auto|always|inspect",
-	detect: "autodetekce on|off",
 	original: "rámeček originál/překlad on|off",
 	ui: "překlad AskUserQuestion on|off",
 	note: "poznámka „pracuj anglicky“ u promptu on|off",
-	balance: "zůstatek OpenRouter [refresh]",
-	stats: "telemetrie",
+	stats: "cena, kredit, kurz, tokeny",
 	debug: "debug on|off",
 	global: "show|off",
 	reset: "výchozí nastavení",
@@ -70,7 +65,7 @@ const VALUES: Record<string, string[]> = {
 	boost: ["off", "on", "plus", "mega"],
 	history: ["off", "ask", "auto", "always", "inspect"],
 	global: ["show", "off"],
-	balance: ["refresh"],
+	think: [...THINK_LEVELS],
 	lang: ["Czech", "English", "German", "Slovak", "Polish", "Spanish", "French"],
 	model: [
 		"openrouter/google/gemini-3.1-flash-lite",
@@ -120,7 +115,7 @@ export async function runCommand($: $, args: string): Promise<string> {
 		return saveConfig($, next, writeGlobal);
 	};
 
-	if (!sub || sub === "help") return buildHelpText(config, await read($, sessionCostAtom));
+	if (!sub || sub === "help") return buildHelpText(config);
 
 	// `/prompt-translate on|off` is the prompt toggle without its name.
 	const bare = sub === "on" || sub === "enable" ? true : sub === "off" || sub === "disable" ? false : undefined;
@@ -154,29 +149,19 @@ export async function runCommand($: $, args: string): Promise<string> {
 	}
 
 	if (sub === "model") {
-		const untilIndex = rest.findIndex((t) => t.toLowerCase() === "until");
-		const modelTokens = untilIndex >= 0 ? rest.slice(0, untilIndex) : rest;
-		if (modelTokens.length === 0) {
-			const eff = effectiveModel(config);
-			return `překladový model: ${eff.setting}${eff.temporaryUntil ? ` (dočasně do ${config.temporaryModelUntil}, pak ${config.translateModel})` : ""}\nPoužití: /prompt-translate model openrouter/<vendor>/<model>|haiku|sonnet|current|<claude-id> [until YYYY-MM-DD]`;
-		}
-		const setting = parseModelSetting(modelTokens.join(" "));
-		if (!setting) return "Neplatný model. Použití: /prompt-translate model openrouter/<vendor>/<model>|haiku|sonnet|current [until YYYY-MM-DD]";
-		if (untilIndex >= 0) {
-			const untilRaw = rest[untilIndex + 1] ?? "";
-			const until = parseUntilDate(untilRaw);
-			if (!until) return `Neplatné datum "until": ${untilRaw || "(chybí)"}. Formát YYYY-MM-DD.`;
-			if (until.getTime() < Date.now()) return `Datum ${untilRaw} je v minulosti; ponechávám ${config.translateModel}.`;
-			const where = await persist((c) => ({ ...c, temporaryModel: setting, temporaryModelUntil: untilRaw }));
-			return `překladový model ${setting} do ${untilRaw} (včetně), pak zpět na ${config.translateModel} — ${where}`;
-		}
-		const where = await persist((c) => {
-			const next = { ...c, translateModel: setting };
-			delete next.temporaryModel;
-			delete next.temporaryModelUntil;
-			return next;
-		});
+		const usage = "Použití: /prompt-translate model openrouter/<vendor>/<model>|haiku|sonnet|current|<claude-id>";
+		if (rest.length === 0) return `překladový model: ${config.translateModel}\n${usage}`;
+		const setting = parseModelSetting(rest.join(" "));
+		if (!setting) return `Neplatný model. ${usage}`;
+		const where = await persist((c) => ({ ...c, translateModel: setting }));
 		return `překladový model: ${setting} (${shortModelLabel(setting)}) — ${where}`;
+	}
+
+	if (sub === "think") {
+		const level = THINK_LEVELS.find((l) => l === (rest[0] ?? "").toLowerCase());
+		if (!level) return `reasoning: ${config.think}\nPoužití: /prompt-translate think off|low|medium|high`;
+		const where = await persist((c) => ({ ...c, think: level }));
+		return `reasoning: ${level} — ${where}`;
 	}
 
 	if (sub === "history") {
@@ -194,23 +179,13 @@ export async function runCommand($: $, args: string): Promise<string> {
 		return `historie: ${mode} — ${where}`;
 	}
 
-	if (sub === "status") return statusText($, config);
-
-	if (sub === "stats" || sub === "telemetry" || sub === "savings") {
-		return formatTelemetry(await read($, telemetryAtom), config, await read($, sessionCostAtom), await getUsdToCzkRate($));
-	}
-
-	if (sub === "balance") {
-		if (rest[0] === "refresh") clearBalanceCache();
+	if (sub === "stats") {
+		const tokens = await read($, telemetryAtom);
+		// A Claude model is paid by the subscription: no price, credit or rate to show.
+		if (modelBackend(config.translateModel) !== "openrouter") return buildStatsText({ tokens });
+		clearBalanceCache(); // asked for now: show the credit as it is now
 		const [rate, balance] = await Promise.all([getUsdToCzkRate($), getOpenRouterBalance($)]);
-		const lines = [`USD→CZK: ${typeof rate === "number" ? `${rate.toFixed(3)} (ČNB)` : "n/a"}`];
-		if (balance) {
-			const czk = typeof rate === "number" ? ` (≈ ${(balance.remaining * rate).toFixed(2)} Kč)` : "";
-			lines.push(`OpenRouter: $${balance.remaining.toFixed(2)}${czk} / $${balance.total.toFixed(2)} kredit, utraceno $${balance.used.toFixed(2)}`);
-		} else {
-			lines.push("OpenRouter: zůstatek nedostupný (chybí klíč?)");
-		}
-		return lines.join(" | ");
+		return buildStatsText({ tokens, costUsd: await read($, sessionCostAtom), rate, balance: balance ?? null });
 	}
 
 	if (sub === "reset") {
@@ -235,29 +210,4 @@ export async function runCommand($: $, args: string): Promise<string> {
 	}
 
 	return `Neznámý podpříkaz "${sub}". Použij /prompt-translate help`;
-}
-
-async function statusText($: $, config: TranslateConfig): Promise<string> {
-	const eff = effectiveModel(config);
-	const [rate, balance, current] = await Promise.all([getUsdToCzkRate($), getOpenRouterBalance($), $.session.model()]);
-	return [
-		`vstupy=${onOff(config.enabled)}`,
-		`odpovědi=${onOff(config.translateResponses)}`,
-		`cíl=${config.targetLanguage}`,
-		`model=${config.translateModel}`,
-		`dočasný=${config.temporaryModel ? `${config.temporaryModel} do ${config.temporaryModelUntil}` : "žádný"}`,
-		`aktivní=${eff.setting}`,
-		`globální=${Object.keys(await loadGlobalConfig($)).length > 0 ? "ano" : "ne"}`,
-		`modelSezení=${current}`,
-		`thinking=${config.translateReasoning ? "on (low)" : "off"}`,
-		`boost=${config.boost}`,
-		`historie=${config.historyMode}`,
-		`confirm=${onOff(config.confirm)}`,
-		`original=${onOff(config.showOriginal)}`,
-		`detect=${onOff(config.autodetect)}`,
-		`ui=${onOff(config.translateToolUi)}`,
-		`usdCzk=${typeof rate === "number" ? rate.toFixed(3) : "n/a"}`,
-		`openRouter=${balance ? `$${balance.remaining.toFixed(2)} / $${balance.total.toFixed(2)}` : "n/a"}`,
-		`debug=${onOff(config.debug)}`,
-	].join(", ");
 }

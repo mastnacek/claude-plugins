@@ -11,7 +11,7 @@ odznaku.
 
 - `ui.render PromptHint` (`register.tsx`) — připojí `[🇬🇧 49 Kč]`, během překladu `[🇬🇧 ⟳ překládám…]`, na Claude modelu jen `[🇬🇧]`; při vypnutém překladu promptů nic.
 - `badge.ts` — `buildBadge(config, credit, translating)` vrací čistá data; `balanceLevel`: do 1 USD `critical`, do 3 USD `low`, jinak `ok` (barvy error / warning / success).
-- `startIndicator` — zruší starý pevný status line a načte kredit (`refreshCredit`).
+- `startIndicator` — načte kredit (`refreshCredit`).
 
 ## Kontrakt
 
@@ -26,7 +26,7 @@ odznaku.
 |---|---|
 | kurz USD→Kč, zůstatek, klíč OpenRouter | `shared/credit.ts` |
 | příznak „překládám“ | `shared/progress.ts` (`withProgress`) |
-| podrobný zůstatek a kurz | `features/settings-command` (`/prompt-translate balance`) |
+| podrobný zůstatek a kurz | `features/settings-command` (`/prompt-translate stats`) |
 | cena a model jednoho překladu | `features/settings-command` (`stats`) |
 | toast po překladu | nikam — záměrně zrušeno |
 

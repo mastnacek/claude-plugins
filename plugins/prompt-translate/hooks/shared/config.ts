@@ -9,15 +9,17 @@ import { atom, read, update } from "claude-code";
 import { normalizeLanguage } from "./languages";
 
 import { DEFAULT_CONFIG } from "./types";
-import type { BoostLevel, HistoryMode, ModelBackend, TranslateConfig } from "./types";
+import type { BoostLevel, HistoryMode, ModelBackend, ThinkLevel, TranslateConfig } from "./types";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const configAtom = atom({ plugin: "prompt-translate", key: "config" } as const, DEFAULT_CONFIG as TranslateConfig, { shape: "config-2" });
+const configAtom = atom({ plugin: "prompt-translate", key: "config" } as const, DEFAULT_CONFIG as TranslateConfig, { shape: "config-3" });
 
 
 type $ = EngineInterface;
 
 const GLOBAL_KEY = "config";
+
+export const THINK_LEVELS: readonly ThinkLevel[] = ["off", "low", "medium", "high"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -31,6 +33,7 @@ export function normalizeConfig(value: Partial<TranslateConfig> | Record<string,
 		allowed.includes(value as T) ? (value as T) : fallback;
 	const boost = oneOf<BoostLevel>(v.boost, ["off", "boost", "plus", "mega"], DEFAULT_CONFIG.boost);
 	const historyMode = oneOf<HistoryMode>(v.historyMode, ["off", "ask", "auto", "always"], DEFAULT_CONFIG.historyMode);
+	const think = oneOf<ThinkLevel>(v.think, THINK_LEVELS, DEFAULT_CONFIG.think);
 	const translateModel =
 		typeof v.translateModel === "string" && v.translateModel.trim() ? v.translateModel.trim() : DEFAULT_CONFIG.translateModel;
 	const config: TranslateConfig = {
@@ -41,20 +44,15 @@ export function normalizeConfig(value: Partial<TranslateConfig> | Record<string,
 				? normalizeLanguage(v.targetLanguage) || DEFAULT_CONFIG.targetLanguage
 				: DEFAULT_CONFIG.targetLanguage,
 		translateModel,
-		translateReasoning: bool("translateReasoning"),
+		think,
 		boost,
 		historyMode,
 		confirm: bool("confirm"),
 		showOriginal: bool("showOriginal"),
-		autodetect: bool("autodetect"),
 		translateToolUi: bool("translateToolUi"),
 		englishNote: bool("englishNote"),
 		debug: bool("debug"),
 	};
-	if (typeof v.temporaryModel === "string" && typeof v.temporaryModelUntil === "string") {
-		config.temporaryModel = v.temporaryModel;
-		config.temporaryModelUntil = v.temporaryModelUntil;
-	}
 	return config;
 }
 
@@ -125,42 +123,8 @@ export function modelBackend(setting: string): ModelBackend {
 	return setting.startsWith("openrouter/") ? "openrouter" : "claude";
 }
 
-// Parse "until" dates as local end-of-day, so "until 2026-08-26" keeps the
-// temporary model active through that whole day.
-export function parseUntilDate(raw: string): Date | undefined {
-	const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw.trim());
-	if (!m) return undefined;
-	const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 59, 999);
-	return Number.isNaN(d.getTime()) ? undefined : d;
-}
-
-/** The model used right now: a still-valid temporary override, else the base model. */
-export function effectiveModel(config: TranslateConfig): { setting: string; temporaryUntil?: Date; expired: boolean } {
-	if (config.temporaryModel && config.temporaryModelUntil) {
-		const until = parseUntilDate(config.temporaryModelUntil);
-		if (until && Date.now() <= until.getTime()) {
-			return { setting: config.temporaryModel, temporaryUntil: until, expired: false };
-		}
-		return { setting: config.translateModel, expired: true };
-	}
-	return { setting: config.translateModel, expired: false };
-}
-
-/** Session start: the merged configuration into $.state, an expired override dropped. */
+/** Session start: the merged configuration into $.state. */
 export async function initConfig($: $): Promise<void> {
 	const config = await loadConfig($);
 	await update($, configAtom, () => config);
-	await expireTemporaryModel($);
-}
-
-/** Drop an expired temporary override from the session config. */
-export async function expireTemporaryModel($: $): Promise<void> {
-	const config = await getConfig($);
-	if (effectiveModel(config).expired) {
-		await setConfig($, (c) => {
-			delete c.temporaryModel;
-			delete c.temporaryModelUntil;
-			return c;
-		});
-	}
 }

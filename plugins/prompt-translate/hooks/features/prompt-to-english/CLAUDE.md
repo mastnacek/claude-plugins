@@ -11,7 +11,7 @@ Kdyby řez zmizel, plugin prompty přestane překládat, ostatní řezy se neroz
 
 - `prompt.submit` (`register.tsx`) — přeloží prompt (`translate(…, "English", "prompt")`), na přání se zeptá na potvrzení (`confirm`), uloží záznam originálu a předá odpovědi `pending`.
 - Přeskočí slash příkazy, meta zprávy, prompty s obrázkem a vstupy mimo `composer`/`bridge`.
-- Autodetekce (`detect` zapnuto, platí i s boostem): angličtina nebo kód se nepřekládá ani neboostuje, jen se nastaví `pending`.
+- Autodetekce (vždy, i s boostem): angličtina nebo kód se nepřekládá ani neboostuje, jen se nastaví `pending`.
 - `ui.render UserMessage` — rámeček originál (`-`) / angličtina (`+`) se štítky `boost` a `s historií`.
 - `history.ts` — podle `historyMode` (`off`/`ask`/`auto`/`always`) přiloží poslední výměny; `auto` jen při odkazovacích slovech (`hasDeicticReferences`).
 - `english-note.ts` — skrytá poznámka „pracuj anglicky“ do `context` promptu (jen s `note on`).

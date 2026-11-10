@@ -5,6 +5,7 @@
 export type {
 	BoostLevel,
 	HistoryMode,
+	ThinkLevel,
 	TranslateConfig,
 	OriginalRecord,
 	PendingTranslation,
@@ -40,27 +41,17 @@ export const DEFAULT_CONFIG: TranslateConfig = {
 	translateResponses: true,
 	targetLanguage: "Czech",
 	translateModel: "openrouter/google/gemini-3.1-flash-lite",
-	translateReasoning: true,
+	think: "low",
 	boost: "boost",
 	historyMode: "off",
 	confirm: false,
 	showOriginal: true,
-	autodetect: true,
 	translateToolUi: true,
 	englishNote: false,
 	debug: false,
 };
 
 export const EMPTY_TELEMETRY: Telemetry = {
-	totalRequests: 0,
-	promptRequests: 0,
-	answerRequests: 0,
-	toolRequests: 0,
-	openRouterRequests: 0,
-	claudeRequests: 0,
-	cachedTokens: 0,
-	cacheWriteTokens: 0,
-	promptAnswerCacheHits: 0,
 	inputTokens: 0,
 	outputTokens: 0,
 };

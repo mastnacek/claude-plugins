@@ -6,7 +6,7 @@
 
 import type { EngineInterface } from "claude-code";
 import { atom, update } from "claude-code";
-import { effectiveModel, getConfig, modelBackend } from "../config";
+import { getConfig, modelBackend } from "../config";
 import { fmtSmallAmount, getOpenRouterApiKey, getUsdToCzkRate, refreshCredit } from "../credit";
 import { debug, warn } from "../log";
 import {
@@ -24,12 +24,12 @@ import {
 	stripKeepTags,
 } from "./protect";
 
-import type { Purpose, Telemetry, TranslateConfig } from "../types";
+import type { Purpose, Telemetry, ThinkLevel, TranslateConfig } from "../types";
 import { EMPTY_TELEMETRY } from "../types";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const sessionCostAtom = atom({ plugin: "prompt-translate", key: "sessionCostUsd" } as const, 0);
-const telemetryAtom = atom({ plugin: "prompt-translate", key: "telemetry" } as const, EMPTY_TELEMETRY as Telemetry, { shape: "telemetry-2" });
+const telemetryAtom = atom({ plugin: "prompt-translate", key: "telemetry" } as const, EMPTY_TELEMETRY as Telemetry, { shape: "telemetry-3" });
 
 type $ = EngineInterface;
 
@@ -146,7 +146,7 @@ async function callOpenRouter(
 	system: string,
 	user: string,
 	maxTokens: number,
-	reasoning: boolean,
+	think: ThinkLevel,
 ): Promise<CallResult> {
 	const apiKey = await getOpenRouterApiKey($);
 	if (!apiKey) return { ok: false, error: "no OpenRouter key (set OPENROUTER_API_KEY or log in to openrouter in pi)" };
@@ -160,7 +160,7 @@ async function callOpenRouter(
 		max_tokens: maxTokens,
 		usage: { include: true },
 	};
-	if (reasoning) body.reasoning = { effort: "low", exclude: true };
+	if (think !== "off") body.reasoning = { effort: think, exclude: true };
 	const headers: Record<string, string> = {
 		Authorization: `Bearer ${apiKey}`,
 		"Content-Type": "application/json",
@@ -222,7 +222,7 @@ async function callClaude(
 	system: string,
 	user: string,
 	maxTokens: number,
-	reasoning: boolean,
+	think: ThinkLevel,
 ): Promise<CallResult> {
 	const model = setting === "current" ? await $.session.model() : setting.replace(/^anthropic\//, "");
 	const result = await $.model.complete({
@@ -230,7 +230,7 @@ async function callClaude(
 		system,
 		prompt: user,
 		maxTokens,
-		...(reasoning ? { effort: "low" as const } : {}),
+		...(think !== "off" ? { effort: think } : {}),
 	});
 	const usage: TranslationUsage = {
 		input: result.usage.input_tokens,
@@ -252,11 +252,11 @@ function callModel(
 	system: string,
 	user: string,
 	maxTokens: number,
-	reasoning: boolean,
+	think: ThinkLevel,
 ): Promise<CallResult> {
 	return modelBackend(setting) === "openrouter"
-		? callOpenRouter($, setting, system, user, maxTokens, reasoning)
-		: callClaude($, setting, system, user, maxTokens, reasoning);
+		? callOpenRouter($, setting, system, user, maxTokens, think)
+		: callClaude($, setting, system, user, maxTokens, think);
 }
 
 /** One model, with the retries pi's version made: transient, reasoning on/off, truncation. */
@@ -266,10 +266,10 @@ async function callWithRetries(
 	system: string,
 	user: string,
 	payloadText: string,
-	reasoningWanted: boolean,
+	wanted: ThinkLevel,
 ): Promise<CallResult> {
-	let reasoning = reasoningWanted;
-	const run = () => callModel($, setting, system, user, estimateMaxTokens(payloadText, reasoning), reasoning);
+	let think = wanted;
+	const run = () => callModel($, setting, system, user, estimateMaxTokens(payloadText, think !== "off"), think);
 	let response = await run();
 
 	if (!response.ok && isTransient(response.error, response.status)) {
@@ -279,21 +279,21 @@ async function callWithRetries(
 	}
 	if (!response.ok) {
 		const mandatory = /reasoning is mandatory|mandatory.*reasoning|reasoning.*cannot be disabled/i.test(response.error);
-		if (mandatory && !reasoning) {
-			await debug($, "reasoning mandatory; retrying with thinking on");
-			reasoning = true;
+		if (mandatory && think === "off") {
+			await debug($, "reasoning mandatory; retrying with thinking low");
+			think = "low";
 			response = await run();
-		} else if (reasoning && /thinking|effort|max_?tokens|unsupported|invalid|bad request|400/i.test(response.error)) {
-			await debug($, `error with thinking on (${response.error}); retrying without thinking`);
-			reasoning = false;
+		} else if (think !== "off" && /thinking|effort|max_?tokens|unsupported|invalid|bad request|400/i.test(response.error)) {
+			await debug($, `error with thinking ${think} (${response.error}); retrying without thinking`);
+			think = "off";
 			response = await run();
 		}
 	}
 	// Reasoning shares the output budget; a truncated reply with thinking on gets
 	// one more try with the whole budget for the translation.
-	if (response.ok && response.truncated && reasoning) {
-		await debug($, "translation truncated with thinking on; retrying without thinking");
-		reasoning = false;
+	if (response.ok && response.truncated && think !== "off") {
+		await debug($, `translation truncated with thinking ${think}; retrying without thinking`);
+		think = "off";
 		response = await run();
 	}
 	return response;
@@ -311,9 +311,9 @@ export async function translate(
 	conversationContext?: string,
 ): Promise<TranslationResult> {
 	const config = await getConfig($);
-	const eff = effectiveModel(config).setting;
+	const model = config.translateModel;
 	const rate = await getUsdToCzkRate($);
-	await debug($, `${purpose} translation with ${eff}`);
+	await debug($, `${purpose} translation with ${model} (think ${config.think})`);
 
 	const protectedInput = purpose === "prompt" ? protectPromptSegments(text) : protectFinalAnswerSegments(text);
 
@@ -327,14 +327,7 @@ export async function translate(
 	const system = systemPromptFor(purpose, config, targetLanguage, tag);
 	const user = purpose === "tool" ? protectedInput.text : buildUserContent(protectedInput.text, tag, conversationContext);
 
-	let model = eff;
-	let response = await callWithRetries($, model, system, user, protectedInput.text, config.translateReasoning);
-	// A broken temporary override falls back to the base model.
-	if (!response.ok && model !== config.translateModel) {
-		warn($, `${model}: ${response.error} — zkouším ${config.translateModel}`);
-		model = config.translateModel;
-		response = await callWithRetries($, model, system, user, protectedInput.text, config.translateReasoning);
-	}
+	const response = await callWithRetries($, model, system, user, protectedInput.text, config.think);
 	if (!response.ok) return degrade(`${purpose} translation failed: ${response.error}`);
 	if (response.truncated) return degrade(`${purpose} translation truncated at maxTokens`);
 
@@ -347,25 +340,11 @@ export async function translate(
 	const costUsd = response.usage.costUsd;
 	if (typeof costUsd === "number") await update($, sessionCostAtom, (c) => c + costUsd);
 
-	const backend = modelBackend(model);
 	const usage = response.usage;
-	await update($, telemetryAtom, (t) => {
-		const next = { ...t };
-		next.totalRequests++;
-		if (purpose === "prompt") next.promptRequests++;
-		else if (purpose === "answer") next.answerRequests++;
-		else next.toolRequests++;
-		if (backend === "openrouter") next.openRouterRequests++;
-		else next.claudeRequests++;
-		next.inputTokens += usage.input;
-		next.outputTokens += usage.output;
-		if (usage.cacheRead > 0) {
-			next.cachedTokens += usage.cacheRead;
-			if (purpose !== "tool") next.promptAnswerCacheHits++;
-		}
-		next.cacheWriteTokens += usage.cacheWrite;
-		return next;
-	});
+	await update($, telemetryAtom, (t) => ({
+		inputTokens: t.inputTokens + usage.input,
+		outputTokens: t.outputTokens + usage.output,
+	}));
 
 	void refreshCredit($); // the call was paid for: the credit shown is stale
 	return { text: restored };
