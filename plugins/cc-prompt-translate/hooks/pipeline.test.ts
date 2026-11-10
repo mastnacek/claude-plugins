@@ -11,6 +11,10 @@ const CZ_ANSWER = "Opravil jsem chybu přihlášení v src/app.ts.";
 
 import type { On } from "claude-code";
 
+// The module has no Node/DOM typings and the engine's mock clock does not drive
+// the real background awaits polled below, so declare the one global used.
+declare function setTimeout(handler: (value: unknown) => void, ms: number): unknown;
+
 /** What the engine does beneath the plugins, for the events these tests raise. */
 function engineBottom(on: On) {
 	on("prompt.submit", (_$, e) => ({ text: e.text, context: e.context }));

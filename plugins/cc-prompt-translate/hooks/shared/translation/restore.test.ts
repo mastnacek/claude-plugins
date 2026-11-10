@@ -7,11 +7,15 @@
  * stays there.
  */
 import { describe, expect, test as it } from "claude-code/testing";
+import type { ProtectedSegment } from "../types";
 import { restoreProtectedSegments } from "./protect";
+
+// Fixed-length tuple: indexing it 0..2 is typed as a segment, not `| undefined`.
+type Three = [ProtectedSegment, ProtectedSegment, ProtectedSegment];
 
 describe("restoreProtectedSegments", () => {
 	it("handles exact, fuzzy, and dropped placeholder restorations safely", () => {
-		const segments = [
+		const segments: Three = [
 			{
 				placeholder: "__PI_PROMPT_TRANSLATE_PROTECTED_0__",
 				value: "https://foo.com",
@@ -189,7 +193,7 @@ describe("restoreProtectedSegments", () => {
 		// The count feeds the degrade guard in core.ts: a truncated translation
 		// (stopReason "length") reaches restore with most placeholders unreached
 		// and every one of them lands in the recovery branch.
-		const segments = [
+		const segments: Three = [
 			{ placeholder: "__PI_PROMPT_TRANSLATE_PROTECTED_0__", value: "src/a.ts" },
 			{ placeholder: "__PI_PROMPT_TRANSLATE_PROTECTED_1__", value: "https://foo.com" },
 			{ placeholder: "__PI_PROMPT_TRANSLATE_PROTECTED_2__", value: "src/b.ts" },

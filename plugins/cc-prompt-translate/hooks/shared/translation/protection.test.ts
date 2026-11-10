@@ -276,7 +276,7 @@ describe("protectPromptSegments & restoreProtectedSegments", () => {
 
 	it("wraps translation context input in <source_text> XML tags", () => {
 		const ctx = createTranslationContext("system prompt", "user prompt");
-		expect(ctx.messages[0].content).toBe(
+		expect(ctx.messages[0]?.content).toBe(
 			"<source_text>\nuser prompt\n</source_text>",
 		);
 	});
@@ -289,7 +289,7 @@ describe("protectPromptSegments & restoreProtectedSegments", () => {
 			undefined,
 			tag,
 		);
-		const content = ctx.messages[0].content as string;
+		const content = ctx.messages[0]?.content as string;
 		// The random tag wraps the payload; the only literal closing tag in it is
 		// escaped, so nothing can end the block early.
 		expect(content.startsWith(`<${tag}>\n`)).toBe(true);

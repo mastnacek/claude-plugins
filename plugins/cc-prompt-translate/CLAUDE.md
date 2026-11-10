@@ -19,7 +19,7 @@ a přesnější než tenhle soubor.
 claude plugin validate .        # validátor enginu: atomy, on/$, registrace
 claude plugin test .            # všechny *.test.ts (i ve složkách řezů)
 scripts/vsa-check.sh            # hranice řezů (viz níž)
-npx -y -p typescript tsc -p . --noEmit   # typy; chyby v *.test.ts jsou starší dluh
+npx -y -p typescript tsc -p . --noEmit   # typy
 ```
 
 **Brána před commitem: všechny čtyři.** Typy hooků musí být čisté, testy zelené,
