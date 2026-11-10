@@ -1,8 +1,8 @@
 // config.ts — normalisation, persistence and model-setting parsing.
 //
 // Precedence: DEFAULT_CONFIG < global ($.store "config") < project
-// (<cwd>/.claude/prompt-translate.json). The global config is migrated once from
-// pi's ~/.pi/agent/pi-prompt-translate.json when the store holds none yet.
+// (<cwd>/.claude/prompt-translate.json). Nothing is inherited from the pi
+// version: a fresh install starts from DEFAULT_CONFIG.
 
 import type { EngineInterface } from "claude-code";
 import { atom, read, update } from "claude-code";
@@ -18,7 +18,6 @@ const configAtom = atom({ plugin: "prompt-translate", key: "config" } as const, 
 type $ = EngineInterface;
 
 const GLOBAL_KEY = "config";
-const MIGRATED_KEY = "migrated-from-pi";
 
 export { normalizeLanguage };
 
@@ -76,10 +75,6 @@ export function normalizeConfig(value: Partial<TranslateConfig> | Record<string,
 	return config;
 }
 
-async function home($: $): Promise<string | undefined> {
-	return (await $.env.get("HOME")) ?? undefined;
-}
-
 async function readJson($: $, path: string): Promise<Record<string, unknown> | undefined> {
 	try {
 		if (!(await $.fs.exists(path))) return undefined;
@@ -94,21 +89,10 @@ export async function projectConfigPath($: $): Promise<string> {
 	return `${await $.session.cwd()}/.claude/prompt-translate.json`;
 }
 
-/** The global config, migrated from pi on the first run. */
+/** The global config: what `/prompt-translate … --global` stored, else nothing. */
 export async function loadGlobalConfig($: $): Promise<Record<string, unknown>> {
 	const stored = await $.store.get(GLOBAL_KEY);
-	if (isRecord(stored)) return stored;
-	if (!(await $.store.get(MIGRATED_KEY))) {
-		await $.store.set(MIGRATED_KEY, true);
-		const h = await home($);
-		const fromPi = h ? await readJson($, `${h}/.pi/agent/pi-prompt-translate.json`) : undefined;
-		if (fromPi) {
-			const migrated = normalizeConfig(fromPi);
-			await $.store.set(GLOBAL_KEY, migrated);
-			return migrated as unknown as Record<string, unknown>;
-		}
-	}
-	return {};
+	return isRecord(stored) ? stored : {};
 }
 
 export async function hasGlobalConfig($: $): Promise<boolean> {
