@@ -7,12 +7,18 @@ ty uživatel nevidí a nemají vlastní terminál.
 
 | role | panel | spuštění | dělá |
 |---|---|---|---|
-| **orchestrátor** | tvůj | — | rozpad práce na zadání, kontrola výsledku proti zadání a bráně, commit, push, komunikace s uživatelem |
-| **programátor** | vlastní, vpravo | `claude --model sonnet` | píše kód podle zadání; necommituje, nepushuje |
-| **tester** | vlastní, dole | `claude --model haiku` | ověřuje funkce pluginu naživo podle scénářů; kód nemění |
+| **orchestrátor** | tvůj | — | rozpad práce na zadání, kontrola výsledku proti zadání a bráně, **jediný commit a push**, komunikace s uživatelem |
+| **programátor** | vpravo nahoře | `scripts/agent.sh coder` (Sonnet) | píše kód podle zadání; zprávu commitu jen navrhne |
+| **tester** | vpravo dole | `scripts/agent.sh tester --plugin-dir <plugin>` (Haiku) | ověřuje funkce pluginu naživo podle scénářů; kód nemění |
 
-`sonnet` a `haiku` jsou aliasy na nejnovější model rodiny. Existující panel
-s agentem dané role použij znovu; nový otevři jen, když chybí.
+`scripts/agent.sh` spustí `claude` s aliasem modelu (`sonnet`, `haiku` = nejnovější
+model rodiny) a s rolí v `CC_ROLE`. **Commit a push dělá jen orchestrátor**:
+projektový hook `.claude/hooks/orchestrator-only-git.sh` (v `.claude/settings.json`)
+agentovi s rolí `git commit` i `git push` zamítne. Agenty proto spouštěj vždy
+přes `scripts/agent.sh`, nikdy holým `claude`. Hook platí jen v sezeních
+s kořenem v tomto repozitáři — tester ve scratchpadu repozitář neměnit.
+
+Existující panel s agentem dané role použij znovu; nový otevři jen, když chybí.
 
 ## Eskalace na Fable — rozhoduje uživatel
 
@@ -49,7 +55,7 @@ herdr pane split --pane <programátor> --direction down --cwd <test-složka>  # 
 herdr pane rename <moje> "orchestrátor (Opus)"
 herdr pane rename <programátor> "programátor (Sonnet)"
 herdr pane rename <tester> "tester (Haiku)"
-herdr pane send-text <pane> "claude --model sonnet"; herdr pane send-keys <pane> Enter
+herdr pane send-text <pane> "scripts/agent.sh coder"; herdr pane send-keys <pane> Enter
 herdr pane wait-output <pane> --match "shortcuts" --timeout 40000  # agent je připravený
 herdr pane close <pane>                              # po /exit
 ```
@@ -62,7 +68,7 @@ herdr pane close <pane>                              # po /exit
 
 - **Programátor** běží ve složce, kterou mění (repozitář pluginu nebo jádra).
 - **Tester** běží ve vlastní testovací složce ve scratchpadu s pluginem
-  načteným z vývojové kopie: `claude --model haiku --plugin-dir <cesta k pluginu>`.
+  načteným z vývojové kopie: `<repo>/scripts/agent.sh tester --plugin-dir <cesta k pluginu>`.
   Je-li stejný plugin nainstalovaný z marketplace, nejdřív
   `claude plugin disable <plugin>@mastnacek`, jinak běží dvakrát.
 - Nová složka vyvolá dialog důvěry: `send-keys Down`, pak `Enter`. V úzkém
@@ -98,7 +104,8 @@ Každé zadání obsahuje:
 2. **rozsah**: které soubory nebo řez, a co je mimo;
 3. **kritérium hotovo**: konkrétní a ověřitelné, včetně brány
    (validate, test, vsa-check, tsc) se zeleným výstupem;
-4. **zákaz commitu a pushe** — to dělá orchestrátor po kontrole.
+4. **návrh zprávy commitu** v závěrečné zprávě; commit a push udělá
+   orchestrátor po kontrole (hook to agentovi jinak ani nedovolí).
 
 Výsledek ověř sám: diff (`git diff`), brána, shoda se zadáním. Vadný
 výsledek vrať s konkrétní výtkou, neopravuj ho potichu.

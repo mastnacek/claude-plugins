@@ -42,6 +42,13 @@ pi rozšíření podle `docs/port-z-pi.md`.
 - **Commit, větve, vydání nové verze** → `docs/git-a-vydani.md`
 - **Psaní `CLAUDE.md` řezu nebo skillu** → skill `mattpocock-skills:writing-for-agents`
 
+## Commit dělá jen orchestrátor
+
+Sezení, se kterým mluví uživatel, je jediné, kdo commituje a pushuje.
+Agenti (programátor, tester) změny nechávají v pracovním stromu a zprávu
+commitu jen navrhují; projektový hook jim `git commit`/`git push` zamítne
+(`.claude/hooks/orchestrator-only-git.sh`, role z `scripts/agent.sh`).
+
 ## Brána
 
 Před každým commitem ze složky pluginu, všechny čtyři zelené:
