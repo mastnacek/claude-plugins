@@ -9,6 +9,11 @@
       "name": "cc-prompt-translate",
       "source": "./plugins/cc-prompt-translate",
       "description": "Překládá prompty do angličtiny a finální odpovědi zpět do češtiny"
+    },
+    {
+      "name": "cc-uma",
+      "source": "./plugins/cc-uma",
+      "description": "UMA (Universal Memory Architecture) pro Claude Code — paměť sdílená s pi"
     }
   ]
 }
