@@ -12,6 +12,7 @@ Kdyby řez zmizel, plugin prompty přestane překládat, ostatní řezy se neroz
 - `prompt.submit` (`register.tsx`) — přeloží prompt (`translate(…, "English", "prompt")`), na přání se zeptá na potvrzení (`confirm`), uloží záznam originálu a předá odpovědi `pending`.
 - Přeskočí slash příkazy, meta zprávy, prompty s obrázkem a vstupy mimo `composer`/`bridge`.
 - Autodetekce (vždy, i s boostem): angličtina nebo kód se nepřekládá ani neboostuje, jen se nastaví `pending`.
+- Prompt začínající `/` přeskočí (řez `command-arguments` tam sám nastaví `pending`).
 - `ui.render UserMessage` — rámeček originál (`-`) / angličtina (`+`) se štítky `boost` a `s historií`.
 - `history.ts` — podle `historyMode` (`off`/`ask`/`auto`/`always`) přiloží poslední výměny; `auto` jen při odkazovacích slovech (`hasDeicticReferences`).
 - `english-note.ts` — skrytá poznámka „pracuj anglicky“ do `context` promptu (jen s `note on`).
@@ -36,7 +37,7 @@ Kdyby řez zmizel, plugin prompty přestane překládat, ostatní řezy se neroz
 
 ## Pasti
 
-- Atomy `pending` a `originals` jsou deklarované i v `answer-to-target` (a `pending` v `settings-command/run.ts`): klíč, výchozí hodnota a `shape` se musí ve všech souborech shodovat.
+- Atomy `pending` a `originals` jsou deklarované i v `answer-to-target` (a `pending` v `command-arguments` a `settings-command/run.ts`): klíč, výchozí hodnota a `shape` se musí ve všech souborech shodovat.
 - Záznam originálu se hledá podle `textKey(english)`: dva prompty se stejnou angličtinou si záznam přepíšou.
 - Prompt, který autodetekce nechala být, záznam v `originals` nemá, takže `answer-to-target` jeho odpověď po reloadu nedopřeloží.
 - Překlad s `degraded` jde dál jako původní text a `pending` se nenastaví — odpověď se pak nepřekládá.

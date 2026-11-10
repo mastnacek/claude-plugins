@@ -36,7 +36,7 @@ anglicky, nic jiného se nerozbije.
 ## Pasti
 
 - `startAnswerToTarget` musí běžet po `startPromptToEnglish`: `recoverMissedAnswer` čte `originals`, které obnovuje ten druhý. Pořadí drží `hooks/register.tsx`.
-- `pending` je jeden slot: nastavuje ho prompt-řez, tady se čte a maže, a `/prompt-translate` ho při vypnutí ruší (`settings-command`).
+- `pending` je jeden slot: nastavují ho dva řezy — `prompt-to-english` (běžný prompt) a `command-arguments` (skill/slash příkaz, který `prompt-to-english` přeskočí) — tady se čte a maže, a `/prompt-translate` ho při vypnutí ruší (`settings-command`).
 - Atomy `pending`, `finals` a `originals` se deklarují v každém souboru, který je čte; klíč, výchozí hodnota a `shape` se musí shodovat.
 - Překlad je asynchronní: odpověď se chvíli ukazuje anglicky, než `$.ui.invalidate("ui.render")` překreslí.
 - Překlad se páruje s odpovědí přes `textKey(answer)`; změněný text zprávy se s překladem nespáruje.

@@ -14,13 +14,14 @@ nepřeložené, nic jiného se nerozbije.
 - Jen vstup z `composer`/`bridge`.
 - Přeskočí prázdné argumenty, angličtinu a kód (`detectLanguageOrCode`) a vlastní příkaz `prompt-translate`.
 - Při `degraded` argumenty zůstanou původní.
+- Nastaví `pending` (`pending.ts`, čistá `pendingFor`) pro příkazy ze zdroje `plugin`/`user` z `composer`/`bridge`, při zapnutém pluginu, mimo `prompt-translate` — **i s prázdnými argumenty**; `prompt-to-english` totiž prompt začínající `/` přeskočí, takže bez toho by se odpověď na skill nepřeložila. Vestavěné příkazy `pending` nenastavují.
 
 ## Kontrakt
 
-- **`$.state`:** řez nemá žádný vlastní atom.
-- **Čte:** `config` (přes `getConfig`).
+- **`$.state`:** píše `pending` (atom deklarovaný v `register.ts`, stejný klíč/výchozí hodnota jako jinde); jiný vlastní atom nemá.
+- **Čte:** `config` (přes `getConfig`). **Píše:** `pending`.
 - **Nepřímo přes `withProgress`/`translate()`:** `translating`, `sessionCostUsd`, `telemetry`, `credit`.
-- **Shared:** `config`, `progress`, `translation/translate`, `translation/detect`.
+- **Shared:** `types`, `config`, `progress`, `translation/translate`, `translation/detect`.
 
 ## Nepatří sem
 
@@ -33,5 +34,5 @@ nepřeložené, nic jiného se nerozbije.
 
 ## Pasti
 
-- `OWN_COMMAND = "prompt-translate"` je tu opsaný, řez nesmí importovat `COMMAND` ze `settings-command`. Přejmenování příkazu se musí udělat na obou místech.
+- `OWN_COMMAND = "prompt-translate"` (v `pending.ts`) je tu opsaný, řez nesmí importovat `COMMAND` ze `settings-command`. Přejmenování příkazu se musí udělat na obou místech.
 - Engine pustí `command.run` bez matcheru jen jednou na plugin. Tenhle hook je jediný takový; `settings-command` používá matcher `{ command }`.
