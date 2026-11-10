@@ -4,8 +4,8 @@
  * path out — the two exits are a restored translation, or clean input.
  */
 import { describe, expect, test as it } from "claude-code/testing";
-import { protectPromptSegments, restoreProtectedSegments } from "../hooks/lib/protect";
-import type { TranslationResult } from "../hooks/lib/translate";
+import { protectPromptSegments, restoreProtectedSegments } from "./protect";
+import type { TranslationResult } from "./translate";
 
 const original = [
   "Uprav prosím D:/repo/src/plugin.ts aby šlo do buildu.",

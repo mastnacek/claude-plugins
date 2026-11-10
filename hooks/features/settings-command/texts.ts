@@ -1,37 +1,9 @@
-// format.ts — pure presentation helpers: money, usage, model labels, help text,
-// the status line. Plain text: the status line and log rows draw no ANSI colour.
+// texts.ts — the texts /prompt-translate prints: help, stats, model labels.
+// Plain text, no colour: the CommandOutput row draws it line by line.
 
-import { effectiveModel } from "./config";
-import type { Badge, BalanceInfo, Telemetry, TranslateConfig, TranslationUsage } from "./types";
-
-// Show real amounts even when tiny: 0.000022 USD, 0.000468 Kč — never collapse to 0.000.
-export function fmtSmallAmount(n: number): string {
-	if (!Number.isFinite(n)) return "n/a";
-	if (n === 0) return "0";
-	const abs = Math.abs(n);
-	const decimals = abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
-	return n.toFixed(decimals);
-}
-
-export function formatCost(costUsd?: number, costCzk?: number): string {
-	if (typeof costCzk === "number") return `(${fmtSmallAmount(costCzk)} Kč)`;
-	if (typeof costUsd === "number") return `($${fmtSmallAmount(costUsd)})`;
-	return "";
-}
-
-export function formatUsage(usage: TranslationUsage, rate?: number): string {
-	const cost = usage.costUsd;
-	let costText = "";
-	if (typeof cost === "number") {
-		costText =
-			typeof rate === "number" && rate > 0 ? `, cost=${fmtSmallAmount(cost * rate)} Kč` : `, cost=$${cost.toFixed(6)}`;
-	}
-	return `input=${usage.input}, output=${usage.output}, cacheRead=${usage.cacheRead}, cacheWrite=${usage.cacheWrite}, total=${usage.totalTokens}${costText}`;
-}
-
-export function formatTokens(usage?: TranslationUsage): string {
-	return usage ? `${usage.totalTokens} tok (in: ${usage.input}, out: ${usage.output})` : "";
-}
+import { effectiveModel } from "../../shared/config";
+import { fmtSmallAmount } from "../../shared/credit";
+import type { Telemetry, TranslateConfig } from "../../shared/types";
 
 const PROVIDER_SHORT_CODES: Record<string, string> = {
 	openrouter: "OR",
@@ -50,34 +22,6 @@ export function shortModelLabel(setting: string, currentModel?: string): string 
 	const provider = setting.slice(0, firstSlash).toLowerCase();
 	const code = PROVIDER_SHORT_CODES[provider] ?? provider.slice(0, 3).toUpperCase();
 	return `${code}:${setting.slice(setting.lastIndexOf("/") + 1)}`;
-}
-
-/** The status line: target & boost │ model & thinking │ session cost / balance. */
-export function statusLine(options: {
-	config: TranslateConfig;
-	sessionCostUsd: number;
-	rate?: number;
-	balance?: BalanceInfo;
-	translating: boolean;
-	currentModel?: string;
-}): Badge | null {
-	// Deliberately minimal: on/off, and the OpenRouter credit left. The rest is in
-	// /prompt-translate status.
-	const { config, rate, balance, translating } = options;
-	if (!config.enabled) return null;
-	if (!balance) return { flag: "🇬🇧", credit: "", level: "ok", translating };
-	const credit =
-		typeof rate === "number" && rate > 0
-			? `${(balance.remaining * rate).toFixed(0)} Kč`
-			: `$${balance.remaining.toFixed(2)}`;
-	return { flag: "🇬🇧", credit, level: balanceLevel(balance.remaining), translating };
-}
-
-// pi's thresholds (USD): above $3 healthy, $1–3 time to refill, below $1 critical.
-export function balanceLevel(remainingUsd: number): Badge["level"] {
-	if (remainingUsd <= 1) return "critical";
-	if (remainingUsd <= 3) return "low";
-	return "ok";
 }
 
 const choice = (choices: string[], active: string | boolean): string => {

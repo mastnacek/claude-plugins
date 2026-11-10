@@ -71,9 +71,8 @@ export type Telemetry = {
 
 export type BalanceInfo = { remaining: number; total: number; used: number };
 
-/** The indicator at the end of the hint line: the flag, and the credit coloured by level. */
-/** The indicator at the end of the prompt hint: `[🇬🇧 49 Kč]`, or `[🇬🇧 ⟳ překládám…]` while a translation runs. */
-export type Badge = { flag: string; credit: string; level: "ok" | "low" | "critical"; translating?: boolean };
+/** What the indicator shows of the money: the day's rate and, on an OpenRouter model, the credit left. */
+export type CreditInfo = { rate?: number; remainingUsd?: number };
 
 declare module "claude-code" {
 	interface PluginState {
@@ -86,8 +85,8 @@ declare module "claude-code" {
 			originals: Shaped<Record<string, OriginalRecord>>;
 			sessionCostUsd: number;
 			telemetry: Shaped<Telemetry>;
-			/** The indicator drawn at the end of the hint line under the prompt. */
-			badge: Badge | null;
+			/** The rate and credit left, refreshed by shared/credit, drawn by the indicator slice. */
+			credit: CreditInfo;
 			/** True while a prompt, answer or command-argument translation runs (drawn in the indicator). */
 			translating: boolean;
 			/** A /prompt-translate output's first line (what the model reads) → the whole output, drawn in its row. */

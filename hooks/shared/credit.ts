@@ -1,8 +1,14 @@
-// balance.ts — USD→CZK rate (ČNB, ECB fallback), the OpenRouter key and balance.
+// credit.ts — USD→CZK rate (ČNB, ECB fallback), the OpenRouter key and balance,
+// and the `credit` value in $.state that the indicator slice draws.
 // Module-level caches start over on a reload; the day's rate is also kept in $.store.
 
 import type { EngineInterface } from "claude-code";
-import type { BalanceInfo } from "./types";
+import { atom, read, update } from "claude-code";
+import { effectiveModel, getConfig, modelBackend } from "./config";
+import type { BalanceInfo, CreditInfo } from "./types";
+
+// Atoms are declared in every file that reads them (the validator's scan reads literals).
+const creditAtom = atom({ plugin: "prompt-translate", key: "credit" } as const, {} as CreditInfo);
 
 type $ = EngineInterface;
 
@@ -18,12 +24,32 @@ export function clearBalanceCache(): void {
 	balanceCache = undefined;
 }
 
-export function cachedBalance(): BalanceInfo | undefined {
-	return balanceCache?.info;
+/**
+ * Re-reads the rate and, on an OpenRouter model, the balance (both cached), and
+ * stores what the indicator shows. A Claude model has no credit to show.
+ */
+export async function refreshCredit($: $): Promise<void> {
+	let next: CreditInfo = {};
+	try {
+		const config = await getConfig($);
+		const openRouter = modelBackend(effectiveModel(config).setting) === "openrouter";
+		const [rate, balance] = await Promise.all([getUsdToCzkRate($), openRouter ? getOpenRouterBalance($) : undefined]);
+		next = { rate, remainingUsd: balance?.remaining };
+	} catch {
+		/* best-effort: keep what is shown */
+		return;
+	}
+	const current = await read($, creditAtom);
+	if (current.rate !== next.rate || current.remainingUsd !== next.remainingUsd) await update($, creditAtom, () => next);
 }
 
-export function cachedUsdToCzkRate(): number | undefined {
-	return fxCache?.rate;
+// Show real amounts even when tiny: 0.000022 USD, 0.000468 Kč — never collapse to 0.000.
+export function fmtSmallAmount(n: number): string {
+	if (!Number.isFinite(n)) return "n/a";
+	if (n === 0) return "0";
+	const abs = Math.abs(n);
+	const decimals = abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
+	return n.toFixed(decimals);
 }
 
 function today(): string {

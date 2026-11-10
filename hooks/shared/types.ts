@@ -11,7 +11,7 @@ export type {
 	PendingTranslation,
 	Telemetry,
 	BalanceInfo,
-	Badge,
+	CreditInfo,
 } from "../../types";
 
 import type { TranslateConfig, Telemetry } from "../../types";

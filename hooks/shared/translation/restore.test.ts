@@ -7,7 +7,7 @@
  * stays there.
  */
 import { describe, expect, test as it } from "claude-code/testing";
-import { restoreProtectedSegments } from "../hooks/lib/protect";
+import { restoreProtectedSegments } from "./protect";
 
 describe("restoreProtectedSegments", () => {
 	it("handles exact, fuzzy, and dropped placeholder restorations safely", () => {

@@ -1,8 +1,9 @@
-// commands.ts — /prompt-translate and its argument completions.
+// run.ts — /prompt-translate: one line in, the text to show out; and the
+// completions for its arguments.
 
 import type { EngineInterface, PromptAutocompleteSuggestion } from "claude-code";
 import { atom, read, update } from "claude-code";
-import { clearBalanceCache, getOpenRouterBalance, getUsdToCzkRate } from "./balance";
+import { clearBalanceCache, getOpenRouterBalance, getUsdToCzkRate } from "../../shared/credit";
 import {
 	clearGlobalConfig,
 	effectiveModel,
@@ -13,14 +14,11 @@ import {
 	parseUntilDate,
 	saveConfig,
 	setConfig,
-} from "./config";
-import { buildHelpText, formatTelemetry, shortModelLabel } from "./format";
-
-import { extractRecentContext } from "./translate";
-import { DEFAULT_CONFIG } from "./types";
-import type { BoostLevel, HistoryMode, TranslateConfig } from "./types";
-import { EMPTY_TELEMETRY } from "./types";
-import type { PendingTranslation, Telemetry } from "./types";
+} from "../../shared/config";
+import { extractRecentContext } from "../../shared/recent-context";
+import { DEFAULT_CONFIG, EMPTY_TELEMETRY } from "../../shared/types";
+import type { BoostLevel, HistoryMode, PendingTranslation, Telemetry, TranslateConfig } from "../../shared/types";
+import { buildHelpText, formatTelemetry, shortModelLabel } from "./texts";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const pendingAtom = atom({ plugin: "prompt-translate", key: "pending" } as const, null as PendingTranslation | null);

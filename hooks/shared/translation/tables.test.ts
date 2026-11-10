@@ -9,7 +9,7 @@ import {
   protectFinalAnswerSegments,
   protectPromptSegments,
   restoreProtectedSegments,
-} from "../hooks/lib/protect";
+} from "./protect";
 
 describe("markdown table protection", () => {
 	it("protects a markdown table as one segment, before inline code", () => {

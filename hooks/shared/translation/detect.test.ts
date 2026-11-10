@@ -1,5 +1,5 @@
 import { describe, expect, test } from "claude-code/testing";
-import { detectLanguageOrCode } from "../hooks/lib/language";
+import { detectLanguageOrCode } from "./detect";
 
 describe("language detection", () => {
 	test("Czech typed without diacritics is not English", () => {

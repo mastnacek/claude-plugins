@@ -183,6 +183,13 @@ export function effectiveModel(config: TranslateConfig): { setting: string; temp
 	return { setting: config.translateModel, expired: false };
 }
 
+/** Session start: the merged configuration into $.state, an expired override dropped. */
+export async function initConfig($: $): Promise<void> {
+	const config = await loadConfig($);
+	await update($, configAtom, () => config);
+	await expireTemporaryModel($);
+}
+
 /** Drop an expired temporary override from the session config. */
 export async function expireTemporaryModel($: $): Promise<void> {
 	const config = await getConfig($);

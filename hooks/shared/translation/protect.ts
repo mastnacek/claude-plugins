@@ -5,7 +5,7 @@
  * Split out of `translate.ts`.
  */
 // (ported) at-words integration dropped: knownWords defaults to [].
-import type { ProtectedSegment, ProtectedText } from "./types";
+import type { ProtectedSegment, ProtectedText } from "../types";
 
 function shouldProtectTagName(tagName: string): boolean {
 	const normalized = tagName.toLowerCase();

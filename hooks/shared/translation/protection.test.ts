@@ -6,15 +6,14 @@
  * and display tests live in `translate-context.test.ts`.
  */
 import { describe, expect, test as it } from "claude-code/testing";
-import { cleanTranslationOutput, protectFinalAnswerSegments, protectPromptSegments, restoreProtectedSegments, stripKeepTags } from "../hooks/lib/protect";
-import { detectLanguageOrCode } from "../hooks/lib/language";
-import { buildUserContent, createSourceTag, hasDeicticReferences } from "../hooks/lib/translate";
+import { cleanTranslationOutput, protectFinalAnswerSegments, protectPromptSegments, restoreProtectedSegments, stripKeepTags } from "./protect";
+import { detectLanguageOrCode } from "./detect";
+import { buildUserContent, createSourceTag } from "./translate";
 
 // pi's createTranslationContext, as the port builds the same user message.
 const createTranslationContext = (_system: string, text: string, context?: string, tag = "source_text") => ({
 	messages: [{ content: buildUserContent(text, tag, context) }],
 });
-void hasDeicticReferences;
 
 describe("protectPromptSegments & restoreProtectedSegments", () => {
 	it("protects pi-read-all headers and <file> blocks from translation", () => {

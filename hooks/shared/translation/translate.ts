@@ -1,12 +1,14 @@
-// translate.ts — the translation call: request building, the two backends
-// (OpenRouter over $.http.fetch, Claude over $.model.complete), retries,
-// segment protection and telemetry.
+// translate.ts — the deep module every slice translates through. One call,
+// translate(), hides request building, the two backends (OpenRouter over
+// $.http.fetch, Claude over $.model.complete), retries, segment protection,
+// cost and telemetry. A failure never throws: it returns the original text
+// flagged `degraded`.
 
 import type { EngineInterface } from "claude-code";
 import { atom, update } from "claude-code";
-import { effectiveModel, getConfig, modelBackend } from "./config";
-import { getOpenRouterApiKey, getUsdToCzkRate } from "./balance";
-import { formatUsage } from "./format";
+import { effectiveModel, getConfig, modelBackend } from "../config";
+import { fmtSmallAmount, getOpenRouterApiKey, getUsdToCzkRate, refreshCredit } from "../credit";
+import { debug, warn } from "../log";
 import {
 	KEEP_TERM_RULE,
 	PROMPT_BOOST_SYSTEM_PROMPT,
@@ -22,9 +24,9 @@ import {
 	stripKeepTags,
 } from "./protect";
 
-import type { Purpose, TranslateConfig, TranslationUsage } from "./types";
-import { EMPTY_TELEMETRY } from "./types";
-import type { Telemetry } from "./types";
+import type { Purpose, TranslateConfig, TranslationUsage } from "../types";
+import { EMPTY_TELEMETRY } from "../types";
+import type { Telemetry } from "../types";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const sessionCostAtom = atom({ plugin: "prompt-translate", key: "sessionCostUsd" } as const, 0);
@@ -51,19 +53,6 @@ type CallResult =
 	| { ok: false; error: string; status?: number };
 
 const ZERO_USAGE: TranslationUsage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 };
-
-// ---------------------------------------------------------------------------
-// Logging
-// ---------------------------------------------------------------------------
-
-export async function debug($: $, message: string): Promise<void> {
-	const config = await getConfig($);
-	$.ui.log(`[prompt-translate] ${message}`, config.debug ? undefined : { to: "debug" });
-}
-
-export function warn($: $, message: string): void {
-	$.ui.log(`prompt-translate: ${message}`);
-}
 
 // ---------------------------------------------------------------------------
 // Request context
@@ -96,32 +85,14 @@ export function buildUserContent(text: string, tag: string, conversationContext?
 		: `<${tag}>\n${body}\n</${tag}>`;
 }
 
-export function hasDeicticReferences(text: string): boolean {
-	return /(?<![\p{L}\p{N}_])(to|ten|ta|ti|ty|tento|tato|toto|tyto|tohle|tamto|tamten|taky|také|stejně|stejný|stejnou|druhou|druhý|druhé|další|předchozí|výše|minulý|minulou|minule|stále|pořád)(?![\p{L}\p{N}_])/iu.test(
-		text.toLowerCase(),
-	);
-}
-
-/** The last `maxTurns` user/assistant exchanges, each snippet capped. */
-export async function extractRecentContext($: $, maxTurns = 2, maxChars = 600): Promise<string | undefined> {
-	let messages: Awaited<ReturnType<$["session"]["messages"]>>;
-	try {
-		messages = await $.session.messages();
-	} catch {
-		return undefined;
+function formatUsage(usage: TranslationUsage, rate?: number): string {
+	const cost = usage.costUsd;
+	let costText = "";
+	if (typeof cost === "number") {
+		costText =
+			typeof rate === "number" && rate > 0 ? `, cost=${fmtSmallAmount(cost * rate)} Kč` : `, cost=$${cost.toFixed(6)}`;
 	}
-	if (!Array.isArray(messages)) return undefined;
-	const rows: Array<{ role: string; text: string }> = [];
-	for (const m of messages as Array<{ role?: string; text?: string }>) {
-		if (m.role !== "user" && m.role !== "assistant") continue;
-		const clean = (m.text ?? "").trim().replace(/\s+/g, " ");
-		if (clean) rows.push({ role: m.role, text: clean });
-	}
-	const recent = rows.slice(-maxTurns * 2);
-	if (recent.length === 0) return undefined;
-	return recent
-		.map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.text.length > maxChars ? `${m.text.slice(0, maxChars)}…` : m.text}`)
-		.join("\n");
+	return `input=${usage.input}, output=${usage.output}, cacheRead=${usage.cacheRead}, cacheWrite=${usage.cacheWrite}, total=${usage.totalTokens}${costText}`;
 }
 
 function estimateMaxTokens(text: string, reasoning: boolean): number {
@@ -397,5 +368,6 @@ export async function translate(
 		return next;
 	});
 
+	void refreshCredit($); // the call was paid for: the credit shown is stale
 	return { text: restored, usage, costUsd, costCzk, model };
 }
