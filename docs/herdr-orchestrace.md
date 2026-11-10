@@ -14,6 +14,20 @@ ty uživatel nevidí a nemají vlastní terminál.
 `sonnet` a `haiku` jsou aliasy na nejnovější model rodiny. Existující panel
 s agentem dané role použij znovu; nový otevři jen, když chybí.
 
+## Eskalace na Fable — rozhoduje uživatel
+
+`claude --model fable` je nejschopnější a nejdražší model (limit předplatného
+čerpá zhruba 2× rychleji než Opus a 4× rychleji než Sonnet). Na běžné
+programování ani testy se nepoužívá. Hodí se jen tam, kde chyba stojí hodně:
+
+- **návrh** rozhraní, které se později těžko mění (sdílené jádro, MCP);
+- **revize** bezpečnostně kritického kódu (brány, tajemství, zápis do paměti);
+- **zaseknutý problém**, který programátor nevyřešil ani na druhý pokus.
+
+**Fable nikdy nespouštěj sám.** Navrhni ho uživateli: co přesně má udělat,
+proč na to nestačí Sonnet a jak velká úloha to je. Spusť ho až po výslovném
+souhlasu, ve vlastním panelu jen na tu jednu úlohu, a pak panel zavři.
+
 ## Panely
 
 ```sh
