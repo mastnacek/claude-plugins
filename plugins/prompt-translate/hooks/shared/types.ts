@@ -45,7 +45,6 @@ export const DEFAULT_CONFIG: TranslateConfig = {
 	historyMode: "off",
 	confirm: false,
 	showOriginal: true,
-	diff: true,
 	autodetect: true,
 	translateToolUi: true,
 	englishNote: false,

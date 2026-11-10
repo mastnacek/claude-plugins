@@ -17,8 +17,8 @@ export type TranslateConfig = {
 	boost: BoostLevel;
 	historyMode: HistoryMode;
 	confirm: boolean;
+	/** The frame in place of a translated prompt: original, English and any attached history. */
 	showOriginal: boolean;
-	diff: boolean;
 	autodetect: boolean;
 	/** Translate AskUserQuestion dialogs the model opens into the target language. */
 	translateToolUi: boolean;

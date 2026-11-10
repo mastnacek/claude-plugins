@@ -88,7 +88,7 @@ export function registerPromptToEnglish(on: On): void {
 
 	on("ui.render", { component: "UserMessage" }, async ($, e, next) => {
 		const config = await getConfig($);
-		if (!config.showOriginal && !config.diff) return next(e);
+		if (!config.showOriginal) return next(e);
 		const record = (await read($, originalsAtom))[textKey(e.props.text)];
 		if (!record || record.source.trim() === record.english.trim()) return next(e);
 		// One frame in place of the engine's row: the original and the English
@@ -118,7 +118,7 @@ export function registerPromptToEnglish(on: On): void {
 					<Text bold color="diffAdded">{"+ "}</Text>
 					<Text color="diffAdded">{record.english}</Text>
 				</Box>
-				{config.diff && record.conversationContext ? (
+				{record.conversationContext ? (
 					<Text dimColor>{`\nhistorie:\n${record.conversationContext}`}</Text>
 				) : null}
 			</Box>
