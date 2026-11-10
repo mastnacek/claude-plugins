@@ -10,6 +10,7 @@ import { getConfig, modelBackend } from "../config";
 import { fmtSmallAmount, getOpenRouterApiKey, getUsdToCzkRate, refreshCredit } from "../credit";
 import { debug, warn } from "../log";
 import { clip, logEvent } from "../usage-log";
+import { checkTranslationLength } from "./length-check";
 import {
 	KEEP_TERM_RULE,
 	PROMPT_BOOST_SYSTEM_PROMPT,
@@ -349,29 +350,51 @@ export async function translate(
 	};
 
 	const tag = createSourceTag();
-	const system = systemPromptFor(purpose, config, targetLanguage, tag);
 	const user = purpose === "tool" ? protectedInput.text : buildUserContent(protectedInput.text, tag, conversationContext);
+	const paid: TranslationUsage[] = [];
 
-	const response = await callWithRetries($, model, system, user, protectedInput.text, config.think, retries);
-	if (!response.ok) return degrade(`${purpose} translation failed: ${response.error}`);
-	if (response.truncated) return degrade(`${purpose} translation truncated at maxTokens`);
+	// One full round: call, unmask, check. `boost` is a parameter because the
+	// length guard retries a prompt once with the faithful (no boost) instructions.
+	type Attempt = { failed: TranslationResult } | { restored: string; appended: number; short: string | null };
+	const attempt = async (boost: TranslateConfig["boost"]): Promise<Attempt> => {
+		const system = systemPromptFor(purpose, { ...config, boost }, targetLanguage, tag);
+		const response = await callWithRetries($, model, system, user, protectedInput.text, config.think, retries);
+		if (!response.ok) return { failed: degrade(`${purpose} translation failed: ${response.error}`) };
+		if (response.truncated) return { failed: degrade(`${purpose} translation truncated at maxTokens`) };
 
-	await debug($, `${purpose} usage: ${formatUsage(response.usage, rate)}`);
-	const cleaned = cleanTranslationOutput(response.text.trim(), tag);
-	const stats = { appended: 0 };
-	const restored = stripKeepTags(restoreProtectedSegments(cleaned, protectedInput.segments, stats));
-	if (stats.appended > 3) return degrade(`${purpose} translation dropped ${stats.appended} protected segments`);
+		paid.push(response.usage);
+		await debug($, `${purpose} usage: ${formatUsage(response.usage, rate)}`);
+		const cleaned = cleanTranslationOutput(response.text.trim(), tag);
+		const stats = { appended: 0 };
+		const restored = stripKeepTags(restoreProtectedSegments(cleaned, protectedInput.segments, stats));
+		if (stats.appended > 3) return { failed: degrade(`${purpose} translation dropped ${stats.appended} protected segments`) };
 
-	const costUsd = response.usage.costUsd;
-	if (typeof costUsd === "number") await update($, sessionCostAtom, (c) => c + costUsd);
+		const verdict = checkTranslationLength(protectedInput.text, restored, protectedInput.segments);
+		const short = verdict.short ? `${purpose} translation too short (${verdict.outChars} of ${verdict.inChars} chars)` : null;
+		return { restored, appended: stats.appended, short };
+	};
 
-	const usage = response.usage;
+	let result = await attempt(config.boost);
+	if ("restored" in result && result.short && purpose === "prompt" && config.boost !== "off") {
+		await debug($, `${result.short}; retrying without boost`);
+		retries.push("short");
+		result = await attempt("off");
+	}
+	if ("failed" in result) return result.failed;
+	if (result.short) return degrade(result.short);
+	const { restored, appended } = result;
+
+	const costUsd = paid.reduce((sum, u) => sum + (u.costUsd ?? 0), 0);
+	if (costUsd > 0) await update($, sessionCostAtom, (c) => c + costUsd);
+
+	const inputTokens = paid.reduce((sum, u) => sum + u.input, 0);
+	const outputTokens = paid.reduce((sum, u) => sum + u.output, 0);
 	await update($, telemetryAtom, (t) => ({
-		inputTokens: t.inputTokens + usage.input,
-		outputTokens: t.outputTokens + usage.output,
+		inputTokens: t.inputTokens + inputTokens,
+		outputTokens: t.outputTokens + outputTokens,
 	}));
 
 	void refreshCredit($); // the call was paid for: the credit shown is stale
-	report({ outChars: restored.length, appended: stats.appended });
+	report({ outChars: restored.length, appended });
 	return { text: restored };
 }

@@ -15,7 +15,7 @@ nikdy nevyhodí výjimku, ale vrátí původní text s příznakem `degraded`.
 
 ## Kontrakt
 
-- **Skrývá:** `protect.ts` (maskování a vrácení kódu, cest, URL, tabulek) a `prompts.ts` (systémové prompty podle `boost`) jsou **interní**; mimo složku je nikdo neimportuje (`scripts/vsa-check.sh`, pravidlo 3).
+- **Skrývá:** `protect.ts` (maskování a vrácení kódu, cest, URL, tabulek a vložených bloků `<file>`, `<pasted_content id="…">` — uzavírací tag smí nést atributy), `length-check.ts` (pojistka délky) a `prompts.ts` (systémové prompty podle `boost`) jsou **interní**; mimo složku je nikdo neimportuje (`scripts/vsa-check.sh`, pravidlo 3).
 - **Skrývá také:** backendy OpenRouter (`$.http.fetch`) a Claude (`$.model.complete`), opakování, reasoning (`think`: off/low/medium/high, při chybě nebo useknutí bez něj), limit tokenů, cenu v Kč.
 - **Čte:** `config`. **Píše:** `sessionCostUsd`, `telemetry`, `credit` (přes `refreshCredit`). `translating` nezapisuje, to dělá volající přes `withProgress`.
 - **Shared:** `config`, `credit`, `log`, `types`.
@@ -33,6 +33,7 @@ nikdy nevyhodí výjimku, ale vrátí původní text s příznakem `degraded`.
 ## Pasti
 
 - `degraded: true` znamená, že `text` je původní nepřeložený text. Volající ho nesmí uložit jako překlad ani dál zpracovávat jako přeložený.
+- **Pojistka délky:** model s boostem umí vložený text tiše vypustit (výstup není `finish_reason: length`). Po obnově chráněných segmentů `translate()` porovná délku překladu a maskovaného vstupu, oboje bez chráněných kusů (`length-check.ts`: vstup ≥ 400 znaků a výstup < 50 %). U `prompt` s boostem ≠ off zopakuje jednou bez boostu (`retries: ["short"]`); stále krátké, nebo jiný purpose → `degraded` „translation too short (x of y chars)“ a odejde originál.
 - Selže-li model, nebo se ztratí víc než 3 chráněné segmenty (`stats.appended > 3`), vrátí se původní text; zamaskovaný text nikdy neodejde ven.
 - Zástupný token `__PI_PROMPT_TRANSLATE_PROTECTED_n__` je v `protect.ts` i v textech `prompts.ts` a `translate.ts`; změna se musí udělat na všech místech.
 - Atomy `sessionCostUsd` a `telemetry` se deklarují i v `settings-command/run.ts`; klíč, výchozí hodnota a `shape` se musí shodovat.

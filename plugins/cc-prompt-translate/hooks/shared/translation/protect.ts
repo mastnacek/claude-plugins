@@ -28,8 +28,14 @@ function protectTables(text: string, addSegment: (value: string) => string): str
 	);
 }
 
-/** Opaque payloads the model must not read: <file> and friends (prompt only). */
-const EMBEDDED_BLOCK = /<(file|context|document|code|snippet)\b[^>]*>[\s\S]*?<\/\1>/gi;
+/**
+ * Opaque payloads the model must not read: <file> and friends (prompt only).
+ * `pasted_content` is what the terminal wraps around a paste, and its closing
+ * tag repeats the id (`</pasted_content id="x">`), hence the optional
+ * attributes after the closing name. Unprotected, a boost prompt ("drop
+ * filler") dropped a whole pasted block.
+ */
+const EMBEDDED_BLOCK = /<(file|context|document|code|snippet|pasted_content)\b[^>]*>[\s\S]*?<\/\1\b[^>]*>/gi;
 
 /**
  * Masked in both directions, in this order (after tables, so a table costs one

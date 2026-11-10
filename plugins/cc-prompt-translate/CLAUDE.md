@@ -41,7 +41,7 @@ Hodnotí se tři věci:
 
 | otázka | řádky | co spočítat |
 |---|---|---|
-| **kvalita** | `kind: "translation"`, `kind: "dialog"` | podíl s `degraded` a jeho důvody; `appended` > 0 = model ztratil chráněný kus (kód, cestu) a plugin ho připojil na konec; `retries` |
+| **kvalita** | `kind: "translation"`, `kind: "dialog"` | podíl s `degraded` a jeho důvody (mj. `translation too short (x of y chars)` = model vypustil většinu textu, viz pojistka délky); `appended` > 0 = model ztratil chráněný kus (kód, cestu) a plugin ho připojil na konec; `retries` (`short` = první pokus byl podezřele krátký a běžel znovu bez boostu) |
 | **rychlost** | `kind: "translation"`, `purpose: "prompt"` | `ms`: medián a 95. percentil (na prompt se čeká, odpověď běží na pozadí) |
 | **autodetekce** | `kind: "detect"` | podíl `skipped`; projít `text` u řádků bez diakritiky a najít omyly v obou směrech |
 
