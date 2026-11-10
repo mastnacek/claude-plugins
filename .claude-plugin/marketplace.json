@@ -14,6 +14,11 @@
       "name": "cc-uma-memory",
       "source": "./plugins/cc-uma-memory",
       "description": "UMA (Universal Memory Architecture) pro Claude Code — paměť sdílená s pi"
+    },
+    {
+      "name": "cc-theme-switcher",
+      "source": "./plugins/cc-theme-switcher",
+      "description": "Rotates the Claude Code theme by the sun: dawn, day, dusk and night palettes."
     }
   ]
 }

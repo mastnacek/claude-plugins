@@ -12,6 +12,7 @@ Claude Code plugins by mastnacek, in one marketplace.
 |---|---|
 | [cc-prompt-translate](plugins/cc-prompt-translate) | Translates your prompts into English before they reach the model and the final answer back into Czech (or your language). |
 | [cc-uma-memory](plugins/cc-uma-memory) | UMA (Universal Memory Architecture) for Claude Code, memory shared with pi. So far: turns Claude Code's own auto memory off (`/uma claude-memory`) and shows its state under the prompt. |
+| [cc-theme-switcher](plugins/cc-theme-switcher) | Rotates the Claude Code theme by the sun: dawn, day, dusk and night palettes. |
 
 Each plugin lives in `plugins/<name>/` with its own README, tests and version.
 
