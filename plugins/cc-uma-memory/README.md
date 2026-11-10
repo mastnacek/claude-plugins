@@ -24,7 +24,7 @@ cp target/release/uma ~/.local/bin/   # any directory on PATH
 
 - **Gives Claude Code the UMA memory tools** through an MCP server named `uma` (`uma mcp serve --allow-writes`).
 - **Adds relevant memories to your prompts** (recall): before a prompt is sent, `uma recall check` looks for facts that fit it, and up to 3 are attached as hidden context for the model. Facts already attached in this session are not repeated. Recall is advisory: if `uma` fails or takes more than 3 s, the prompt goes through unchanged (one log line per series of failures).
-- **Asks before anything is written to memory** (write gate): a dialog shows type, title, scope and the body of every `uma_write` / `uma_supersede` and offers *Zapsat* / *Zamítnout*. Without a way to ask (`-p`) the write is refused.
+- **Asks before anything is written to memory** (write gate): a dialog shows type, title, scope and the body of every `uma_write` / `uma_supersede` and offers *✅ Zapsat* / *❌ Zamítnout* (*🚀 Spustit* for a shell command). Without a way to ask (`-p`) the write is refused.
 - **Closes the side doors**: `Write` / `Edit` / `NotebookEdit` aimed at the UMA store (`.uma/`, the global store) are refused, and a shell command that would change memory (`uma write`, `uma mcp serve --allow-writes`, `echo > .uma/x.md`, `cp … .uma/…`, also inside `bash -c`) gets the same dialog.
 - **Turn off Claude Code's own automatic memory** (not UMA) so UMA is the only memory — globally or per project.
 - **Tag at the end of the hint line under the prompt** — `[UMA]` when Claude's auto memory is off, `[UMA ⚠ CC]` when it is on; ` ↻` is added once you changed it in this session (applies from the next one).

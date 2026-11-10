@@ -11,7 +11,7 @@
 import type { EngineInterface, On } from "claude-code";
 import { atom, read } from "claude-code";
 import { isBypassingBashCommand, isUmaMemoryFilePath } from "./bypass";
-import { ACCEPT, FILE_DENY_REASON, NO_UI_REASON, REJECT, SUPERSEDE_TOOL, WRITE_TOOL, previewOfCommand, previewOfWrite, verdictOf } from "./dialog";
+import { ACCEPT_RUN, ACCEPT_WRITE, FILE_DENY_REASON, HEADER, NO_UI_REASON, REJECT, SUPERSEDE_TOOL, WRITE_TOOL, previewOfCommand, previewOfWrite, verdictOf } from "./dialog";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask" } as { recall: boolean; writeGate: "ask" | "off" });
@@ -19,14 +19,14 @@ const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const,
 type $ = EngineInterface;
 
 /** Asks; undefined = the user said yes, otherwise the deny. No one to ask is a no. */
-async function confirm($: $, preview: string, question: string): Promise<{ deny: string } | undefined> {
+async function confirm($: $, question: string, accept: string): Promise<{ deny: string } | undefined> {
 	let answer: string;
 	try {
-		answer = await $.ui.ask(`${preview}\n\n${question}`, { options: [ACCEPT, REJECT], header: "Zápis UMA" });
+		answer = await $.ui.ask(question, { options: [accept, REJECT], header: HEADER });
 	} catch {
 		return { deny: NO_UI_REASON };
 	}
-	const verdict = verdictOf(answer);
+	const verdict = verdictOf(answer, accept);
 	return verdict.ok ? undefined : { deny: verdict.reason };
 }
 
@@ -68,13 +68,13 @@ export function registerWriteGate(on: On): void {
 		const tool: string = e.tool;
 		if (isMemoryTool(tool)) {
 			if ((await read($, settingsAtom)).writeGate === "off") return next(e);
-			return (await confirm($, previewOfWrite(tool, e as Record<string, unknown>), "Zapsat do paměti UMA?")) ?? next(e);
+			return (await confirm($, previewOfWrite(tool, e as Record<string, unknown>), ACCEPT_WRITE)) ?? next(e);
 		}
 		if (e.tool === "Write" || e.tool === "Edit") return (await touchesStore($, e.file_path)) ? { deny: FILE_DENY_REASON } : next(e);
 		if (e.tool === "NotebookEdit") return (await touchesStore($, e.notebook_path)) ? { deny: FILE_DENY_REASON } : next(e);
 		if (e.tool === "Bash" && isBypassingBashCommand(e.command)) {
 			if ((await read($, settingsAtom)).writeGate === "off") return next(e);
-			return (await confirm($, previewOfCommand(e.command), "Spustit příkaz?")) ?? next(e);
+			return (await confirm($, previewOfCommand(e.command), ACCEPT_RUN)) ?? next(e);
 		}
 		return next(e);
 	}).catch(($, e, next) => (next.called ? next(e) : isMemoryTool(String(e.tool)) ? { deny: GATE_FAILED } : next(e)));

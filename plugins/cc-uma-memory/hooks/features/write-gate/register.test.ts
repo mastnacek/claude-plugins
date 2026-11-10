@@ -35,23 +35,23 @@ async function start($: { session: { start: (a: never) => Promise<unknown> } }) 
 	await $.session.start({ cwd: "/w", surface: "terminal", isInteractive: true } as never);
 }
 
-test("uma_write: the dialog shows type, title, scope and a clipped body; Zapsat lets it through", async ($, on) => {
-	const seen = setup(on, "ask", "Zapsat");
+test("uma_write: the dialog shows type, title, scope and a clipped body; ✅ Zapsat lets it through", async ($, on) => {
+	const seen = setup(on, "ask", "✅ Zapsat");
 	await start($);
 	const body = "x".repeat(2000);
 	const r = await $.tool.call({ tool: WRITE, title: "Použít VSA", type: "decision", scope: "project", body } as never);
 	expect(r.deny).toBeUndefined();
 	expect(seen.ran).toContain(WRITE);
 	const shown = seen.questions[0] ?? "";
-	expect(shown).toContain("Typ: decision");
-	expect(shown).toContain("Titulek: Použít VSA");
-	expect(shown).toContain("Scope: project");
+	expect(shown).toMatch(/📌 Typ +decision/);
+	expect(shown).toMatch(/🔖 Titulek +Použít VSA/);
+	expect(shown).toMatch(/📂 Scope +project/);
 	expect(shown).toContain("(+1400 znaků)");
 	expect(shown.length).toBeLessThan(900);
 });
 
 test("uma_write: Zamítnout is a deny for the model and nothing runs", async ($, on) => {
-	const seen = setup(on, "ask", "Zamítnout");
+	const seen = setup(on, "ask", "❌ Zamítnout");
 	await start($);
 	const r = await $.tool.call({ tool: WRITE, title: "t", body: "b" } as never);
 	expect(r.deny).toContain("zamítl");
@@ -74,7 +74,7 @@ test("uma_write without a way to ask is denied", async ($, on) => {
 });
 
 test("uma_supersede: the dialog shows the replaced id", async ($, on) => {
-	const seen = setup(on, "ask", "Zapsat");
+	const seen = setup(on, "ask", "✅ Zapsat");
 	await start($);
 	const r = await $.tool.call({ tool: SUPERSEDE, oldId: "01OLD", title: "t", body: "b" } as never);
 	expect(r.deny).toBeUndefined();
@@ -82,7 +82,7 @@ test("uma_supersede: the dialog shows the replaced id", async ($, on) => {
 });
 
 test("write-gate off: no dialog for uma_write", async ($, on) => {
-	const seen = setup(on, "off", "Zamítnout");
+	const seen = setup(on, "off", "❌ Zamítnout");
 	await start($);
 	const r = await $.tool.call({ tool: WRITE, title: "t", body: "b" } as never);
 	expect(r.deny).toBeUndefined();
@@ -102,19 +102,19 @@ async function filesAreGuarded($: Parameters<typeof start>[0] & { tool: { call: 
 }
 
 test("Write, Edit and NotebookEdit into the store are denied (ask); other files pass", async ($, on) => {
-	const seen = setup(on, "ask", "Zapsat");
+	const seen = setup(on, "ask", "✅ Zapsat");
 	await start($);
 	await filesAreGuarded($ as never, seen);
 });
 
 test("Write, Edit and NotebookEdit into the store are denied also with the gate off", async ($, on) => {
-	const seen = setup(on, "off", "Zapsat");
+	const seen = setup(on, "off", "✅ Zapsat");
 	await start($);
 	await filesAreGuarded($ as never, seen);
 });
 
 test("a symlink into the store is denied through fs.stat realPath", async ($, on) => {
-	setup(on, "ask", "Zapsat", (path) => {
+	setup(on, "ask", "✅ Zapsat", (path) => {
 		if (path.replace(/\/$/, "") === "/w/m") return { kind: "dir", size: 0, mtimeMs: 0, isLink: true, realPath: "/w/.uma/decision" };
 		throw new Error("ENOENT");
 	});
@@ -124,7 +124,7 @@ test("a symlink into the store is denied through fs.stat realPath", async ($, on
 });
 
 test("Bash that would change memory: same dialog with the command; reads and other commands pass", async ($, on) => {
-	const seen = setup(on, "ask", "Zapsat");
+	const seen = setup(on, "ask", "🚀 Spustit");
 	await start($);
 	const r = await $.tool.call({ tool: "Bash", command: "uma write --title x --body y" });
 	expect(r.deny).toBeUndefined();
@@ -137,14 +137,14 @@ test("Bash that would change memory: same dialog with the command; reads and oth
 });
 
 test("Bash that would change memory: Zamítnout denies; off lets it run", async ($, on) => {
-	setup(on, "ask", "Zamítnout");
+	setup(on, "ask", "❌ Zamítnout");
 	await start($);
 	const denied = await $.tool.call({ tool: "Bash", command: "echo hi > .uma/x.md" });
 	expect(denied.deny).toContain("zamítl");
 });
 
 test("Bash that would change memory with the gate off runs without a dialog", async ($, on) => {
-	const seen = setup(on, "off", "Zamítnout");
+	const seen = setup(on, "off", "❌ Zamítnout");
 	await start($);
 	const r = await $.tool.call({ tool: "Bash", command: "uma write --title x --body y" });
 	expect(r.deny).toBeUndefined();
