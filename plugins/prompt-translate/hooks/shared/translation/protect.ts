@@ -17,8 +17,7 @@ function isTableBlock(block: string): boolean {
 /**
  * Mask each markdown table as one segment. Unmasked, the grid reaches the
  * translator as prose and comes back re-flowed into bare cells, header gone.
- * Runs before the inline-code rule so a table costs one segment, not one
- * per span inside it. Trade: the table is not translated — a mangled grid is
+ * Trade: the table is not translated — a mangled grid is
  * worse than an English one, and these cells hold ids, paths and verdicts.
  */
 function protectTables(text: string, addSegment: (value: string) => string): string {
@@ -29,136 +28,61 @@ function protectTables(text: string, addSegment: (value: string) => string): str
 	);
 }
 
-export function protectPromptSegments(text: string): ProtectedText {
+/** Opaque payloads the model must not read: <file> and friends (prompt only). */
+const EMBEDDED_BLOCK = /<(file|context|document|code|snippet)\b[^>]*>[\s\S]*?<\/\1>/gi;
+
+/**
+ * Masked in both directions, in this order (after tables, so a table costs one
+ * segment, not one per code span inside it). Without the code rules a ```ts
+ * sample comes back with renamed identifiers or broken syntax.
+ */
+const SHARED_MASKS: readonly RegExp[] = [
+	// multi-line code blocks, inline code
+	/```[\s\S]*?```/g,
+	/`[^`\n]+`/g,
+	// @ file mentions (@src/file.ts, @"quoted file.ts")
+	/@"[^"\n]+"|@[\w][\w./-]*/g,
+	// web, git and file URLs
+	/(?:https?|git\+https?|ftp|file):\/\/[^\s<>)"]+?(?=[.,;:!?]*(?:\s|[<>)"]|$))/g,
+	// Windows absolute paths (C:\foo\bar, D:/foo/bar) and UNC paths (\\server\share\...)
+	/\b[A-Za-z]:[\\/](?:[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?])?/g,
+	/\\\\[a-zA-Z0-9_.-]+\\[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?]/g,
+	// Unix absolute and home paths, then relative paths (./..., ../...)
+	/(?<=^|[\s<>"'`{}()[\]])(?:~|\/tmp|\/var|\/home|\/etc|\/usr|\/opt|\/srv|\/root|\/mnt|\/Volumes|\/Users)\/[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?]/g,
+	/(?<=^|[\s<>"'`{}()[\]])(?:\.{1,2}[\\/])[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?]/g,
+];
+
+/**
+ * User-written `!term!`: the explicit "do not translate this" syntax, rewritten
+ * into <keep> tags the model sees and passes through (`stripKeepTags` drops them
+ * afterwards). Runs after masking, so a marker inside code, a path or a URL is
+ * already gone. `[^\s!]+` is load-bearing: with `[^!]+` the Czech sentence
+ * "Pozor! To je chyba!" would become one protected span. Single token only;
+ * use <keep>a b</keep> for a phrase.
+ */
+const KEEP_MARKER = /!([^\s!]+)!/g;
+
+function mask(text: string, leading: readonly RegExp[]): ProtectedText {
 	const segments: ProtectedSegment[] = [];
-	let protectedText = text;
 	const addSegment = (value: string) => {
 		const placeholder = `__PI_PROMPT_TRANSLATE_PROTECTED_${segments.length}__`;
 		segments.push({ placeholder, value });
 		return placeholder;
 	};
+	let masked = text;
+	for (const re of leading) masked = masked.replace(re, addSegment);
+	masked = protectTables(masked, addSegment);
+	for (const re of SHARED_MASKS) masked = masked.replace(re, addSegment);
+	return { text: masked, segments };
+}
 
-	// 2. Protect any <file ...>...</file>, <context>...</context>, <document>...</document>, <code ...>...</code>
-	protectedText = protectedText.replace(
-		/<(file|context|document|code|snippet)\b[^>]*>[\s\S]*?<\/\1>/gi,
-		(match) => addSegment(match),
-	);
-
-	// 3. Protect markdown tables first, so each grid is one segment
-	protectedText = protectTables(protectedText, addSegment);
-
-	// 4. Protect multi-line markdown code blocks and inline code
-	protectedText = protectedText.replace(/```[\s\S]*?```/g, (match) =>
-		addSegment(match),
-	);
-	protectedText = protectedText.replace(/`[^`\n]+`/g, (match) =>
-		addSegment(match),
-	);
-
-	// 5. Protect standard @ file mentions (@src/file.ts, @"quoted file.ts")
-	protectedText = protectedText.replace(/@"[^"\n]+"|@[\w][\w./-]*/g, (match) =>
-		addSegment(match),
-	);
-
-	// 6. Protect web URLs, git URLs, and file URLs
-	protectedText = protectedText.replace(
-		/(?:https?|git\+https?|ftp|file):\/\/[^\s<>)"]+?(?=[.,;:!?]*(?:\s|[<>)"]|$))/g,
-		(match) => addSegment(match),
-	);
-
-	// 7. Protect Windows absolute paths (e.g. C:\foo\bar, D:/foo/bar) and UNC paths (\\server\share\...)
-	protectedText = protectedText.replace(
-		/\b[A-Za-z]:[\\/](?:[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?])?/g,
-		(match) => addSegment(match),
-	);
-	protectedText = protectedText.replace(
-		/\\\\[a-zA-Z0-9_.-]+\\[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?]/g,
-		(match) => addSegment(match),
-	);
-
-	// 8. Protect Unix absolute paths, home paths, and relative paths (e.g. /tmp/..., ~/..., ./..., ../...)
-	protectedText = protectedText.replace(
-		/(?<=^|[\s<>"'`{}()[\]])(?:~|\/tmp|\/var|\/home|\/etc|\/usr|\/opt|\/srv|\/root|\/mnt|\/Volumes|\/Users)\/[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?]/g,
-		(match) => addSegment(match),
-	);
-	protectedText = protectedText.replace(
-		/(?<=^|[\s<>"'`{}()[\]])(?:\.{1,2}[\\/])[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?]/g,
-		(match) => addSegment(match),
-	);
-
-	// 10. User-written `!term!` markers: the explicit "do not translate this"
-	// syntax. Rewritten into <keep> tags the model sees and passes through;
-	// `stripKeepTags` drops them afterwards. Placed after the masking rules so a marker inside
-	// code, a path or a URL is already masked and never reaches this pattern.
-	//
-	// `[^\s!]+` (no whitespace) is load-bearing, not cosmetic: with `[^!]+` a
-	// plain Czech sentence like "Pozor! To je chyba!" would be read as one
-	// protected span (" To je chyba") and silently left untranslated.
-	// ponytail: single token only, no spaces — so `!a b!` is not a marker; use
-	// <keep>a b</keep> for a phrase.
-	protectedText = protectedText.replace(
-		/!([^\s!]+)!/g,
-		(_match, term: string) => `<keep>${term}</keep>`,
-	);
-
-	return { text: protectedText, segments };
+export function protectPromptSegments(text: string): ProtectedText {
+	const result = mask(text, [EMBEDDED_BLOCK]);
+	return { ...result, text: result.text.replace(KEEP_MARKER, (_match, term: string) => `<keep>${term}</keep>`) };
 }
 
 export function protectFinalAnswerSegments(text: string): ProtectedText {
-	const segments: ProtectedSegment[] = [];
-	let protectedText = text;
-	const addSegment = (value: string) => {
-		const placeholder = `__PI_PROMPT_TRANSLATE_PROTECTED_${segments.length}__`;
-		segments.push({ placeholder, value });
-		return placeholder;
-	};
-
-	// Markdown tables, same reason and same trade-off.
-	protectedText = protectTables(protectedText, addSegment);
-
-	// Protect multi-line markdown code blocks and inline code.
-	// Same two rules the prompt path uses. Without them a ```ts sample in an
-	// answer goes to the translator unprotected and comes back with renamed
-	// identifiers or broken syntax — the prompt path has always guarded these.
-	protectedText = protectedText.replace(/```[\s\S]*?```/g, (match) =>
-		addSegment(match),
-	);
-	protectedText = protectedText.replace(/`[^`\n]+`/g, (match) =>
-		addSegment(match),
-	);
-
-	// Protect standard @ file mentions (@src/file.ts, @"quoted file.ts").
-	protectedText = protectedText.replace(/@"[^"\n]+"|@[\w][\w./-]*/g, (match) =>
-		addSegment(match),
-	);
-
-	// Protect web URLs, git URLs, and file URLs
-	protectedText = protectedText.replace(
-		/(?:https?|git\+https?|ftp|file):\/\/[^\s<>)"]+?(?=[.,;:!?]*(?:\s|[<>)"]|$))/g,
-		(match) => addSegment(match),
-	);
-
-	// Protect Windows absolute paths (e.g. C:\foo\bar, D:/foo/bar) and UNC paths
-	protectedText = protectedText.replace(
-		/\b[A-Za-z]:[\\/](?:[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?])?/g,
-		(match) => addSegment(match),
-	);
-	protectedText = protectedText.replace(
-		/\\\\[a-zA-Z0-9_.-]+\\[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?]/g,
-		(match) => addSegment(match),
-	);
-
-	// Protect Unix absolute paths, home paths, and relative paths
-	protectedText = protectedText.replace(
-		/(?<=^|[\s<>"'`{}()[\]])(?:~|\/tmp|\/var|\/home|\/etc|\/usr|\/opt|\/srv|\/root|\/mnt|\/Volumes|\/Users)\/[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?]/g,
-		(match) => addSegment(match),
-	);
-	protectedText = protectedText.replace(
-		/(?<=^|[\s<>"'`{}()[\]])(?:\.{1,2}[\\/])[^\s<>"'`{}()[\]]*[^\s<>"'`{}()[\].,;:!?]/g,
-		(match) => addSegment(match),
-	);
-
-	return { text: protectedText, segments };
+	return mask(text, []);
 }
 
 /**
