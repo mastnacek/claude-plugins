@@ -6,21 +6,30 @@ Tři kroky. Každý končí souhlasem uživatele; další krok začíná až po 
 
 Navrhni 2–3 názvy s jednou větou, co plugin dělá, a nech uživatele vybrat.
 
+Tvar názvu: **`<agent>-<název>-<funkce>`**
+
+| část | význam | příklady |
+|---|---|---|
+| agent | pro kterého agenta plugin je: `cc` = Claude Code (`pi` = pi) | `cc` |
+| název | čeho se plugin týká | `uma`, `prompt` |
+| funkce | co pro uživatele dělá | `memory`, `translate` |
+
+`cc-uma-memory`, `cc-prompt-translate`.
+
 Dobrý název:
 
-- začíná předponou **`cc-`** (Claude Code), stejně jako pi rozšíření
-  začínají `pi-`: `cc-prompt-translate`, `cc-uma`;
-- za předponou **říká, co plugin dělá pro uživatele**, ne jak to dělá:
+- funkce **říká, co plugin dělá pro uživatele**, ne jak to dělá:
   `cc-prompt-translate`, ne `cc-openrouter-hooks`;
-- je **kebab-case**, za předponou 1–3 slova, anglicky (je to klíč
-  v `$.state` a název v marketplace);
+- je **kebab-case**, anglicky, název i funkce po jednom slově (výjimečně
+  dvou); je to klíč v `$.state` a název v marketplace;
 - je v `.claude-plugin/marketplace.json` **jedinečný**;
 - neobsahuje `claude`, `plugin` ani jméno cizího produktu jako značku.
 
-Port z pi vymění předponu `pi-` za `cc-` a zahodí přípony fork verze
-(`pi-prompt-translate-czk` → `cc-prompt-translate`, `pi-uma` → `cc-uma`).
-Příkaz pluginu předponu mít nemusí (`/prompt-translate`, `/uma`): je to
-slovo, které uživatel píše, a na názvu pluginu nezávisí.
+Port z pi vymění předponu `pi-` za `cc-`, zahodí přípony fork verze a chybí-li
+funkce, doplní ji (`pi-prompt-translate-czk` → `cc-prompt-translate`,
+`pi-uma` → `cc-uma-memory`). Příkaz pluginu předponu ani funkci mít nemusí
+(`/prompt-translate`, `/uma`): je to slovo, které uživatel píše, a na názvu
+pluginu nezávisí.
 
 **Hotovo:** uživatel název výslovně schválil.
 

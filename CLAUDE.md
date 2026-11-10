@@ -19,7 +19,8 @@ přepínač; kód, který nic nečte, se maže; abstrakce až při třetím pou�
 
 Tři kroky, každý končí souhlasem uživatele, než začne další:
 
-1. **Název.** Navrhni 2–3 názvy s předponou `cc-`, uživatel vybere. Hotovo, až je název
+1. **Název.** Navrhni 2–3 názvy ve tvaru `cc-<název>-<funkce>`
+   (`cc-uma-memory`), uživatel vybere. Hotovo, až je název
    schválený. Pravidla pro název: `docs/novy-plugin.md` § Název.
 2. **Kostra.** `scripts/new-plugin.sh <název> "<popis jednou větou>"` na
    větvi `feat/<název>`. Hotovo, až oba validátory skončí `✔`.
