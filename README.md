@@ -6,6 +6,7 @@ Claude Code plugins by mastnacek, in one marketplace.
 /plugin marketplace add mastnacek/claude-plugins
 /plugin install cc-prompt-translate@mastnacek
 /plugin install cc-uma-memory@mastnacek
+/plugin install cc-theme-switcher@mastnacek
 ```
 
 | Plugin | What it does |

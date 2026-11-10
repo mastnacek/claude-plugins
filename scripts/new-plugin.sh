@@ -4,7 +4,7 @@
 #   scripts/new-plugin.sh <název> "<popis jednou větou>"
 #
 # Zkopíruje šablonu do plugins/<název>/, doplní název, popis a rok, přidá
-# položku do .claude-plugin/marketplace.json a řádek do tabulky v README.md
+# položku do .claude-plugin/marketplace.json, řádek instalace a řádek tabulky v README.md
 # a spustí oba validátory.
 # Spouštěj z kořene repozitáře.
 set -euo pipefail
@@ -56,6 +56,9 @@ readme = pathlib.Path("README.md")
 lines = readme.read_text().split("\n")
 last = max(i for i, l in enumerate(lines) if l.startswith("| ["))
 lines.insert(last + 1, f"| [{name}](plugins/{name}) | {description} |")
+# Install line in the README's code block (after the last one).
+last = max(i for i, l in enumerate(lines) if l.startswith("/plugin install "))
+lines.insert(last + 1, f"/plugin install {name}@mastnacek")
 readme.write_text("\n".join(lines))
 PY
 
