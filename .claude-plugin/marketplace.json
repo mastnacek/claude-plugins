@@ -19,6 +19,11 @@
       "name": "cc-theme-switcher",
       "source": "./plugins/cc-theme-switcher",
       "description": "Rotates the Claude Code theme by the sun: dawn, day, dusk and night palettes."
+    },
+    {
+      "name": "cc-reverse-spec",
+      "source": "./plugins/cc-reverse-spec",
+      "description": "Reverse-engineers a verifiable spec (rules, tests, traceability) from an existing codebase so it can be rebuilt with proven parity."
     }
   ]
 }
