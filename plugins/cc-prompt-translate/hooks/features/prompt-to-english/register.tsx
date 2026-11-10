@@ -20,6 +20,7 @@ import { detectLanguageOrCode } from "../../shared/translation/detect";
 import { translate } from "../../shared/translation/translate";
 import type { OriginalRecord, PendingTranslation } from "../../shared/types";
 import { askYesNo } from "./ask";
+import { collapsePastedBlocks } from "./collapse";
 import { englishOnlyNote, withNote } from "./english-note";
 import { conversationContextFor } from "./history";
 
@@ -116,13 +117,21 @@ export function registerPromptToEnglish(on: On): void {
 					{tags.length > 0 ? <Text color="warning">{` [${tags.join(", ")}]`}</Text> : null}
 				</Text>
 				<Box flexDirection="row" marginTop={1}>
-					<Text bold color="diffRemoved">{"- "}</Text>
-					<Text color="diffRemoved">{record.source}</Text>
+					<Box flexShrink={0}>
+						<Text bold color="diffRemoved">{"- "}</Text>
+					</Box>
+					<Box flexGrow={1} flexShrink={1} minWidth={0}>
+						<Text color="diffRemoved" wrap="wrap">{collapsePastedBlocks(record.source)}</Text>
+					</Box>
 				</Box>
 				<Text dimColor>{"─".repeat(ruleWidth)}</Text>
 				<Box flexDirection="row">
-					<Text bold color="diffAdded">{"+ "}</Text>
-					<Text color="diffAdded">{record.english}</Text>
+					<Box flexShrink={0}>
+						<Text bold color="diffAdded">{"+ "}</Text>
+					</Box>
+					<Box flexGrow={1} flexShrink={1} minWidth={0}>
+						<Text color="diffAdded" wrap="wrap">{collapsePastedBlocks(record.english)}</Text>
+					</Box>
 				</Box>
 				{record.conversationContext ? (
 					<Text dimColor>{`\nhistorie:\n${record.conversationContext}`}</Text>

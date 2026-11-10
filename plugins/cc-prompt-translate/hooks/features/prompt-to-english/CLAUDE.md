@@ -13,7 +13,7 @@ Kdyby řez zmizel, plugin prompty přestane překládat, ostatní řezy se neroz
 - Přeskočí slash příkazy, meta zprávy, prompty s obrázkem a vstupy mimo `composer`/`bridge`.
 - Autodetekce (vždy, i s boostem): angličtina nebo kód se nepřekládá ani neboostuje, jen se nastaví `pending`.
 - Prompt začínající `/` přeskočí (řez `command-arguments` tam sám nastaví `pending`).
-- `ui.render UserMessage` — rámeček originál (`-`) / angličtina (`+`) se štítky `boost` a `s historií`.
+- `ui.render UserMessage` — rámeček originál (`-`) / angličtina (`+`) se štítky `boost` a `s historií`; text se v rámečku zalamuje na jeho šířku a vložené bloky `<pasted_content>` se sbalí na 3 řádky (`collapse.ts`, jen zobrazení — model dostane text celý).
 - `history.ts` — podle `historyMode` (`off`/`ask`/`auto`/`always`) přiloží poslední výměny; `auto` jen při odkazovacích slovech (`hasDeicticReferences`).
 - `english-note.ts` — skrytá poznámka „pracuj anglicky“ do `context` promptu (jen s `note on`).
 - `startPromptToEnglish` — obnoví `originals` z archivu relace.
