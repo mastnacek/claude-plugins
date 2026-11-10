@@ -1,4 +1,4 @@
-# cc-uma
+# cc-uma-memory
 
 UMA (Universal Memory Architecture) pro Claude Code — paměť sdílená s pi
 
@@ -11,7 +11,7 @@ než do řezu sáhneš, přečti ji.
 ## Příkazy
 
 ```sh
-# vše spouštěj ze složky pluginu (plugins/cc-uma/)
+# vše spouštěj ze složky pluginu (plugins/cc-uma-memory/)
 claude plugin validate .        # validátor enginu: atomy, on/$, registrace
 claude plugin test .            # všechny *.test.ts
 scripts/vsa-check.sh            # hranice řezů
@@ -21,7 +21,7 @@ npx -y -p typescript tsc -p . --noEmit   # typy (po prvním načtení enginem)
 **Brána před commitem: všechny čtyři zelené.**
 
 Vývoj naživo: `claude --plugin-dir .` (hot reload). Je-li plugin zároveň
-nainstalovaný z marketplace, nejdřív `claude plugin disable cc-uma@mastnacek`,
+nainstalovaný z marketplace, nejdřív `claude plugin disable cc-uma-memory@mastnacek`,
 jinak běží dvakrát.
 
 ## Architektura

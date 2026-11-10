@@ -11,8 +11,8 @@
       "description": "Překládá prompty do angličtiny a finální odpovědi zpět do češtiny"
     },
     {
-      "name": "cc-uma",
-      "source": "./plugins/cc-uma",
+      "name": "cc-uma-memory",
+      "source": "./plugins/cc-uma-memory",
       "description": "UMA (Universal Memory Architecture) pro Claude Code — paměť sdílená s pi"
     }
   ]

@@ -1,4 +1,4 @@
-# cc-uma
+# cc-uma-memory
 
 UMA (Universal Memory Architecture) pro Claude Code — paměť sdílená s pi
 
@@ -6,7 +6,7 @@ UMA (Universal Memory Architecture) pro Claude Code — paměť sdílená s pi
 
 ```
 /plugin marketplace add mastnacek/claude-plugins
-/plugin install cc-uma@mastnacek
+/plugin install cc-uma-memory@mastnacek
 ```
 
 ## What it does

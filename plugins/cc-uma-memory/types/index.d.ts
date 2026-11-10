@@ -4,7 +4,7 @@
 
 declare module "claude-code" {
 	interface PluginState {
-		"cc-uma": {
+		"cc-uma-memory": {
 			/** A /uma output's first line (what the model reads) → the whole output, drawn in its row. */
 			commandOutputs: Record<string, string>;
 			/** True once /uma claude-memory changed autoMemoryEnabled in this session (it takes effect next session). */

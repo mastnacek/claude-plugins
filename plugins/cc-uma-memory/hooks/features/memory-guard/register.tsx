@@ -16,8 +16,8 @@ import { effectiveState, setAutoMemory } from "./settings";
 import type { Layers } from "./settings";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const commandOutputsAtom = atom({ plugin: "cc-uma", key: "commandOutputs" } as const, {} as Record<string, string>);
-const memoryChangedAtom = atom({ plugin: "cc-uma", key: "memoryChanged" } as const, false);
+const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Record<string, string>);
+const memoryChangedAtom = atom({ plugin: "cc-uma-memory", key: "memoryChanged" } as const, false);
 
 type $ = EngineInterface;
 
