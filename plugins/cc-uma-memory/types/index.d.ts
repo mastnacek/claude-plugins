@@ -7,6 +7,8 @@ declare module "claude-code" {
 		"cc-uma-memory": {
 			/** A /uma output's first line (what the model reads) → the whole output, drawn in its row. */
 			commandOutputs: Record<string, string>;
+			/** Effective autoMemoryEnabled and the layer that decides it; null until computed at start. */
+			memoryState: { enabled: boolean; source: "globální" | "projekt" | "lokální" | "výchozí" } | null;
 			/** True once /uma claude-memory changed autoMemoryEnabled in this session (it takes effect next session). */
 			memoryChanged: boolean;
 		};

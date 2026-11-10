@@ -12,7 +12,7 @@ UMA (Universal Memory Architecture) pro Claude Code — paměť sdílená s pi
 ## What it does
 
 - **Turn off Claude Code's own automatic memory** (not UMA) so UMA is the only memory — globally or per project.
-- **Status under the prompt** — whether Claude's auto memory is on or off, and which settings file decides.
+- **Tag at the end of the hint line under the prompt** — `[UMA]` when Claude's auto memory is off, `[UMA ⚠ CC]` when it is on; ` ↻` is added once you changed it in this session (applies from the next one).
 
 ## Commands
 

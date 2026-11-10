@@ -1,8 +1,9 @@
 // memory-guard — /uma claude-memory: turns Claude Code's automatic memory on and off
-// (UMA is the one memory) and keeps its state visible under the prompt.
+// (UMA is the one memory) and keeps its state visible as a tag under the prompt.
 //
-//   start                  reads the three settings layers, draws the status
+//   start                  reads the three settings layers into memoryState
 //   command.run {uma}      runs a line (claude-memory [on|off] [--global], help)
+//   ui.render PromptHint   adds the tag [UMA] / [UMA ⚠ CC] (+ ↻ once changed) to its tail
 //   ui.render CommandOutput draws the whole multi-line output in its row
 //   prompt.autocomplete    completes subcommands and --global
 //
@@ -12,11 +13,13 @@
 
 import type { EngineInterface, On, PromptAutocompleteSuggestion } from "claude-code";
 import { atom, read, update } from "claude-code";
+import { addToTail, buildBadge } from "./badge";
 import { effectiveState, setAutoMemory } from "./settings";
-import type { Layers } from "./settings";
+import type { Layers, MemoryState } from "./settings";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Record<string, string>);
+const memoryStateAtom = atom({ plugin: "cc-uma-memory", key: "memoryState" } as const, null as MemoryState | null);
 const memoryChangedAtom = atom({ plugin: "cc-uma-memory", key: "memoryChanged" } as const, false);
 
 type $ = EngineInterface;
@@ -57,16 +60,18 @@ async function readLayers($: $, p: Paths): Promise<Layers> {
 	return { global: await readFile($, p.global), project: await readFile($, p.project), local: await readFile($, p.local) };
 }
 
-/** The line under the prompt. */
-async function showStatus($: $): Promise<string> {
+/** Recomputes the effective state once; the PromptHint hook only reads it. */
+async function refreshState($: $): Promise<MemoryState> {
 	const state = effectiveState(await readLayers($, await paths($)));
-	const changed = await read($, memoryChangedAtom);
-	const text = state.enabled
-		? `🧠 paměť Claude zapnutá (${state.source}) — zapisuje mimo UMA · /uma claude-memory off`
-		: `🧠 paměť Claude vypnuta (${state.source}) · paměť = UMA`;
-	const line = changed ? `${text} · platí od příštího sezení` : text;
-	await $.ui.status(line);
-	return line;
+	await update($, memoryStateAtom, () => state);
+	return state;
+}
+
+/** The sentence that replaces the old status line. */
+function verdict(state: MemoryState): string {
+	return state.enabled
+		? `Platí: paměť Claude zapnuta (${state.source}) — zapisuje mimo UMA; od příštího sezení.`
+		: `Platí: paměť Claude vypnuta (${state.source}) — jediná paměť je UMA; od příštího sezení.`;
 }
 
 async function runMemory($: $, words: string[]): Promise<string> {
@@ -93,14 +98,13 @@ async function runMemory($: $, words: string[]): Promise<string> {
 	await $.fs.write(path, result.text);
 	await update($, memoryChangedAtom, () => true);
 	const wanted = target === "on";
-	const state = effectiveState(await readLayers($, p));
-	const status = await showStatus($);
+	const state = await refreshState($);
 	const word = (enabled: boolean) => (enabled ? "zapnuto" : "vypnuto");
 	if (state.enabled !== wanted) {
 		const winner = { lokální: p.local, projekt: p.project, globální: p.global ?? "", výchozí: "" }[state.source];
-		return [`Zapsáno ${word(wanted)} do ${path}, ale platí ${word(state.enabled)} — přebíjí to ${state.source} (${winner})`, status].join("\n");
+		return [`Zapsáno ${word(wanted)} do ${path}, ale platí ${word(state.enabled)} — přebíjí to ${state.source} (${winner})`, verdict(state)].join("\n");
 	}
-	return [`Automatická paměť Claude: ${wanted ? "zapnuta" : "vypnuta"} → ${path}`, status].join("\n");
+	return [`Automatická paměť Claude: ${wanted ? "zapnuta" : "vypnuta"} → ${path}`, verdict(state)].join("\n");
 }
 
 async function runCommand($: $, args: string): Promise<string> {
@@ -131,6 +135,13 @@ export function registerMemoryGuard(on: On): void {
 		const [summary = "", ...rest] = output.split("\n");
 		if (rest.length > 0) await update($, commandOutputsAtom, (o) => capOutputs({ ...o, [summary]: output }));
 		return { text: summary };
+	});
+
+	on("ui.render", { component: "PromptHint" }, async ($, e, next) => {
+		const state = await read($, memoryStateAtom);
+		if (!state) return next(e);
+		const badge = buildBadge(state.enabled, await read($, memoryChangedAtom));
+		return next({ ...e, props: { ...e.props, tail: addToTail(e.props.tail, badge) } });
 	});
 
 	on("ui.render", { component: "CommandOutput" }, async ($, e, next) => {
@@ -169,12 +180,14 @@ function capOutputs(record: Record<string, string>): Record<string, string> {
 	return next;
 }
 
-/** Session start, run by the root: registers the command and draws the status. */
+/** Session start, run by the root: registers the command and computes the state. */
 export async function startMemoryGuard($: EngineInterface): Promise<void> {
 	await $.command.register({
 		name: COMMAND,
 		description: "Paměť UMA: vypnutí a zapnutí automatické paměti Claude",
 		argumentHint: "claude-memory [on|off] [--global] | help",
 	});
-	await showStatus($);
+	// Version 0.1.0 drew a status line; clear what it left behind.
+	await $.ui.status(undefined);
+	await refreshState($);
 }
