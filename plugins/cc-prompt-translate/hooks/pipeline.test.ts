@@ -80,7 +80,7 @@ test("prompt → EN, answer → CZ, both drawn", async ($, on) => {
 	expect(requests).toHaveLength(2);
 
 	const answer = await $.ui.mount({
-		plugin: "prompt-translate",
+		plugin: "cc-prompt-translate",
 		surface: "terminal",
 		component: "AssistantMessage",
 		props: { text: EN_ANSWER, isFirstOfReply: true },
@@ -90,7 +90,7 @@ test("prompt → EN, answer → CZ, both drawn", async ($, on) => {
 	expect(drawnAnswer, "answer drawn in Czech").toBe(CZ_ANSWER);
 
 	const user = await $.ui.mount({
-		plugin: "prompt-translate",
+		plugin: "cc-prompt-translate",
 		surface: "terminal",
 		component: "UserMessage",
 		props: { text: EN_PROMPT, origin: { kind: "composer" }, isExpanded: true },
@@ -102,7 +102,7 @@ test("prompt → EN, answer → CZ, both drawn", async ($, on) => {
 	// The indicator: flag, and the credit coloured by level ($2 left → "low").
 	for (const surface of ["terminal", "desktop"] as const) {
 		const hint = await $.ui.mount({
-			plugin: "prompt-translate",
+			plugin: "cc-prompt-translate",
 			surface,
 			component: "PromptHint",
 			props: { isDraft: false, isWorking: false, hint: "? for shortcuts" },

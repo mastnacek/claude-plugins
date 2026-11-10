@@ -1,4 +1,4 @@
-# prompt-translate
+# cc-prompt-translate
 
 Plugin pro Claude Code: prompt odchází do modelu anglicky, finální odpověď se
 vykreslí česky. Uložená zpráva zůstává anglicky, takže kontext modelu se nikdy
@@ -15,7 +15,7 @@ a přesnější než tenhle soubor.
 ## Příkazy
 
 ```sh
-# vše spouštěj ze složky pluginu (plugins/prompt-translate/)
+# vše spouštěj ze složky pluginu (plugins/cc-prompt-translate/)
 claude plugin validate .        # validátor enginu: atomy, on/$, registrace
 claude plugin test .            # všechny *.test.ts (i ve složkách řezů)
 scripts/vsa-check.sh            # hranice řezů (viz níž)
@@ -25,7 +25,7 @@ npx -y -p typescript tsc -p . --noEmit   # typy; chyby v *.test.ts jsou starší
 **Brána před commitem: všechny čtyři.** Typy hooků musí být čisté, testy zelené,
 `vsa-check` OK.
 
-Vývoj naživo: `claude plugin disable prompt-translate@mastnacek`
+Vývoj naživo: `claude plugin disable cc-prompt-translate@mastnacek`
 a pak `claude --plugin-dir .` (hot reload). **Nikdy obě kopie najednou** —
 každý prompt by se přeložil dvakrát. Vývojová kopie má vlastní `$.store`, takže
 nevidí překlady uložené instalovanou kopií; to není chyba.

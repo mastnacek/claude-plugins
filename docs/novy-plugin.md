@@ -8,15 +8,19 @@ Navrhni 2–3 názvy s jednou větou, co plugin dělá, a nech uživatele vybrat
 
 Dobrý název:
 
-- **říká, co plugin dělá pro uživatele**, ne jak to dělá: `prompt-translate`,
-  ne `openrouter-hooks`;
-- je **kebab-case**, 1–3 slova, anglicky (je to i název příkazu
-  `/<název>` a klíč v `$.state`);
+- začíná předponou **`cc-`** (Claude Code), stejně jako pi rozšíření
+  začínají `pi-`: `cc-prompt-translate`, `cc-uma`;
+- za předponou **říká, co plugin dělá pro uživatele**, ne jak to dělá:
+  `cc-prompt-translate`, ne `cc-openrouter-hooks`;
+- je **kebab-case**, za předponou 1–3 slova, anglicky (je to klíč
+  v `$.state` a název v marketplace);
 - je v `.claude-plugin/marketplace.json` **jedinečný**;
 - neobsahuje `claude`, `plugin` ani jméno cizího produktu jako značku.
 
-Port z pi si nechá název pi rozšíření bez předpony `pi-` a bez přípon
-fork verze (`pi-prompt-translate-czk` → `prompt-translate`).
+Port z pi vymění předponu `pi-` za `cc-` a zahodí přípony fork verze
+(`pi-prompt-translate-czk` → `cc-prompt-translate`, `pi-uma` → `cc-uma`).
+Příkaz pluginu předponu mít nemusí (`/prompt-translate`, `/uma`): je to
+slovo, které uživatel píše, a na názvu pluginu nezávisí.
 
 **Hotovo:** uživatel název výslovně schválil.
 
@@ -68,7 +72,7 @@ Pro každý řez:
 4. Logiku s větvemi, které stojí za test, vytáhni do vedlejšího souboru řezu
    a otestuj (`*.test.ts` vedle ní).
 5. `CLAUDE.md` řezu: co dělá, kontrakt (co čte a píše v `$.state`), tabulka
-   „Nepatří sem“, pasti. Vzor: `plugins/prompt-translate/hooks/features/*/CLAUDE.md`.
+   „Nepatří sem“, pasti. Vzor: `plugins/cc-prompt-translate/hooks/features/*/CLAUDE.md`.
 6. Řádek o řezu do `CLAUDE.md` pluginu (§ Řezy) a funkce do README.
 7. **Brána** (kořenový `CLAUDE.md`), pak commit.
 

@@ -1,4 +1,4 @@
-# prompt-translate
+# cc-prompt-translate
 
 A [Claude Code](https://claude.com/claude-code) plugin that translates your prompts into English before they reach the model, and translates the model's final answer back into your language (Czech by default). Claude works and reasons in English; you write and read in your own language.
 

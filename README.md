@@ -4,12 +4,12 @@ Claude Code plugins by mastnacek, in one marketplace.
 
 ```
 /plugin marketplace add mastnacek/claude-plugins
-/plugin install prompt-translate@mastnacek
+/plugin install cc-prompt-translate@mastnacek
 ```
 
 | Plugin | What it does |
 |---|---|
-| [prompt-translate](plugins/prompt-translate) | Translates your prompts into English before they reach the model and the final answer back into Czech (or your language). |
+| [cc-prompt-translate](plugins/cc-prompt-translate) | Translates your prompts into English before they reach the model and the final answer back into Czech (or your language). |
 
 Each plugin lives in `plugins/<name>/` with its own README, tests and version.
 
@@ -35,5 +35,5 @@ runs both validators):
 scripts/new-plugin.sh <name> "<one-line description>"
 ```
 
-The guides are written in Czech. [`plugins/prompt-translate`](plugins/prompt-translate)
+The guides are written in Czech. [`plugins/cc-prompt-translate`](plugins/cc-prompt-translate)
 is the worked example they refer to.

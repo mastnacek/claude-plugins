@@ -6,7 +6,7 @@ import type { EngineInterface } from "claude-code";
 import { atom, update } from "claude-code";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const translatingAtom = atom({ plugin: "prompt-translate", key: "translating" } as const, false);
+const translatingAtom = atom({ plugin: "cc-prompt-translate", key: "translating" } as const, false);
 
 // Translations in flight: the flag drops only when the last one ends.
 let inFlight = 0;

@@ -24,8 +24,8 @@ import { englishOnlyNote, withNote } from "./english-note";
 import { conversationContextFor } from "./history";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const pendingAtom = atom({ plugin: "prompt-translate", key: "pending" } as const, null as PendingTranslation | null);
-const originalsAtom = atom({ plugin: "prompt-translate", key: "originals" } as const, {} as Record<string, OriginalRecord>, { shape: "originals-1" });
+const pendingAtom = atom({ plugin: "cc-prompt-translate", key: "pending" } as const, null as PendingTranslation | null);
+const originalsAtom = atom({ plugin: "cc-prompt-translate", key: "originals" } as const, {} as Record<string, OriginalRecord>, { shape: "originals-1" });
 
 function preview(text: string, max = 500): string {
 	return text.length > max ? `${text.slice(0, max)}…` : text;

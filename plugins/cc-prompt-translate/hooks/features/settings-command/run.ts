@@ -21,9 +21,9 @@ import type { BoostLevel, HistoryMode, PendingTranslation, Telemetry, TranslateC
 import { buildHelpText, buildStatsText, shortModelLabel } from "./texts";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const pendingAtom = atom({ plugin: "prompt-translate", key: "pending" } as const, null as PendingTranslation | null);
-const sessionCostAtom = atom({ plugin: "prompt-translate", key: "sessionCostUsd" } as const, 0);
-const telemetryAtom = atom({ plugin: "prompt-translate", key: "telemetry" } as const, EMPTY_TELEMETRY as Telemetry, { shape: "telemetry-3" });
+const pendingAtom = atom({ plugin: "cc-prompt-translate", key: "pending" } as const, null as PendingTranslation | null);
+const sessionCostAtom = atom({ plugin: "cc-prompt-translate", key: "sessionCostUsd" } as const, 0);
+const telemetryAtom = atom({ plugin: "cc-prompt-translate", key: "telemetry" } as const, EMPTY_TELEMETRY as Telemetry, { shape: "telemetry-3" });
 
 type $ = EngineInterface;
 

@@ -8,7 +8,7 @@ import { getConfig, modelBackend } from "./config";
 import type { BalanceInfo, CreditInfo } from "./types";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const creditAtom = atom({ plugin: "prompt-translate", key: "credit" } as const, {} as CreditInfo);
+const creditAtom = atom({ plugin: "cc-prompt-translate", key: "credit" } as const, {} as CreditInfo);
 
 type $ = EngineInterface;
 

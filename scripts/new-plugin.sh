@@ -18,8 +18,8 @@ if [[ -z "$name" || -z "$description" ]]; then
   echo "Použití: scripts/new-plugin.sh <název> \"<popis jednou větou>\"" >&2
   exit 2
 fi
-if [[ ! "$name" =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ ]]; then
-  echo "Název musí být kebab-case (malá písmena, číslice, pomlčky): $name" >&2
+if [[ ! "$name" =~ ^cc(-[a-z0-9]+)+$ ]]; then
+  echo "Název musí začínat cc- a být kebab-case (malá písmena, číslice, pomlčky): $name" >&2
   exit 2
 fi
 if [[ -e "plugins/$name" ]]; then

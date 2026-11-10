@@ -14,8 +14,8 @@ import type { CreditInfo } from "../../shared/types";
 import { buildBadge } from "./badge";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const creditAtom = atom({ plugin: "prompt-translate", key: "credit" } as const, {} as CreditInfo);
-const translatingAtom = atom({ plugin: "prompt-translate", key: "translating" } as const, false);
+const creditAtom = atom({ plugin: "cc-prompt-translate", key: "credit" } as const, {} as CreditInfo);
+const translatingAtom = atom({ plugin: "cc-prompt-translate", key: "translating" } as const, false);
 
 export function registerIndicator(on: On): void {
 	on("ui.render", { component: "PromptHint" }, async ($, e, next) => {

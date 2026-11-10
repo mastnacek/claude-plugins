@@ -6,8 +6,8 @@
   },
   "plugins": [
     {
-      "name": "prompt-translate",
-      "source": "./plugins/prompt-translate",
+      "name": "cc-prompt-translate",
+      "source": "./plugins/cc-prompt-translate",
       "description": "Překládá prompty do angličtiny a finální odpovědi zpět do češtiny"
     }
   ]

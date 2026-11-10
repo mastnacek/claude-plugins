@@ -17,7 +17,7 @@ import { capRecord } from "../../shared/state";
 import { COMMAND, completions, runCommand } from "./run";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const commandOutputsAtom = atom({ plugin: "prompt-translate", key: "commandOutputs" } as const, {} as Record<string, string>);
+const commandOutputsAtom = atom({ plugin: "cc-prompt-translate", key: "commandOutputs" } as const, {} as Record<string, string>);
 
 export function registerSettingsCommand(on: On): void {
 	on("command.run", { command: COMMAND }, async ($, e) => {

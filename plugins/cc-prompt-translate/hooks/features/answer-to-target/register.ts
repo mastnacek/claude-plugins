@@ -23,9 +23,9 @@ import type { OriginalRecord, PendingTranslation } from "../../shared/types";
 import { canCheck, isAlreadyCzechOrSlovak } from "./already-target";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const pendingAtom = atom({ plugin: "prompt-translate", key: "pending" } as const, null as PendingTranslation | null);
-const finalsAtom = atom({ plugin: "prompt-translate", key: "finals" } as const, {} as Record<string, string>, { shape: "finals-1" });
-const originalsAtom = atom({ plugin: "prompt-translate", key: "originals" } as const, {} as Record<string, OriginalRecord>, { shape: "originals-1" });
+const pendingAtom = atom({ plugin: "cc-prompt-translate", key: "pending" } as const, null as PendingTranslation | null);
+const finalsAtom = atom({ plugin: "cc-prompt-translate", key: "finals" } as const, {} as Record<string, string>, { shape: "finals-1" });
+const originalsAtom = atom({ plugin: "cc-prompt-translate", key: "originals" } as const, {} as Record<string, OriginalRecord>, { shape: "originals-1" });
 
 type $ = EngineInterface;
 

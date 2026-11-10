@@ -54,7 +54,7 @@ export type CreditInfo = { rate?: number; remainingUsd?: number };
 
 declare module "claude-code" {
 	interface PluginState {
-		"prompt-translate": {
+		"cc-prompt-translate": {
 			config: Shaped<TranslateConfig>;
 			pending: PendingTranslation | null;
 			/** English final answer (trimmed) → translated text, drawn in its place. */

@@ -29,8 +29,8 @@ import type { Purpose, Telemetry, ThinkLevel, TranslateConfig } from "../types";
 import { EMPTY_TELEMETRY } from "../types";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const sessionCostAtom = atom({ plugin: "prompt-translate", key: "sessionCostUsd" } as const, 0);
-const telemetryAtom = atom({ plugin: "prompt-translate", key: "telemetry" } as const, EMPTY_TELEMETRY as Telemetry, { shape: "telemetry-3" });
+const sessionCostAtom = atom({ plugin: "cc-prompt-translate", key: "sessionCostUsd" } as const, 0);
+const telemetryAtom = atom({ plugin: "cc-prompt-translate", key: "telemetry" } as const, EMPTY_TELEMETRY as Telemetry, { shape: "telemetry-3" });
 
 type $ = EngineInterface;
 

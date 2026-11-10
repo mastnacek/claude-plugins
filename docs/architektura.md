@@ -33,7 +33,7 @@ neřekne, jak to postavit správně:
 - **Atom musí být deklarovaný v souboru, který ho čte nebo zapisuje.**
   Importovaný atom validátor nepřečte. Sdílí se klíč (literál), ne objekt.
 - **`$.ui.log` je jeden řádek** (`\n` se kreslí jako `�`) a **text příkazu
-  pluginu jde modelu do kontextu** — vzor obchvatu: `plugins/prompt-translate/hooks/features/settings-command`.
+  pluginu jde modelu do kontextu** — vzor obchvatu: `plugins/cc-prompt-translate/hooks/features/settings-command`.
 - **Mění-li se tvar hodnoty v `$.state`, změň `shape` atomu** (`"config-1"` →
   `"config-2"`) ve všech souborech, které atom deklarují: po reloadu zůstává
   stará hodnota a nový kód by ji četl jako novou.
@@ -57,7 +57,7 @@ neřekne, jak to postavit správně:
 
 ## Hluboký, nebo mělký modul
 
-**Hluboký modul** = malé rozhraní, hodně schované práce. `plugins/prompt-translate/hooks/shared/translation`
+**Hluboký modul** = malé rozhraní, hodně schované práce. `plugins/cc-prompt-translate/hooks/shared/translation`
 je vzor: jedno `translate()` schovává maskování kódu a cest, dva backendy,
 opakování, ořez reasoning, telemetrii a cenu; selhání nevyhazuje, vrací
 originál s `degraded`. Řez neví nic z toho.

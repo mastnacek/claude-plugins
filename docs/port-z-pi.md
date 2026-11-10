@@ -2,7 +2,7 @@
 
 Port jde stejnými třemi kroky jako nový plugin (`novy-plugin.md`). Mezi
 názvem a kostrou přidej **inventuru**; při programování převáděj podle
-tabulky níž. Vzor hotového portu: `plugins/prompt-translate`
+tabulky níž. Vzor hotového portu: `plugins/cc-prompt-translate`
 (z `pi-prompt-translate-czk`).
 
 Zdroj pi rozšíření je lokálně v `~/.pi/agent/git/github.com/mastnacek/<repo>/`.
