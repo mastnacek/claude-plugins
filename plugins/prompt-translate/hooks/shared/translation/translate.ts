@@ -24,14 +24,12 @@ import {
 	stripKeepTags,
 } from "./protect";
 
-import type { Purpose, TranslateConfig, TranslationUsage } from "../types";
+import type { Purpose, Telemetry, TranslateConfig } from "../types";
 import { EMPTY_TELEMETRY } from "../types";
-import type { Telemetry } from "../types";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const sessionCostAtom = atom({ plugin: "prompt-translate", key: "sessionCostUsd" } as const, 0);
-const telemetryAtom = atom({ plugin: "prompt-translate", key: "telemetry" } as const, EMPTY_TELEMETRY as Telemetry, { shape: "telemetry-1" });
-
+const telemetryAtom = atom({ plugin: "prompt-translate", key: "telemetry" } as const, EMPTY_TELEMETRY as Telemetry, { shape: "telemetry-2" });
 
 type $ = EngineInterface;
 
@@ -40,19 +38,22 @@ const REASONING_HEADROOM = 2048;
 
 export type TranslationResult = {
 	text: string;
-	usage: TranslationUsage;
-	costUsd?: number;
-	costCzk?: number;
-	model: string;
 	/** True when nothing was translated and `text` is the untouched original. */
 	degraded?: boolean;
+};
+
+type TranslationUsage = {
+	input: number;
+	output: number;
+	cacheRead: number;
+	cacheWrite: number;
+	totalTokens: number;
+	costUsd?: number;
 };
 
 type CallResult =
 	| { ok: true; text: string; usage: TranslationUsage; truncated: boolean }
 	| { ok: false; error: string; status?: number };
-
-const ZERO_USAGE: TranslationUsage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 };
 
 // ---------------------------------------------------------------------------
 // Request context
@@ -317,9 +318,9 @@ export async function translate(
 	const protectedInput = purpose === "prompt" ? protectPromptSegments(text) : protectFinalAnswerSegments(text);
 
 	// Fail closed on placeholders, fail open on the model: the masked text never escapes.
-	const degrade = (reason: string, model: string): TranslationResult => {
+	const degrade = (reason: string): TranslationResult => {
 		warn($, `${reason} — posílám původní text bez překladu`);
-		return { text, usage: ZERO_USAGE, model, degraded: true };
+		return { text, degraded: true };
 	};
 
 	const tag = createSourceTag();
@@ -334,17 +335,16 @@ export async function translate(
 		model = config.translateModel;
 		response = await callWithRetries($, model, system, user, protectedInput.text, config.translateReasoning);
 	}
-	if (!response.ok) return degrade(`${purpose} translation failed: ${response.error}`, model);
-	if (response.truncated) return degrade(`${purpose} translation truncated at maxTokens`, model);
+	if (!response.ok) return degrade(`${purpose} translation failed: ${response.error}`);
+	if (response.truncated) return degrade(`${purpose} translation truncated at maxTokens`);
 
 	await debug($, `${purpose} usage: ${formatUsage(response.usage, rate)}`);
 	const cleaned = cleanTranslationOutput(response.text.trim(), tag);
 	const stats = { appended: 0 };
 	const restored = stripKeepTags(restoreProtectedSegments(cleaned, protectedInput.segments, stats));
-	if (stats.appended > 3) return degrade(`${purpose} translation dropped ${stats.appended} protected segments`, model);
+	if (stats.appended > 3) return degrade(`${purpose} translation dropped ${stats.appended} protected segments`);
 
 	const costUsd = response.usage.costUsd;
-	const costCzk = typeof costUsd === "number" && typeof rate === "number" && rate > 0 ? costUsd * rate : undefined;
 	if (typeof costUsd === "number") await update($, sessionCostAtom, (c) => c + costUsd);
 
 	const backend = modelBackend(model);
@@ -361,7 +361,6 @@ export async function translate(
 		next.outputTokens += usage.output;
 		if (usage.cacheRead > 0) {
 			next.cachedTokens += usage.cacheRead;
-			next.cacheHitTurns++;
 			if (purpose !== "tool") next.promptAnswerCacheHits++;
 		}
 		next.cacheWriteTokens += usage.cacheWrite;
@@ -369,5 +368,5 @@ export async function translate(
 	});
 
 	void refreshCredit($); // the call was paid for: the credit shown is stale
-	return { text: restored, usage, costUsd, costCzk, model };
+	return { text: restored };
 }

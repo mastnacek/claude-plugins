@@ -27,24 +27,11 @@ export type TranslateConfig = {
 	debug: boolean;
 };
 
-export type TranslationUsage = {
-	input: number;
-	output: number;
-	cacheRead: number;
-	cacheWrite: number;
-	totalTokens: number;
-	costUsd?: number;
-};
-
 /** One translated prompt, keyed in state by the English text the transcript shows. */
 export type OriginalRecord = {
 	source: string;
 	english: string;
 	boost: BoostLevel;
-	model: string;
-	usage?: TranslationUsage;
-	costUsd?: number;
-	costCzk?: number;
 	conversationContext?: string;
 };
 
@@ -62,9 +49,7 @@ export type Telemetry = {
 	claudeRequests: number;
 	cachedTokens: number;
 	cacheWriteTokens: number;
-	cacheHitTurns: number;
 	promptAnswerCacheHits: number;
-	savedCostUsd: number;
 	inputTokens: number;
 	outputTokens: number;
 };

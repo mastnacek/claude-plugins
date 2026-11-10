@@ -23,14 +23,6 @@ function degrade(originalText: string): TranslationResult {
   void restoreProtectedSegments;
   return {
     text: originalText,
-    usage: {
-      input: 0,
-      output: 0,
-      cacheRead: 0,
-      cacheWrite: 0,
-      totalTokens: 0,
-      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-    },
     degraded: true,
   };
 }
@@ -46,25 +38,10 @@ describe("degraded translation", () => {
     expect(degrade(original).degraded).toBe(true);
   });
 
-  it("carries no cost, so nothing is billed for a failed call", () => {
-    const r = degrade(original);
-    expect(r.costUsd).toBeUndefined();
-    expect(r.costCzk).toBeUndefined();
-    expect(r.usage.totalTokens).toBe(0);
-  });
-
   it("the success shape is not degraded", () => {
     const { segments } = protectPromptSegments(original, []);
     const ok: TranslationResult = {
       text: restoreProtectedSegments("__PI_PROMPT_TRANSLATE_PROTECTED_0__", segments),
-      usage: {
-        input: 0,
-        output: 0,
-        cacheRead: 0,
-        cacheWrite: 0,
-        totalTokens: 0,
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-      },
     };
     expect(ok.degraded).toBeUndefined();
   });

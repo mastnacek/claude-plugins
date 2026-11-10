@@ -29,26 +29,12 @@ export function normalizeConfig(value: Partial<TranslateConfig> | Record<string,
 	const v = value as Record<string, unknown>;
 	const bool = (key: keyof TranslateConfig): boolean =>
 		typeof v[key] === "boolean" ? (v[key] as boolean) : (DEFAULT_CONFIG[key] as boolean);
-	const boostRaw = v.boost;
-	const boost: BoostLevel =
-		boostRaw === true
-			? "boost"
-			: boostRaw === false
-				? "off"
-				: boostRaw === "off" || boostRaw === "boost" || boostRaw === "plus" || boostRaw === "mega"
-					? boostRaw
-					: DEFAULT_CONFIG.boost;
-	const historyRaw = v.historyMode;
-	const historyMode: HistoryMode =
-		historyRaw === "off" || historyRaw === "ask" || historyRaw === "auto" || historyRaw === "always"
-			? historyRaw
-			: historyRaw === true
-				? "ask"
-				: DEFAULT_CONFIG.historyMode;
-	let translateModel =
+	const oneOf = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
+		allowed.includes(value as T) ? (value as T) : fallback;
+	const boost = oneOf<BoostLevel>(v.boost, ["off", "boost", "plus", "mega"], DEFAULT_CONFIG.boost);
+	const historyMode = oneOf<HistoryMode>(v.historyMode, ["off", "ask", "auto", "always"], DEFAULT_CONFIG.historyMode);
+	const translateModel =
 		typeof v.translateModel === "string" && v.translateModel.trim() ? v.translateModel.trim() : DEFAULT_CONFIG.translateModel;
-	// pi's "default" meant pi's own default model; here the nearest is the mod's default.
-	if (translateModel === "default") translateModel = DEFAULT_CONFIG.translateModel;
 	const config: TranslateConfig = {
 		enabled: bool("enabled"),
 		translateResponses: bool("translateResponses"),

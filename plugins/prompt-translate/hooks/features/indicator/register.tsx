@@ -44,6 +44,5 @@ export function registerIndicator(on: On): void {
 
 /** Session start, run by the root after the configuration is loaded. */
 export async function startIndicator($: EngineInterface): Promise<void> {
-	$.ui.status(undefined); // an earlier version pinned a status line
 	void refreshCredit($);
 }

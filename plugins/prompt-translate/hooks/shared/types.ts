@@ -6,7 +6,6 @@ export type {
 	BoostLevel,
 	HistoryMode,
 	TranslateConfig,
-	TranslationUsage,
 	OriginalRecord,
 	PendingTranslation,
 	Telemetry,
@@ -62,9 +61,7 @@ export const EMPTY_TELEMETRY: Telemetry = {
 	claudeRequests: 0,
 	cachedTokens: 0,
 	cacheWriteTokens: 0,
-	cacheHitTurns: 0,
 	promptAnswerCacheHits: 0,
-	savedCostUsd: 0,
 	inputTokens: 0,
 	outputTokens: 0,
 };

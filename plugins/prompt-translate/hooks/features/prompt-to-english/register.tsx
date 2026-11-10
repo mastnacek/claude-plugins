@@ -78,10 +78,6 @@ export function registerPromptToEnglish(on: On): void {
 			source,
 			english,
 			boost: config.boost,
-			model: result.model,
-			usage: result.usage,
-			costUsd: result.costUsd,
-			costCzk: result.costCzk,
 			conversationContext,
 		};
 		await update($, originalsAtom, (o) => capRecord({ ...o, [textKey(english)]: record }));

@@ -15,8 +15,8 @@ const PROVIDER_SHORT_CODES: Record<string, string> = {
 };
 
 // "openrouter/google/gemini-3.1-flash-lite" → "OR:gemini-3.1-flash-lite", "haiku" → "A:haiku"
-export function shortModelLabel(setting: string, currentModel?: string): string {
-	if (setting === "current") return `A:${currentModel ?? "current"}`;
+export function shortModelLabel(setting: string): string {
+	if (setting === "current") return "A:current";
 	const firstSlash = setting.indexOf("/");
 	if (firstSlash === -1) return `A:${setting}`;
 	const provider = setting.slice(0, firstSlash).toLowerCase();
