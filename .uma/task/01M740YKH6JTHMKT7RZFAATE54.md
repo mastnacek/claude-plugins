@@ -7,12 +7,13 @@ tags:
   - cc-prompt-translate
   - cc-uma-memory
   - k-revizi
-status: stable
+status: deprecated
 supersedes: 01M7400H42FN9XDVGFS6M9YP4Q
 generated:
   by: pi-agent/1.1
   at: "2026-11-11T00:43:28.678825248+00:00"
 since: "2026-11-11T00:27:03.170364778+00:00"
+until: "2026-11-11T17:48:37.559881212+00:00"
 ---
 Zjištěno 2026-11-11 při živých testech cc-uma-memory:
 

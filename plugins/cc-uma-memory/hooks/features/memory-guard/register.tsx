@@ -3,7 +3,7 @@
 //
 //   start                  reads the three settings layers into memoryState
 //   command.run {uma}      answers `claude-memory [on|off] [--global]`, passes the rest down
-//   ui.render PromptHint   adds the tag [UMA] / [UMA ⚠ CC] (+ ↻ once changed, ⚖N debts, 📝N waiting drafts) to its tail
+//   ui.render PromptHint   adds the tag [💾 UMA] / [💾 UMA ⚠ CC] (+ ↻ once changed, ⚖N debts, 📝N waiting drafts) to its tail
 //
 // The command itself (registration, help, drawing multi-line output,
 // completion) is the uma-command slice's. A plugin's command text goes into the
