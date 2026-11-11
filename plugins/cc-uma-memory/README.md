@@ -27,6 +27,7 @@ cp target/release/uma ~/.local/bin/   # any directory on PATH
 - **Puts your rules in the system prompt**: the active facts of type `decision` and `pattern` (`uma list --json --type …`, at most 10, first line of each body) are added to the system prompt as a section titled *Project Memory & Architectural Rules (from UMA)*, same text as in pi. They are fetched once per session (the prompt stays stable for the provider's cache), so a fact written meanwhile appears in the next session. No rules or `uma` failing → no section.
 - **Asks before anything is written to memory** (write gate): every `uma_write` / `uma_supersede` opens a step dialog with pi's proposal preview (type, scope, tags, 📌 title, 📄 body with 8 lines) and four choices — *✅ Schválit a uložit do paměti*, *✏️ Upravit* (title, body, tags — type the new value under "Type something" — or the full text), *🔄 Přepnout rozsah* (🌐 global ↔ 📁 project), *❌ Zamítnout a zahodit*. After each change you are back at the updated preview, and what you approve is what is stored, edits included. Text typed in the main dialog rejects the write and goes to the model as the reason. Without a way to ask (`-p`) the write is refused.
 - **Closes the side doors**: `Write` / `Edit` / `NotebookEdit` aimed at the UMA store (`.uma/`, the global store) are refused, and a shell command that would change memory (`uma write`, `uma mcp serve --allow-writes`, `echo > .uma/x.md`, `cp … .uma/…`, also inside `bash -c`) gets a yes/no dialog (*🛡️ UMA imunitní interceptor*: *Ano, pokračovat* / *Ne, zablokovat*).
+- **Reminds the model of open debts** (Prospective Debt Ledger): when the main agent finishes a turn, `uma debt check` is asked for open *blocking* debts (the agent records them with `uma_debt`); if there are any, the ledger's reminder is sent to the model as a new prompt so it carries on — settles the debts or explains them. At most **2 reminders per run** (a run is your prompt plus the continuations the plugin started); after that one log line `Otevřených blokujících dluhů: N …` and the model is left alone. Outside a git repo or without `uma` it stays silent (one log line per series). While blocking debts are open the tag below shows ` ⚖N`.
 - **Turn off Claude Code's own automatic memory** (not UMA) so UMA is the only memory — globally or per project.
 - **Tag at the end of the hint line under the prompt** — `[UMA]` when Claude's auto memory is off, `[UMA ⚠ CC]` when it is on; ` ↻` is added once you changed it in this session (applies from the next one).
 
@@ -35,6 +36,7 @@ cp target/release/uma ~/.local/bin/   # any directory on PATH
 - `uma_read`, `uma_list`, `uma_search`, `uma_consolidate` — read-only.
 - `uma_write`, `uma_supersede` — write; enabled by `--allow-writes`.
 - `uma_skill_invoke` — expands a stored skill template into a command; never runs it (you run it with your shell tool). Needs `uma` from pi-uma `master` after 0.17.8.
+- `uma_debt` — the Prospective Debt Ledger of the working tree (`.uma/.state/debts.json`, never committed): the agent records an obligation its action creates (`add`), settles it (`settle`) or lists open ones. Advisory working state, not memory; the plugin's reminders (above) make it hard to finish with blocking debts open.
 - `uma_muscle` — operator-curated routines: `list`, or `run <name>` as a **dry-run** that prints the exact steps and a `plan_hash`. It never executes anything (even with `confirm`).
 - `uma_skeptic` — the adversarial Skeptic: a typed critique of a planned change (failure mode, devil objection, risk level, `suggested_debt`). Read-only, advisory.
 - `uma_humility` — Familiarity Index: how well memory covers the code you are about to touch; `low` means read at least 3 related files first. Read-only, advisory.
@@ -51,8 +53,11 @@ The read-only tools never need a prompt. To stop Claude Code asking for them, ad
 "mcp__plugin_cc-uma-memory_uma__uma_skill_invoke",
 "mcp__plugin_cc-uma-memory_uma__uma_muscle",
 "mcp__plugin_cc-uma-memory_uma__uma_skeptic",
-"mcp__plugin_cc-uma-memory_uma__uma_humility"
+"mcp__plugin_cc-uma-memory_uma__uma_humility",
+"mcp__plugin_cc-uma-memory_uma__uma_debt"
 ```
+
+`uma_debt` is not read-only, but it writes only the local, git-ignored ledger (no memory facts), so it is listed too.
 
 **Running a routine.** Dry-run with `uma_muscle` → the model runs `uma muscle run <name> --confirm --plan-hash <hash>` with Bash → the write gate does its own dry-run and shows a dialog with the steps (`$ command args…`), the routine name and the hash; you answer *Ano, pokračovat* / *Ne, zablokovat*. A command without `--plan-hash`, with a hash that no longer matches the routine, with a failed dry-run, or with more than one routine is refused without a dialog. The dialog appears also with `/uma write-gate off` (running processes is not writing memory), and in `-p` mode the run is refused. For you in a terminal `--plan-hash` stays optional (the CLI); the gate guards the model.
 
@@ -72,6 +77,7 @@ Writes are approved by the write gate (see above). Claude Code's own MCP permiss
 - `/uma search <query>`, `/uma list [global|<project>]`, `/uma read <id>`, `/uma timeline [--id <ULID>] [--all]`, `/uma doctor` — look into the memory. The full listing is shown to you; the model gets only a one-line summary. They read only.
 - `/uma reindex` — rebuild the search index (`uma search "" --reindex`).
 - `/uma export --out <folder>` — write the facts as an OKF bundle (one Markdown document per fact) into the folder; memory is not changed.
+- `/uma debt [list|clear]` — `list` (default) shows every debt of this working tree, open and settled, to you (the model gets a one-line summary); `clear` deletes them all. `clear` is your action: it runs `uma debt clear` directly, and a shell `uma debt clear` from the model asks for your approval (`add`, `settle`, `list`, `check` do not).
 - `/uma help` — short help.
 
 The switches (`recall`, `write-gate`, `append`) are stored with the plugin (`$.store`), so they apply in every session and project.

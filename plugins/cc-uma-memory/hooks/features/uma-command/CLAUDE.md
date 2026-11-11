@@ -10,11 +10,13 @@ a přepínače by neměly kde žít.
 ## Co dělá
 
 - `startUmaCommand` (`register.tsx`) — zaregistruje `/uma` a načte `settings` ze `$.store` do atomu.
-- `command.run {uma}` — `recall [on|off]`, `write-gate [ask|off]`, `append [on|off]`, `search`, `list`, `read`, `timeline`, `doctor`, `reindex`, `export`, `help`. Cizí podpříkaz (`claude-memory`) pošle dolů (`next`); neodpoví-li nikdo, řekne „Neznámý podpříkaz“. Modelu jde jen první řádek výstupu, víceřádkový (nápověda) jde do `commandOutputs`.
+- `command.run {uma}` — `recall [on|off]`, `write-gate [ask|off]`, `append [on|off]`, `search`, `list`, `read`, `timeline`, `doctor`, `reindex`, `export`, `debt [list|clear]`, `help`. Cizí podpříkaz (`claude-memory`) pošle dolů (`next`); neodpoví-li nikdo, řekne „Neznámý podpříkaz“. Modelu jde jen první řádek výstupu, víceřádkový (nápověda) jde do `commandOutputs`.
 - `ui.render CommandOutput` — nakreslí víceřádkový výstup z `commandOutputs` (i ten, který zapsal `memory-guard`).
 - `prompt.autocomplete` — doplňuje podpříkazy a jejich argumenty (včetně `claude-memory`).
 - `settings.ts` — čistá logika: výchozí hodnoty, čtení uložené hodnoty, texty `recall`, `write-gate` a `append`.
 - `queries.ts` — čistá logika čtecích příkazů: argv každého podpříkazu, použití při špatných argumentech, tvar výstupu (shrnutí + výpis), hlášky o chybě binárky. Proces spouští `register.tsx` (`$.process.run`, cwd sezení, 30 s).
+
+- `/uma debt` — `list` (výchozí) = `uma debt list --all --json` vykreslený jako shrnutí + řádek na dluh; `clear` = `uma debt clear` přímo přes `$.process.run` (akce člověka, ne bash). Modelu jde jen první řádek.
 
 ## Kontrakt
 
@@ -31,6 +33,7 @@ a přepínače by neměly kde žít.
 | vkládání vzpomínek do promptu | `recall` |
 | dialog před zápisem, kontrola bashe | `write-gate` |
 | štítek pod promptem | `memory-guard` |
+| připomínky dluhů modelu na konci tahu | `debt` |
 
 ## Pasti
 

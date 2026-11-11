@@ -13,3 +13,9 @@ test("addToTail keeps another plugin's tail", () => {
 	expect(addToTail("", "[UMA]")).toBe("[UMA]");
 	expect(addToTail("[🇬🇧 46 Kč]", "[UMA]")).toBe("[🇬🇧 46 Kč] [UMA]");
 });
+
+test("open blocking debts add ⚖N after the other marks; none leaves the tag as it was", () => {
+	expect(buildBadge(false, false, 0)).toBe("[UMA]");
+	expect(buildBadge(false, false, 2)).toBe("[UMA ⚖2]");
+	expect(buildBadge(true, true, 1)).toBe("[UMA ⚠ CC ↻ ⚖1]");
+});

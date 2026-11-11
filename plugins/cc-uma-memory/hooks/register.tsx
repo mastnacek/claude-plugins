@@ -6,6 +6,7 @@
 // slice is wired by an explicit call, never a loop over a list.
 
 import type { EngineInterface, Register } from "claude-code";
+import { registerDebt } from "./features/debt/register";
 import { registerMemoryGuard, startMemoryGuard } from "./features/memory-guard/register";
 import { registerRecall } from "./features/recall/register";
 import { registerRules } from "./features/rules/register";
@@ -28,6 +29,8 @@ export const register: Register = (on) => {
 		return next(e);
 	});
 
+	// Before uma-command: it wraps /uma debt (next) to refresh the label afterwards.
+	registerDebt(on);
 	registerUmaCommand(on);
 	registerMemoryGuard(on);
 	registerRecall(on);

@@ -11,15 +11,15 @@ v nastavení.
 
 - `startMemoryGuard` (`register.tsx`) — jednou smaže řádek z verze 0.1.0 (`$.ui.status(undefined)`) a spočítá `memoryState`.
 - `command.run {uma}` — odpovídá jen na `claude-memory [on|off] [--global]`, ostatní podpříkazy pošle dolů (`next`); modelu vrátí jen první řádek výstupu.
-- `ui.render PromptHint` — štítek přes pole `tail` props `PromptHint` (engine ho kreslí tlumeně na konci řádku, nezalomí ho; vlastní `<Box>` by ho zalomil): `[UMA]` (paměť Claude vypnutá), `[UMA ⚠ CC]` (zapnutá), před `]` ` ↻` po změně v sezení. Cizí `tail` zachová. Bez barev, jen čte atomy.
-- `badge.ts` — čisté funkce `buildBadge(enabled, changed)` → text a `addToTail`.
+- `ui.render PromptHint` — štítek přes pole `tail` props `PromptHint` (engine ho kreslí tlumeně na konci řádku, nezalomí ho; vlastní `<Box>` by ho zalomil): `[UMA]` (paměť Claude vypnutá), `[UMA ⚠ CC]` (zapnutá), před `]` ` ↻` po změně v sezení, ` ⚖N` při N otevřených blokujících dluzích (z `debtState`, píše ho `debt`). Cizí `tail` zachová. Bez barev, jen čte atomy.
+- `badge.ts` — čisté funkce `buildBadge(enabled, changed, debts)` → text a `addToTail`.
 - `settings.ts` — čistá logika: `effectiveState` (global < projekt < lokální < výchozí = zapnuto) a `setAutoMemory` (mění jen jeden klíč, nevalidní JSON nepřepíše).
 
 Příkaz `/uma` (registrace, nápověda, kreslení víceřádkového výstupu, doplňování) patří řezu `uma-command`; tady je jen logika podpříkazu `claude-memory`.
 
 ## Kontrakt
 
-- **Čte:** `commandOutputs`, `memoryState`, `memoryChanged`.
+- **Čte:** `commandOutputs`, `memoryState`, `memoryChanged`, `debtState` (jen `blocking`).
 - **Píše:** `commandOutputs` (nejvýš 20 záznamů; kreslí je `uma-command`), `memoryState` (při startu a po každé změně příkazem), `memoryChanged` (po první změně v sezení).
 - **Soubory:** jen přes `$.fs`: `~/.claude/settings.json`, `<cwd>/.claude/settings.json` (jen čte), `<cwd>/.claude/settings.local.json`.
 

@@ -52,3 +52,17 @@ test("helpers", () => {
 	expect(missingBinary("spawn uma ENOENT")).toContain("github.com/mastnacek/claude-plugins");
 	expect(failedRun("read", 1, "\nno such fact\nx")).toBe("uma read skončila kódem 1: no such fact");
 });
+
+test("debt: list reads the whole ledger as json, clear is a bare `uma debt clear`, anything else is usage", () => {
+	expect(argv("debt", [])).toEqual(["uma", "debt", "list", "--all", "--json"]);
+	expect(argv("debt", ["list"])).toEqual(["uma", "debt", "list", "--all", "--json"]);
+	expect(argv("debt", ["clear"])).toEqual(["uma", "debt", "clear"]);
+	expect(argv("debt", ["add"])).toBe("Použití: /uma debt [list|clear]");
+	expect(argv("debt", ["clear", "x"])).toBe("Použití: /uma debt [list|clear]");
+	expect(isQuery("debt")).toBe(true);
+});
+
+test("debt: unreadable list output is reported, not thrown", () => {
+	const plan = planQuery("debt", ["list"]);
+	expect("render" in plan && plan.render("garbage")).toBe("uma debt list vrátila nečitelnou odpověď");
+});

@@ -164,3 +164,13 @@ test("two heredocs, commands after the terminator, unterminated and here-strings
 	expect(bypass("cat > a.md <<EOF\numa write --title x")).toBe(true);
 	expect(bypass("cat <<< 'uma write --title x'")).toBe(false); // here-string: unchanged (the text is an argument, not a command)
 });
+
+test("uma debt clear is gated; add, settle, list and check stay free", () => {
+	expect(bypass("uma debt clear")).toBe(true);
+	expect(bypass("sudo uma debt clear")).toBe(true);
+	expect(bypass("bash -c 'uma debt clear'")).toBe(true);
+	expect(bypass("uma debt add --source a --required b")).toBe(false);
+	expect(bypass("uma debt settle debt-1")).toBe(false);
+	expect(bypass("uma debt list --all --json")).toBe(false);
+	expect(bypass("uma debt check --origin claude-code --json")).toBe(false);
+});

@@ -44,6 +44,7 @@ const HELP = [
 	"/uma doctor                        zpráva o zdraví úložiště a indexu (jen čte)",
 	"/uma reindex                       přebuduje index z markdownových souborů",
 	"/uma export --out <složka>         zapíše fakta jako balíček OKF do složky",
+	"/uma debt [list|clear]             dluhy tohoto pracovního stromu (list výchozí, i vyrovnané); clear smaže všechny — jen člověk",
 	"/uma help                          tato nápověda",
 ].join("\n");
 
@@ -94,12 +95,14 @@ function completions(text: string, token: string): PromptAutocompleteSuggestion[
 			["doctor", "zpráva o zdraví úložiště"],
 			["reindex", "přebudování indexu"],
 			["export", "export do balíčku OKF"],
+			["debt", "dluhy pracovního stromu"],
 			["help", "nápověda"],
 		];
 	} else if (words[0] === "claude-memory" && words.length <= 3) options = [["on"], ["off"], ["--global"]];
 	else if (words[0] === "recall" && words.length === 2) options = [["on"], ["off"]];
 	else if (words[0] === "write-gate" && words.length === 2) options = [["ask"], ["off"]];
 	else if (words[0] === "append" && words.length === 2) options = [["on"], ["off"]];
+	else if (words[0] === "debt" && words.length === 2) options = [["list", "otevřené i vyrovnané dluhy"], ["clear", "smazat všechny dluhy"]];
 	else if (words[0] === "list" && words.length === 2) options = [["global", "jen globální fakta"]];
 	else if (words[0] === "timeline" && words.length >= 2) options = [["--id", "jen řetěz s tímto ID"], ["--all", "i nikdy nenahrazená fakta"]];
 	else if (words[0] === "export" && words.length === 2) options = [["--out", "cílová složka"]];
@@ -165,7 +168,7 @@ export async function startUmaCommand($: EngineInterface): Promise<void> {
 	await $.command.register({
 		name: COMMAND,
 		description: "Paměť UMA: vzpomínky k promptu, schvalování zápisu, automatická paměť Claude",
-		argumentHint: "search | list | read | timeline | doctor | reindex | export | recall | append | write-gate | claude-memory | help",
+		argumentHint: "search | list | read | timeline | doctor | reindex | export | debt | recall | append | write-gate | claude-memory | help",
 	});
 	const stored = parseStored(await $.store.get(STORE_KEY));
 	await update($, settingsAtom, () => stored);

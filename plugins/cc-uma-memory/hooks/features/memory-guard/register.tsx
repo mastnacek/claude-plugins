@@ -19,6 +19,7 @@ import type { Layers, MemoryState } from "./settings";
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Record<string, string>);
 const memoryStateAtom = atom({ plugin: "cc-uma-memory", key: "memoryState" } as const, null as MemoryState | null);
+const debtStateAtom = atom({ plugin: "cc-uma-memory", key: "debtState" } as const, { blocking: 0, reminders: 0, continuing: false, failing: false } as { blocking: number; reminders: number; continuing: boolean; failing: boolean });
 const memoryChangedAtom = atom({ plugin: "cc-uma-memory", key: "memoryChanged" } as const, false);
 
 type $ = EngineInterface;
@@ -111,7 +112,7 @@ export function registerMemoryGuard(on: On): void {
 	on("ui.render", { component: "PromptHint" }, async ($, e, next) => {
 		const state = await read($, memoryStateAtom);
 		if (!state) return next(e);
-		const badge = buildBadge(state.enabled, await read($, memoryChangedAtom));
+		const badge = buildBadge(state.enabled, await read($, memoryChangedAtom), (await read($, debtStateAtom)).blocking);
 		return next({ ...e, props: { ...e.props, tail: addToTail(e.props.tail, badge) } });
 	});
 }

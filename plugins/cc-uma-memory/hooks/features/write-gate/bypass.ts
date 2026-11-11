@@ -21,6 +21,8 @@ function subcommandMutatesMemory(tokens: string[]): boolean {
 	// `domains set` rewrites fact frontmatter; `migrate` rewrites every fact file;
 	// `sync push|pull` publishes or merges the whole global store; `muscle run
 	// --confirm` runs a routine without its consent dialog.
+	// `debt clear` wipes the whole ledger: a human action (/uma debt clear). add/settle/list/check stay free.
+	if (sub === "debt" && second === "clear") return true;
 	if (sub === "domains" && second === "set") return true;
 	if (sub === "migrate" && !tokens.some((t) => t.toLowerCase() === "--dry-run")) return true;
 	if (sub === "sync" && (second === "push" || second === "pull")) return true;

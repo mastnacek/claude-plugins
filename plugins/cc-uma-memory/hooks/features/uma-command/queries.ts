@@ -5,7 +5,7 @@
 
 export const README_URL = "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-uma-memory#requirements";
 
-export const QUERY_SUBCOMMANDS = ["search", "list", "read", "timeline", "doctor", "reindex", "export"] as const;
+export const QUERY_SUBCOMMANDS = ["search", "list", "read", "timeline", "doctor", "reindex", "export", "debt"] as const;
 export type QuerySubcommand = (typeof QUERY_SUBCOMMANDS)[number];
 
 export const isQuery = (sub: string | undefined): sub is QuerySubcommand => (QUERY_SUBCOMMANDS as readonly (string | undefined)[]).includes(sub);
@@ -19,6 +19,29 @@ const listing = (what: string, stdout: string): string => {
 	// The first line is all the model gets; the listing is for the person.
 	return `${what}: ${n} řádků výpisu (ukázán uživateli)\n${body}`;
 };
+
+type Debt = { id?: unknown; sourceAction?: unknown; requiredAction?: unknown; blocking?: unknown; origin?: unknown; createdAt?: unknown; settledAt?: unknown };
+
+/** `uma debt list --all --json` as text: a summary line for the model, then one line per debt for the person. */
+function renderDebts(stdout: string): string {
+	let debts: Debt[];
+	try {
+		const parsed: unknown = JSON.parse(stdout);
+		if (!Array.isArray(parsed)) throw new Error("not a list");
+		debts = parsed as Debt[];
+	} catch {
+		return "uma debt list vrátila nečitelnou odpověď";
+	}
+	if (debts.length === 0) return "Dluhy: žádné";
+	const open = debts.filter((d) => !d.settledAt);
+	const blocking = open.filter((d) => d.blocking).length;
+	const lines = debts.map((d) => {
+		const day = (v: unknown) => String(v).slice(0, 16).replace("T", " ");
+		const state = d.settledAt ? `✔ vyrovnán ${day(d.settledAt)}` : d.blocking ? "BLOKUJÍCÍ" : "neblokující";
+		return `${String(d.id)} [${state}] ${String(d.sourceAction)} → ${String(d.requiredAction)} (${String(d.origin)}, ${day(d.createdAt)})`;
+	});
+	return [`Dluhy: otevřených ${open.length} (blokujících ${blocking}), vyrovnaných ${debts.length - open.length} (výpis ukázán uživateli)`, ...lines].join("\n");
+}
 
 /** The flag value after `name`, or undefined when absent or missing. */
 const valueOf = (args: readonly string[], name: string): string | undefined => {
@@ -60,6 +83,14 @@ export function planQuery(sub: QuerySubcommand, args: readonly string[]): Plan {
 		case "reindex":
 			if (args.length > 0) return { usage: "Použití: /uma reindex" };
 			return { argv: ["uma", "search", "", "--reindex"], render: () => "Index UMA byl přebudován." };
+		case "debt": {
+			const usage = "Použití: /uma debt [list|clear]";
+			const action = args[0] ?? "list";
+			if (args.length > 1 || (action !== "list" && action !== "clear")) return { usage };
+			// clear is the person's action (the model's tool cannot do it): it deletes every debt of this working tree.
+			if (action === "clear") return { argv: ["uma", "debt", "clear"], render: (out) => out.trim().split("\n")[0] || "Dluhy smazány." };
+			return { argv: ["uma", "debt", "list", "--all", "--json"], render: renderDebts };
+		}
 		case "export": {
 			const out = valueOf(args, "--out");
 			if (!out || args.length !== 2) return { usage: "Použití: /uma export --out <složka>" };

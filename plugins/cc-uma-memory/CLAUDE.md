@@ -44,8 +44,9 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 ## Řezy
 
 <!-- Jeden řádek na řez: název — co dělá jednou větou. -->
-- uma-command — příkaz `/uma` (registrace, nápověda, doplňování, kreslení výstupu) a trvalé přepínače `/uma recall`, `/uma write-gate` a `/uma append` (`$.store`, atom `settings`; jediný zapisovatel) a čtecí příkazy `/uma search|list|read|timeline|doctor|reindex|export`.
-- memory-guard — `/uma claude-memory [on|off] [--global]` vypne/zapne automatickou paměť Claude (`autoMemoryEnabled`) a stav drží pod promptem jako štítek `[UMA]` / `[UMA ⚠ CC]`. Ostatní podpříkazy `/uma` pošle dolů.
+- uma-command — příkaz `/uma` (registrace, nápověda, doplňování, kreslení výstupu) a trvalé přepínače `/uma recall`, `/uma write-gate` a `/uma append` (`$.store`, atom `settings`; jediný zapisovatel) a čtecí příkazy `/uma search|list|read|timeline|doctor|reindex|export|debt [list|clear]`.
+- memory-guard — `/uma claude-memory [on|off] [--global]` vypne/zapne automatickou paměť Claude (`autoMemoryEnabled`) a stav drží pod promptem jako štítek `[UMA]` / `[UMA ⚠ CC]` (+ ` ⚖N` při otevřených dluzích). Ostatní podpříkazy `/uma` pošle dolů.
 - recall — před promptem zeptá `uma recall check` a pasáže k úkolu přidá jako skrytý kontext (anti-echo přes `recallSession`); poradní, při chybě prompt projde beze změny.
 - rules — aktivní fakty typu `decision` a `pattern` přidá do system promptu jako sekci `session` (port z pi, text doslova, nejvýš 10; vypíná `/uma append off`); načte je jednou za sezení.
-- write-gate — dialog před `uma_write` / `uma_supersede`, zákaz `Write`/`Edit` do úložiště dialog pro bash, který by měnil paměť (port `approval_gate` z pi), a brána `uma muscle run --confirm` (kroky z vlastního dry-runu, kontrola `--plan-hash`).
+- debt — na konci tahu hlavního agenta zeptá `uma debt check` a při otevřených blokujících dluzích pošle modelu připomínku jako nový prompt (`$.prompt.submit`, nejvýš 2 na běh, pak jen řádek logu); počet dluhů jde do štítku ` ⚖N`.
+- write-gate — dialog před `uma_write` / `uma_supersede`, zákaz `Write`/`Edit` do úložiště dialog pro bash, který by měnil paměť (port `approval_gate` z pi), a brána `uma muscle run --confirm` (kroky z vlastního dry-runu, kontrola `--plan-hash`); `uma debt clear` v bashi je mutující.

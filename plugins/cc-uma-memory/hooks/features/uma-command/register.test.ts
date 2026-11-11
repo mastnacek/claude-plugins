@@ -127,3 +127,47 @@ test("a failing uma is reported with its exit code", async ($, on) => {
 	await start($);
 	expect((await run($, "read 01ABC")).text).toBe("uma read skončila kódem 3: no such fact");
 });
+
+const DEBTS = JSON.stringify([
+	{ id: "debt-1", sourceAction: "změna API", requiredAction: "upravit volající", blocking: true, origin: "claude-code", createdAt: "2026-11-11T09:12:00Z", settledAt: null },
+	{ id: "debt-2", sourceAction: "a", requiredAction: "b", blocking: false, origin: "pi", createdAt: "2026-11-10T08:00:00Z", settledAt: "2026-11-10T09:00:00Z" },
+]);
+
+test("/uma debt lists all debts as one summary line for the model and a listing for the person", async ($, on) => {
+	setup(on);
+	const seen = withProcess(on, { exitCode: 0, stdout: DEBTS, stderr: "" });
+	await start($);
+	const out = await run($, "debt list");
+	expect(out.text).toBe("Dluhy: otevřených 1 (blokujících 1), vyrovnaných 1 (výpis ukázán uživateli)");
+	expect(seen.argv[0]).toEqual(["uma", "debt", "list", "--all", "--json"]);
+	expect(seen.cwd[0]).toBe("/work");
+	const mounted = await $.ui.mount({ plugin: "cc-uma-memory", surface: "terminal", component: "CommandOutput", props: { command: "uma", isErrored: false, text: out.text } } as never);
+	expect(await mounted.find({ type: "Text", text: /debt-1 \[BLOKUJÍCÍ\] změna API → upravit volající/ })).toBeDefined();
+	expect(await mounted.find({ type: "Text", text: /debt-2 \[✔ vyrovnán 2026-11-10 09:00\]/ })).toBeDefined();
+	expect((await run($, "debt")).text).toContain("Dluhy: otevřených 1");
+});
+
+test("/uma debt clear runs `uma debt clear` directly (no bash) and relays the engine's line", async ($, on) => {
+	setup(on);
+	const seen = withProcess(on, { exitCode: 0, stdout: "Cleared 2 debt(s).\n", stderr: "" });
+	await start($);
+	expect((await run($, "debt clear")).text).toBe("Cleared 2 debt(s).");
+	expect(seen.argv[0]).toEqual(["uma", "debt", "clear"]);
+});
+
+test("/uma debt: bad argument runs nothing; empty ledger and a failing uma say so", async ($, on) => {
+	setup(on);
+	const seen = withProcess(on, { exitCode: 0, stdout: "[]", stderr: "" });
+	await start($);
+	expect((await run($, "debt nic")).text).toBe("Použití: /uma debt [list|clear]");
+	// Only the debt slice's label refresh ran (check); neither list nor clear.
+	expect(seen.argv.filter((a) => a[2] !== "check")).toEqual([]);
+	expect((await run($, "debt list")).text).toBe("Dluhy: žádné");
+});
+
+test("/uma debt in a directory without git: the engine's error is reported with the exit code", async ($, on) => {
+	setup(on);
+	withProcess(on, { exitCode: 1, stdout: "", stderr: "Error: not a git repository" });
+	await start($);
+	expect((await run($, "debt list")).text).toBe("uma debt skončila kódem 1: Error: not a git repository");
+});
