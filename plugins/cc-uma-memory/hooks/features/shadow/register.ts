@@ -13,12 +13,12 @@
 
 import type { EngineInterface, On } from "claude-code";
 import { atom, read, update } from "claude-code";
-import { MAX_CORRECTION_CHARS, afterBash, dependencyContext, distillArgv, isUserCorrection } from "./policy";
+import { MAX_CORRECTION_CHARS, afterBash, afterEdit, dependencyContext, distillArgv, isUserCorrection } from "./policy";
 import type { Failure, Trigger } from "./policy";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on", lang: "cs" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev"; lang: "cs" | "en" }, { shape: "settings-6" });
-const shadowStateAtom = atom({ plugin: "cc-uma-memory", key: "shadowState" } as const, { failure: null, lastCorrection: "" } as { failure: Failure | null; lastCorrection: string });
+const shadowStateAtom = atom({ plugin: "cc-uma-memory", key: "shadowState" } as const, { failure: null, lastCorrection: "" } as { failure: Failure | null; lastCorrection: string }, { shape: "shadow-state-2" });
 
 type $ = EngineInterface;
 
@@ -61,6 +61,8 @@ async function afterManifestEdit($: $, tool: string, e: Record<string, unknown>)
 	if (mode === undefined) return;
 	const path = typeof e.file_path === "string" ? e.file_path : "";
 	const text = typeof (tool === "Write" ? e.content : e.new_string) === "string" ? String(tool === "Write" ? e.content : e.new_string) : "";
+	// A file changed after a red run: the fix a later green run is credited to.
+	await update($, shadowStateAtom, (s) => ({ ...s, failure: afterEdit(s.failure, path) }));
 	const context = dependencyContext(tool, path, text);
 	if (context !== undefined) stage($, mode, "dependency_change", context);
 }
