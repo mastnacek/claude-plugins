@@ -26,10 +26,26 @@ const MAX_EXCLUDE_IDS = 60;
 /** Longest prompt text sent to the engine (argv, not a document). */
 const MAX_PROMPT_CHARS = 2000;
 
-/** argv of one check. `--` ends option parsing, so a prompt like "- fix the list" stays an argument. */
+/** Czech diacritics: the prompt reached recall untranslated (the facts are English). */
+const NON_ENGLISH = /[áčďéěíňóřšťúůýž]/i;
+
+/** Keyword check (~0.4 s) and the semantic fallback (measured 1.7–3.6 s; pi allows 15 s). Hook budget is 10 s. */
+const TIMEOUT_MS = 3000;
+const SEMANTIC_TIMEOUT_MS = 8000;
+
+/** How long one check may run: the semantic fallback for a non-English prompt needs longer. */
+export const recallTimeout = (prompt: string): number => (NON_ENGLISH.test(prompt) ? SEMANTIC_TIMEOUT_MS : TIMEOUT_MS);
+
+/**
+ * argv of one check. `--` ends option parsing, so a prompt like "- fix the list" stays an argument.
+ * A prompt with diacritics is judged by `jev-relevance` with the semantic fallback (as pi does
+ * when no English translation exists), so the English facts are still found.
+ */
 export function recallArgv(prompt: string, excludeIds: readonly string[]): string[] {
+	const foreign = NON_ENGLISH.test(prompt);
 	return [
-		"uma", "recall", "check", "--judge", "jev", "--json", "--max", String(MAX_INJECTED),
+		"uma", "recall", "check", "--judge", foreign ? "jev-relevance" : "jev", ...(foreign ? ["--semantic-fallback"] : []),
+		"--json", "--max", String(MAX_INJECTED),
 		...excludeIds.slice(-MAX_EXCLUDE_IDS).flatMap((id) => ["--exclude", id]),
 		"--", prompt.slice(0, MAX_PROMPT_CHARS),
 	];
