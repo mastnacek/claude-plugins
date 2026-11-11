@@ -1,6 +1,6 @@
 {
   "name": "cc-reverse-spec",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Reverse-engineers a verifiable spec (rules, tests, traceability) from an existing codebase so it can be rebuilt with proven parity.",
   "author": { "name": "mastnacek" },
   "homepage": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-reverse-spec",
