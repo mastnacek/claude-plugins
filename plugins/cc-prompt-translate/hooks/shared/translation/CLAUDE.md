@@ -9,7 +9,7 @@ nikdy nevyhodí výjimku, ale vrátí původní text s příznakem `degraded`.
 
 ## Co dělá (veřejné rozhraní)
 
-- `translate($, text, targetLanguage, purpose, conversationContext?)` v `translate.ts` → `TranslationResult { text, degraded? }` (cena a tokeny jdou jen do telemetrie); `purpose` je `"prompt"`, `"answer"` nebo `"tool"`.
+- `translate($, text, targetLanguage, purpose, conversationContext?)` v `translate.ts` → `TranslationResult { text, degraded? }` (cena a tokeny jdou jen do telemetrie); `purpose` je `"prompt"`, `"answer"`, `"tool"` nebo `"arguments"` (argumenty příkazu: vlastní prompt bez boostu, `conversationContext` nese jméno, popis a hint příkazu; maskuje se jako prompt).
 - `detectLanguageOrCode(text)` v `detect.ts` → `{ isEnglishOrCode, reason }`.
 - Jen tyhle dva soubory jsou vstupy zvenčí.
 

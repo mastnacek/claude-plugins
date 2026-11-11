@@ -69,13 +69,15 @@ types/index.d.ts                kontrakt $.state — jediné místo, kde se řez
 Pravidla (hlídá `scripts/vsa-check.sh`):
 
 1. **Řez neimportuje z jiného řezu.** Řez musí jít smazat jako složka.
-   Konstantu, kterou potřebují dva řezy, radši zduplikuj (viz `OWN_COMMAND`
-   v `command-arguments`) — duplicita je levnější než špatná abstrakce.
+   Konstantu, kterou potřebují dva řezy, radši zduplikuj — duplicita je levnější než špatná abstrakce.
 2. **Závislosti míří dolů:** `register.tsx → features → shared`. `shared/`
    nezná řezy ani kořen.
 3. **Řezy spolu mluví jen přes `$.state`**, ne voláním: prompt nastaví
    `pending` a odpověď ho přečte; překlad nastaví `translating` a indikátor ho
    kreslí. Kdo hodnotu píše a kdo čte, stojí v `CLAUDE.md` řezu (Kontrakt).
+   `commandMeta` (popis a `argumentHint` příkazů z `command.describe`) píše
+   i čte jen `command-arguments`; v kódu nesmí být jméno pluginu, příkazu ani
+   podpříkazu — co s argumenty, plyne z těchto metadat.
 4. **Vnitřnosti hlubokého modulu jsou soukromé:** zvenku jen
    `translation/translate.ts` a `translation/detect.ts`; `protect.ts`
    a `prompts.ts` ne.

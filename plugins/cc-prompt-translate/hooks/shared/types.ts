@@ -12,6 +12,7 @@ export type {
 	Telemetry,
 	BalanceInfo,
 	CreditInfo,
+	CommandMeta,
 } from "../../types";
 
 import type { TranslateConfig, Telemetry } from "../../types";
@@ -26,7 +27,7 @@ export type ProtectedText = {
 	segments: ProtectedSegment[];
 };
 
-export type Purpose = "prompt" | "answer" | "tool";
+export type Purpose = "prompt" | "answer" | "tool" | "arguments";
 
 /**
  * Model setting:

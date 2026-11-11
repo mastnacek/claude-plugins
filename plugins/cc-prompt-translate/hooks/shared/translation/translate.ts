@@ -12,6 +12,7 @@ import { debug, warn } from "../log";
 import { clip, logEvent } from "../usage-log";
 import { checkTranslationLength } from "./length-check";
 import {
+	ARGUMENTS_SYSTEM_PROMPT,
 	KEEP_TERM_RULE,
 	PROMPT_BOOST_SYSTEM_PROMPT,
 	PROMPT_MEGA_SYSTEM_PROMPT,
@@ -122,6 +123,7 @@ function systemPromptFor(purpose: Purpose, config: TranslateConfig, targetLangua
 		// Kept constant (no per-request tag) so the provider's prompt cache holds it.
 		return `${KEEP_TERM_RULE}\n${body}`;
 	}
+	if (purpose === "arguments") return ARGUMENTS_SYSTEM_PROMPT;
 	if (purpose === "tool") {
 		return [
 			`Translate every block of text to ${targetLanguage}. The blocks are separated by lines of the form <<<n>>>.`,
@@ -336,7 +338,7 @@ export async function translate(
 	const rate = await getUsdToCzkRate($);
 	await debug($, `${purpose} translation with ${model} (think ${config.think})`);
 
-	const protectedInput = purpose === "prompt" ? protectPromptSegments(text) : protectFinalAnswerSegments(text);
+	const protectedInput = purpose === "prompt" || purpose === "arguments" ? protectPromptSegments(text) : protectFinalAnswerSegments(text);
 
 	// One log line per translation (only with `log on`): quality, speed, retries.
 	const started = performance.now();

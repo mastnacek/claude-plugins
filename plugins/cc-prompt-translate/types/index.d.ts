@@ -52,6 +52,9 @@ export type BalanceInfo = { remaining: number; total: number; used: number };
 /** What the indicator shows of the money: the day's rate and, on an OpenRouter model, the credit left. */
 export type CreditInfo = { rate?: number; remainingUsd?: number };
 
+/** What the engine reports about a slash command (`command.describe`); the hint names the values it knows. */
+export type CommandMeta = { description: string; argumentHint?: string };
+
 declare module "claude-code" {
 	interface PluginState {
 		"cc-prompt-translate": {
@@ -69,6 +72,8 @@ declare module "claude-code" {
 			translating: boolean;
 			/** A /prompt-translate output's first line (what the model reads) → the whole output, drawn in its row. */
 			commandOutputs: Record<string, string>;
+			/** Command name → its description and argument hint, collected by command-arguments. */
+			commandMeta: Shaped<Record<string, CommandMeta>>;
 		};
 	}
 }
