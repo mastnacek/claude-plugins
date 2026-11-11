@@ -5,12 +5,15 @@
 // they are hooked here and call each slice's function. `on` / `$` go only to
 // functions called by name: every slice is wired by an explicit call, never a loop.
 //
-// The watchdog only observes: every hook here passes the event on unchanged.
+// The watchdog reports. Only a rule that someone switched to `block` refuses a call (features/guard);
+// the default of every rule is `report`.
 
 import type { EngineInterface, Register } from "claude-code";
 import { recordTurn, registerLedger } from "./features/ledger/register";
+import { registerGuard } from "./features/guard/register";
 import { registerReport, startReport } from "./features/report/register";
 import { evaluateNow, registerRules } from "./features/rules/register";
+import { registerWaiver, startWaiver } from "./features/waiver/register";
 
 /** One slice failing leaves the others working, and never disturbs the session. */
 async function guarded($: EngineInterface, slice: string, work: Promise<void>): Promise<void> {
@@ -24,6 +27,7 @@ async function guarded($: EngineInterface, slice: string, work: Promise<void>): 
 export const register: Register = (on) => {
 	on("session.start", async ($, e, next) => {
 		await guarded($, "report", startReport($));
+		await guarded($, "waiver", startWaiver($));
 		await guarded($, "rules", evaluateNow($));
 		return next(e);
 	});
@@ -47,5 +51,8 @@ export const register: Register = (on) => {
 	// Registered first: it wraps the later hooks of the same event (report answers /watch, rules is below it).
 	registerReport(on);
 	registerLedger(on);
+	// After the ledger, so the ledger records what the guard refuses.
+	registerGuard(on);
+	registerWaiver(on);
 	registerRules(on);
 };

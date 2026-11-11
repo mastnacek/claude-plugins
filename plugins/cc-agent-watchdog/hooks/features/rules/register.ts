@@ -2,21 +2,25 @@
 //
 //   evaluateNow         the root calls it at session start, after each turn and at session end:
 //                       looks for debugging leftovers (git status), judges the ledger, writes `verdict`
-//   command.run {watch} answers `/watch rules` (the active rules); everything else goes down
+//   command.run {watch} answers `/watch rules` (all rules: state, mode, source, open exceptions) and
+//                       `/watch rule <id> on|off|report|block [--global]` (project file or $.store); the rest goes down
 //
 // The rules themselves (data, predicates, scoring) live in shared/ — the report
 // slice judges old sessions with the same code. This slice never denies a call.
 
 import type { EngineInterface, On } from "claude-code";
 import { atom, update } from "claude-code";
-import { loadConfig } from "../../shared/config";
-import { activeRules, evaluate } from "../../shared/judge";
+import { loadConfig, globalRules } from "../../shared/config";
+import { evaluate } from "../../shared/judge";
 import { leftoversOf } from "../../shared/checks";
-import { NOT_YET } from "../../shared/rules";
-import { rulesOutput } from "../../shared/output";
-import type { Out, Outputs } from "../../shared/output";
+import { NOT_YET, RULES } from "../../shared/rules";
+import { rulesOutput, sentence } from "../../shared/output";
+import type { Out, Outputs, Result } from "../../shared/output";
 import { currentRole } from "../../shared/role";
+import { STORE_KEY } from "../../shared/settings";
 import { appendEvent, openLog, readEvents } from "../../shared/store";
+import { openWindows } from "../../shared/waivers";
+import { describeChange, parseChange, patchProjectFile, withChange } from "./change";
 
 type $ = EngineInterface;
 
@@ -62,14 +66,53 @@ export async function evaluateNow($: $): Promise<void> {
 	}
 }
 
+const PROJECT_FILE = ".claude/watchdog.json";
+
+/** `/watch rules`: all rules with state, mode, source, and the exceptions open in this session. */
+async function rulesView($: $): Promise<Result> {
+	const role = await currentRole($);
+	const cwd = await $.session.cwd();
+	const ref = await openLog($, await $.session.id(), role, cwd);
+	const cfg = await loadConfig($, ref?.workdir ?? cwd);
+	const events = ref ? await readEvents($, ref.path) : [];
+	return rulesOutput(role, RULES, cfg, NOT_YET, openWindows(events));
+}
+
+const fail = (text: string): Result => sentence("pravidlo", `❌ ${text}`, "error");
+
+/** `/watch rule <id> on|off|report|block [--global]`: writes the project file or the user's store. */
+async function ruleChange($: $, args: string[]): Promise<Result> {
+	const change = parseChange(args);
+	if ("error" in change) return fail(change.error);
+	if (change.global) {
+		const layer = withChange(await globalRules($), change);
+		await $.store.set(STORE_KEY, layer);
+	} else {
+		const cwd = await $.session.cwd();
+		const workdir = (await openLog($, await $.session.id(), await currentRole($), cwd))?.workdir ?? cwd;
+		const path = `${workdir}/${PROJECT_FILE}`;
+		const old = (await $.fs.exists(path)) ? String(await $.fs.read(path)) : undefined;
+		const patched = patchProjectFile(old, change);
+		if ("error" in patched) return fail(patched.error);
+		await $.fs.write(path, patched.text);
+	}
+	const head = describeChange(change);
+	const lines: Out["lines"] = [{ text: `✔ ${head}`, tone: "success" }];
+	if (change.warning) lines.push({ text: change.warning, tone: "warning" });
+	return { text: `Watchdog · ${head}`, out: { title: `pravidlo ${change.id}`, tone: change.warning ? "warning" : "success", lines } };
+}
+
 export function registerRules(on: On): void {
 	on("command.run", { command: "watch" }, async ($, e, next) => {
-		if (e.args.trim().split(/\s+/)[0] !== "rules") return next(e);
-		const role = await currentRole($);
-		const cwd = await $.session.cwd();
-		const ref = await openLog($, await $.session.id(), role, cwd);
-		const cfg = await loadConfig($, ref?.workdir ?? cwd);
-		const { text, out } = rulesOutput(role, activeRules(role, cfg), NOT_YET);
+		const [sub, ...rest] = e.args.trim().split(/\s+/).filter(Boolean);
+		if (sub !== "rules" && sub !== "rule") return next(e);
+		let result: Result;
+		try {
+			result = sub === "rules" ? await rulesView($) : await ruleChange($, rest);
+		} catch (error) {
+			result = fail(`${error instanceof Error ? error.message.split("\n")[0] : String(error)}`);
+		}
+		const { text, out } = result;
 		await update($, commandOutputsAtom, (o) => {
 			const merged = { ...o, [text]: out };
 			const keys = Object.keys(merged);

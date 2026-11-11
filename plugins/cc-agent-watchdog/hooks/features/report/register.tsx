@@ -13,6 +13,7 @@ import { atom, read, update } from "claude-code";
 import { badge } from "../../shared/judge";
 import type { Out, Outputs } from "../../shared/output";
 import { addToTail } from "./badge";
+import { completions } from "./complete";
 import { reportResult, USAGE } from "./command";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
@@ -37,7 +38,7 @@ export function registerReport(on: On): void {
 			await update($, commandOutputsAtom, (o) => capOutputs({ ...o, [text]: out }));
 			return { text };
 		}
-		if (sub === "rules") return next(e);
+		if (sub === "rules" || sub === "rule") return next(e);
 		return { text: USAGE };
 	});
 
@@ -61,6 +62,13 @@ export function registerReport(on: On): void {
 		);
 	});
 
+	on("prompt.autocomplete", async ($, e, next) => {
+		const mine = completions(e.text, e.token);
+		if (mine.length === 0) return next(e);
+		const below = await next(e);
+		return { ...below, suggestions: [...mine, ...below.suggestions] };
+	});
+
 	on("ui.render", { component: "PromptHint" }, async ($, e, next) => {
 		const verdict = await read($, verdictAtom);
 		if (!verdict) return next(e);
@@ -73,6 +81,6 @@ export async function startReport($: EngineInterface): Promise<void> {
 	await $.command.register({
 		name: COMMAND,
 		description: "Watchdog agentů: skóre sezení a aktivní pravidla",
-		argumentHint: "report [last | all | <id>] | rules",
+		argumentHint: "report [last | all | <id>] | rules | rule <id> on|off|report|block [--global]",
 	});
 }

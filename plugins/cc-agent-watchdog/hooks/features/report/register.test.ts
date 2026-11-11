@@ -70,7 +70,7 @@ test("/watch without a known subcommand says how to use it", async ($, on) => {
 	setup(on, fresh({ env: { HOME: "/h" }, session: "USAGE001-x" }));
 	const h = $ as unknown as Host;
 	await start(h);
-	expect((await run(h, "")).text).toBe("Použití: /watch report [last | all | <id sezení>] · /watch rules");
+	expect((await run(h, "")).text).toBe("Použití: /watch report [last | all | <id sezení>] · /watch rules · /watch rule <id> on|off|report|block [--global]");
 });
 
 test("the orchestrator's scorecard says no rule applies to it", async ($, on) => {

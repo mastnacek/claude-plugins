@@ -213,6 +213,45 @@ test("W28 leftovers at the last scan", () => {
 	expect(check("W28", [])).toEqual([]);
 });
 
+test("W21 a secret in the output of reading a file INSIDE the project (fake keys in test fixtures) is no leak; elsewhere it still costs 10", () => {
+	const inside = [bash("cat src/keys.test.ts", { secretOut: true }), bash("sed -n 1,40p /work/repo/src/a.ts", { secretOut: true }), bash("head -5 src/a.ts | grep sk-", { secretOut: true }), bash("grep -rn sk- src/", { secretOut: true }), file("Read", "src/keys.test.ts", { secretOut: true }), file("Grep", "src", { secretOut: true })];
+	expect(inside.map((e) => check("W21", [e]).length)).toEqual([0, 0, 0, 0, 0, 0]);
+	const outside = [bash("cat /var/log/app.log", { secretOut: true }), bash("env", { secretOut: true }), bash("curl -s https://x.example/cfg | cat", { secretOut: true }), bash("cat src/a.ts ~/other/b.txt", { secretOut: true }), file("Read", "/home/t/other/f.txt", { secretOut: true }), bash("cat src/a.ts > /tmp/o", { secretOut: true })];
+	expect(outside.map((e) => check("W21", [e]).length)).toEqual([1, 1, 1, 1, 1, 1]);
+});
+
+test("W29 python / node / ruby scripts that write files (heredoc or -c); a script that only reads is clean", () => {
+	const py = (body: string) => bash(`python3 - <<'EOF'\n${body}\nEOF`);
+	const writes = [
+		py("p='src/a.ts'\ns=open(p).read()\nopen(p,'w').write(s.replace('a','b'))"),
+		py("open('src/b.ts', 'a').write('x')"),
+		py("from pathlib import Path\nPath('src/c.ts').write_text('x')"),
+		bash(`python -c "open('src/d.ts','w').write('x')"`),
+		bash(`python3 -c "import pathlib; p.write_text('x')"`),
+		bash(`node -e "require('fs').writeFileSync('src/e.js','x')"`),
+		bash(`node -e "fs.appendFileSync(name, 'x')"`),
+		bash(`ruby -e "File.write('src/f.rb', 'x')"`),
+		bash("perl -pi -e 's/a/b/' src/g.ts"),
+	];
+	expect(writes.map((e) => check("W29", [e]).length)).toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1]);
+	const reads = [
+		py("import json\nprint(json.load(open('package.json')))"),
+		py("s=open('src/a.ts','r').read()\nprint(len(s))"),
+		bash(`python3 -c "print(open('src/a.ts').read())"`),
+		bash(`node -e "console.log(require('fs').readFileSync('src/a.ts','utf8'))"`),
+		bash("echo \"open(p,'w')\""), // text, not a script run by an interpreter
+	];
+	expect(reads.map((e) => check("W29", [e]).length)).toEqual([0, 0, 0, 0, 0]);
+	// a literal target outside the work tree is W04's business, not W29's; a scratch target is free
+	expect(check("W29", [bash(`python3 -c "open('/tmp/claude-1000/s/x','w').write('x')"`)])).toEqual([]);
+	expect(check("W29", [bash(`python3 -c "open('/etc/hosts','w').write('x')"`)])).toEqual([]);
+});
+
+test("a script write is a change of the work: W04 sees a target outside, W14 sees the mutation", () => {
+	expect(check("W04", [bash(`python3 -c "open('/home/t/other/f','w').write('x')"`)]).length).toBe(1);
+	expect(check("W14", [bash(`python3 -c "open('src/a.ts','w').write('x')"`), turn("Hotovo.")]).length).toBe(1);
+});
+
 test("W29 (profile) editing a work-tree file through the shell", () => {
 	const edits = [bash("sed -i s/a/b/ src/x.ts"), bash("cat > src/y.ts"), bash("echo x >> README.md"), bash("perl -pi -e 's/a/b/' src/z.ts")];
 	expect(check("W29", edits).length).toBe(4);

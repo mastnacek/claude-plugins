@@ -15,7 +15,8 @@ Kdyby zmizel, plugin nic nezaznamenává a skóre je pořád 100.
 - `record.ts` — čistá `toEvent`/`toTurn`: z vstupu a výsledku nástroje vyrobí řádek.
   Pole: `ts, session` (celé id), `role, cwd, tool, path?, command?, url?, exitCode?, isError, denied, deniedReason?, durationMs, excerpt?, secretOut?`.
   `exitCode` se bere z textu chyby `Exit code N`, u Bash bez chyby je 0. `denied` = `{ deny }` z hooku, nebo chyba, jejíž text vypadá jako zamítnutí
-  (klasifikátor, uživatel: „doesn't want to proceed“, „was blocked“ …).
+  (klasifikátor, uživatel: „doesn't want to proceed“, „was blocked“ …). `blocked: true` = zamítnutí je z režimu `block` tohoto pluginu
+  (`{ deny }` začínající `Wxx: ` a jmenující `watchdog_waiver`, `shared/block.isBlockReason`); W19 a W20 ho nepočítají.
 - **Obsah souborů a výstupy se neukládají.** Příkaz (600 znaků), cesta, url a úryvek chyby (160 znaků) projdou `redact` (klíče `sk-`, `ghp_`,
   `AKIA`, bearer, hesla v URL, soukromé klíče); `secretOut: true` značí, že výstup nástroje obsahoval tajemství (pak už jen příznak). Nenastaví se, je-li tajemství (nebo jeho prvních 8 znaků — nástroje tisknou oříznuté náhledy) v textových polích vstupu téhož volání: to jsou testovací data, která agent napsal sám (`secretsIn` v `shared/redact.ts`, `hasForeignSecret` v `record.ts`). Pravidlo W21 za to bere −10, ne instant.
 
@@ -45,7 +46,8 @@ Po `/clear` je nové id → nový soubor; `--resume` najde soubor podle 8 znaků
 |---|---|
 | posuzování, skóre, pravidla | `shared/judge`, `shared/rules`; spouští `rules` |
 | štítek, příkaz `/watch` | `report` |
-| zamítnutí nebo změna vstupu nástroje | nikam — watchdog jen hlásí |
+| zamítnutí nebo změna vstupu nástroje | `guard` (jen režim `block`); ledger vrací výsledek vždy nezměněný |
+| řádky `waiver` (žádosti o výjimku) | `waiver` |
 | čtení konfigurace projektu | `shared/config` |
 
 ## Pasti

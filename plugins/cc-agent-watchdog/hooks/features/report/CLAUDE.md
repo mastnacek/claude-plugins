@@ -12,7 +12,10 @@ a skóre existují dál, jen je nikdo nevidí.
   - `/watch report` — scorecard tohoto sezení; `last` = předchozí sezení projektu (nejnovější deník, který není tohoto sezení); `all` = jeden řádek za sezení;
     `<id>` = sezení podle prvních znaků id (velikost písmen se nerozlišuje). Čte deníky ze složky projektu a vyhodnotí je `shared/judge`
     s konfigurací projektu.
-  - `/watch rules` pošle dolů (odpovídá `rules`); cokoli jiného vrátí řádek použití.
+  - `/watch rules` a `/watch rule …` pošle dolů (odpovídá `rules`); cokoli jiného vrátí řádek použití.
+  - `prompt.autocomplete` (`complete.ts`) doplňuje `/watch` podpříkazy, id pravidel, `on|off|report|block` a `--global`.
+  - Povolená porušení (výjimka, `shared/judge` → `Verdict.waived`) jsou řádky `✅ povoleno výjimkou W29 (13:05:09) · důkaz · „důvod“` zeleně, bez odečtu;
+    souhrn dostane dim řádek `výjimky: N žádostí, M povoleno, K použito` (jen při N > 0).
   - Modelu jde **jen první řádek** (`Watchdog · sezení a1b2c3d4 (coder): skóre 85/100, 2 porušení`); celý výstup je data v `commandOutputs`.
 - `ui.render CommandOutput {watch}` — rámeček (`round`), hlavička `👁 Watchdog · …` tučně, řádky barvou podle významu: instant failure `error`
   (`⛔ INSTANT FAIL · W01 · 13:05:09 · důkaz`), porušení `warning` (`⚠ −10 · W04 · čas · důkaz`), souhrn dim, bez porušení `✔` zeleně.
@@ -34,8 +37,8 @@ a skóre existují dál, jen je nikdo nevidí.
 |---|---|
 | pravidla, skóre, tokenizace | `shared/` |
 | zápis deníku, přepočet skóre | `ledger`, `rules` |
-| `/watch rules` | `rules` |
-| cokoli, co volání zamítne nebo změní | nikam |
+| `/watch rules`, `/watch rule` | `rules` |
+| cokoli, co volání zamítne nebo změní | `guard` |
 
 ## Pasti
 

@@ -12,7 +12,7 @@ import { readUmaContext } from "../../shared/uma";
 
 type $ = EngineInterface;
 
-export const USAGE = "Použití: /watch report [last | all | <id sezení>] · /watch rules";
+export const USAGE = "Použití: /watch report [last | all | <id sezení>] · /watch rules · /watch rule <id> on|off|report|block [--global]";
 
 async function one($: $, file: Pick<LogFile, "path" | "sid8" | "date" | "role">, workdir: string): Promise<Result> {
 	const events = await readEvents($, file.path);

@@ -2,7 +2,8 @@
 
 Watchdog for coding agents: a ledger of tool calls, rules, and a scorecard for the coder and the tester.
 
-It only **reports**. It never denies a tool call and never changes a tool's input.
+By default it only **reports**: every rule is in `report` mode, which records and never denies a call or changes a tool's input.
+A rule denies a call only after someone explicitly switches it to `block` (see *Rule settings*).
 
 ## Install
 
@@ -29,6 +30,34 @@ It only **reports**. It never denies a tool call and never changes a tool's inpu
 - **Tag under the prompt**, next to other plugins' tags, with a traffic light: `[👁 🟢 100]` (no violation), `[👁 🟡 85 ⚠️2]` (⚠️ = number of violations), `[👁 🔴 0 ⛔]` (instant failure).
 - **UMA facts in context** (optional). If `cc-uma-memory` is installed, `/watch report` adds `🧠 fakty v kontextu: <id8>, …` under each violation (the facts the model had been given by then; `id8` = first 8 characters of the fact id) and `🧠 sezení mělo N faktů UMA v kontextu` to the summary. Without the sidecar file the report is unchanged. The plugins share no code, only this file format (below).
 
+## Exceptions on request: the `watchdog_waiver` tool
+
+Before a deliberate violation of a rule that is **not** an instant failure (e.g. W29 for a mechanical bulk edit), the agent calls
+`watchdog_waiver { rule: "W29", reason: "…", scope: { calls?: number } }`. A dialog opens (`👁 Watchdog • žádost o výjimku`: rule and
+description, role, reason, scope) with `✅ Povolit` / `❌ Zamítnout`; text typed under "Type something" is a refusal with that reason.
+Without a dialog (`-p`) the answer is no. A human or the orchestrator always decides.
+
+- **Scope**: until the end of the turn; `scope.calls` (at most 20) limits it to that many following tool calls, still ending with the turn.
+- **Instant-failure rules** (data: weight `instant` — W01, W02, W05, W06, W07, W08, W14, W19, W21, W26) are refused without a dialog.
+  W28 (leftovers are judged after the turn ends) is refused as well.
+- **Ledger**: a `kind: "waiver"` line `{rule, reason, scope, decision, decidedBy, ts}` (`decidedBy`: `dialog`, or `policy` when refused without asking).
+  Use is counted from the events after it.
+- **Scorecard**: a violation inside a valid exception costs nothing and shows as `✅ povoleno výjimkou W29 (13:05:09) · …`; the summary reads
+  `výjimky: N žádostí, M povoleno, K použito`. Outside the exception the violation counts as usual.
+
+## Rule settings: mode and priority
+
+Each rule is **on or off** and in mode **`report`** (default) or **`block`**. In `block` the `tool.call` hook refuses a call that breaks the rule and
+has no valid exception, *before it runs*: `W29: <why>. Použij <the right way>, nebo požádej o výjimku nástrojem watchdog_waiver.`
+The refusal is written to the ledger and is not counted as a W19 bypass or a W20 denial.
+
+- Only rules judged from one call's input can block: W01, W02, W04, W05, W06, W07, W16, W18, W21, W26, W29. The others (W08, W11, W14, W17, W19, W20, W28)
+  need a result or history and stay "jen report".
+- Priority: **default < global < project < exception in the session**. Global = your `$.store` (set with `--global`), project = `.claude/watchdog.json` →
+  `"rules": { "W29": { "enabled": true, "mode": "block" } }`. The older `"profile": ["W29"]` still works (= `enabled: true`); an explicit `rules` entry wins over it.
+- An instant-failure rule can be switched off only with `--global`, with a warning; a project file that says `enabled: false` for it is ignored.
+- Fail-open: if judging a call fails, the call goes through and one log line says so.
+
 ## Shared file contract: `.uma.jsonl`
 
 Written by `cc-uma-memory`, read here:
@@ -48,7 +77,8 @@ Written by `cc-uma-memory`, read here:
 | `/watch report last` | the previous session of this project |
 | `/watch report all` | one line per session of this project |
 | `/watch report <id>` | a session by the first characters of its id |
-| `/watch rules` | the rules active for the current role |
+| `/watch rules` | every rule: weight / ⛔, 🟢 on / ⚪ off, mode (`report`, 🛑 `block`, or "jen report"), **where that state comes from** (default / global / project), and the exceptions open in this session |
+| `/watch rule <id> on\|off\|report\|block [--global]` | change a rule; without `--global` it writes `.claude/watchdog.json` (other keys are kept; an invalid JSON file is never overwritten), with `--global` your personal store (all projects). Arguments are completed. |
 
 The model only sees the first line of a command's output; the full card is drawn for you.
 
@@ -76,7 +106,8 @@ Optional, read from `<project root>/.claude/watchdog.json`. Everything is option
   "protected": ["CONTRACT.md", "~/tools/ghidra*"],
   "scratch": ["/tmp/claude-*"],
   "remoteAllow": ["nas", "ABC123"],
-  "profile": ["W29"]
+  "profile": ["W29"],
+  "rules": { "W29": { "enabled": true, "mode": "block" } }
 }
 ```
 
@@ -87,7 +118,8 @@ Optional, read from `<project root>/.claude/watchdog.json`. Everything is option
 | `protected` | paths it must not touch; **added to** the built-in list (`~/.ssh`, `~/.claude/settings*`, `~/.claude/rules`, `~/.claude/statusline*`, `~/.pi/agent/*.json`, `/etc`, `.git/config`, …) | built-in list |
 | `scratch` | places for probes and temporary files | `["/tmp/claude-*"]` |
 | `remoteAllow` | hosts and device serials where writes are allowed (W26) | `[]` |
-| `profile` | opt-in rules to switch on (`W29`) | `[]` |
+| `profile` | opt-in rules to switch on (`W29`); same as `rules.<id>.enabled: true` | `[]` |
+| `rules` | per-rule `{ "enabled": bool, "mode": "report" \| "block" }`; beats the global setting | `{}` |
 
 Paths may use `~`, `*` and `**`; relative ones are taken from the project root.
 

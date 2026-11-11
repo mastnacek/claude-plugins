@@ -2,6 +2,7 @@
 // No file contents and no tool output are stored: paths, commands, urls, the exit
 // code, a short error excerpt. Secrets are masked everywhere.
 
+import { isBlockReason } from "../../shared/block";
 import { clip, secretsIn } from "../../shared/redact";
 import type { Role, ToolEv, TurnEv } from "../../shared/types";
 
@@ -33,6 +34,7 @@ export function toEvent(tool: string, input: CallInput, result: CallResult, meta
 	if (url) ev.url = clip(url, 300);
 	if (exitCode !== undefined) ev.exitCode = exitCode;
 	if (reason) ev.deniedReason = clip(reason, 200);
+	if (result.deny !== undefined && isBlockReason(result.deny)) ev.blocked = true;
 	if (isError && text) ev.excerpt = clip(text.split("\n").find((l) => l.trim() && !/^Exit code/.test(l)) ?? text, 160);
 	if (text && hasForeignSecret(text, input)) ev.secretOut = true;
 	return ev;

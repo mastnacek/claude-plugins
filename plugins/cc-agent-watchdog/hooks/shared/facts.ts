@@ -2,6 +2,7 @@
 // which paths it writes or deletes, whether it is a gate run, whether it is masked by a pipe.
 
 import { baseName, matchesAny, resolvePath, under } from "./paths";
+import { runsInterpreter, scriptWrites } from "./script";
 import { nameOf, parseCommand, positionals } from "./shell";
 import type { Cmd } from "./shell";
 import type { Config, Ev, ToolEv } from "./types";
@@ -91,6 +92,8 @@ export function factsOf(ev: ToolEv, cfg: Config): Facts {
 	const writes: string[] = [];
 	const creates: string[] = [];
 	const deletes: string[] = [];
+	// A script in an interpreter (heredoc or -c) writes files the tokenizer cannot see.
+	if (ev.command && runsInterpreter(cmds)) writes.push(...scriptWrites(ev.command).map(abs));
 	for (const c of cmds) {
 		const t = targetsOf(c);
 		writes.push(...t.writes.map(abs));

@@ -12,5 +12,11 @@
 - `[👁 🟢 100]` / `[👁 🟡 85 ⚠️2]` / `[👁 🔴 0 ⛔]`: traffic light in the tag under the prompt.
 
 ### Added
+- **Exceptions on request**: the `watchdog_waiver` tool (dialog, `kind: "waiver"` ledger lines, instant-failure rules refused without a dialog);
+  covered violations cost nothing and show as `✅ povoleno výjimkou …`; summary `výjimky: N žádostí, M povoleno, K použito`.
+- **Rule mode `report` | `block`** (default `report` everywhere): `block` refuses a call that breaks the rule before it runs, fail-open;
+  refusals are marked in the ledger and not counted by W19/W20.
+- **Rule settings** default < global (`$.store`) < project (`.claude/watchdog.json` → `rules`); `/watch rules` shows state, mode and source,
+  `/watch rule <id> on|off|report|block [--global]` changes them (with argument completion). `profile` still works.
 - `/watch report` shows the UMA facts the model had in context (`🧠 fakty v kontextu: …`, `🧠 sezení mělo N fakty/faktů UMA v kontextu`)
   when `cc-uma-memory` wrote a `.uma.jsonl` sidecar beside the ledger (file contract in the README).

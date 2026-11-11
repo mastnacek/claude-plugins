@@ -49,6 +49,9 @@ CMD_TIMEOUT_S   jeden běh testů (60; build 900)
 11. **Poctivě:** odliš VERIFIED (příkaz + výstup), NOT VERIFIED (proč) a HYPOTHESIS (příčina bez
     logu/testu). Čísla (počty testů) kopíruj z výstupu. Nejasné nebo rozporné zadání = BLOCKED
     s otázkou, ne tichá volba varianty.
+12. **Výjimka z pravidla.** Potřebuješ-li porušit pravidlo, které nevede k instant failure (např. W29 u mechanické
+    hromadné úpravy), nejdřív požádej nástrojem `watchdog_waiver` s důvodem a rozsahem; bez schválení se porušení
+    počítá (v režimu block se volání zamítne).
 
 ## Definition of Done
 

@@ -152,8 +152,10 @@ test("/watch rules lists the active rules of the role; the model gets one line",
 	expect(result.text).toBe("Watchdog · 17 aktivních pravidel pro roli coder");
 	expect(result.text).not.toContain("\n");
 	const mounted = await ($ as unknown as Host).ui.mount({ plugin: "cc-agent-watchdog", surface: "terminal", component: "CommandOutput", props: { command: "watch", isErrored: false, text: result.text } } as never);
-	expect(await mounted.find({ type: "Text", text: /W01 · instant failure/ } as never)).toBeDefined();
+	expect(await mounted.find({ type: "Text", text: /🟢 W01 · ⛔ instant · zapnuto · report · zdroj: výchozí/ } as never)).toBeDefined();
 	expect(await mounted.find({ type: "Text", text: /W20 · −3 \(max −15\)/ } as never)).toBeDefined();
+	expect(await mounted.find({ type: "Text", text: /⚪ W29 .*vypnuto · report · zdroj: výchozí/ } as never)).toBeDefined();
+	expect(await mounted.find({ type: "Text", text: /W08 .*jen report/ } as never)).toBeDefined();
 
 	w.env.CC_ROLE = "";
 	expect((await run($ as never, "rules")).text).toBe("Watchdog · 0 aktivních pravidel pro roli orchestrator");

@@ -16,13 +16,17 @@ export type World = {
 	session: string;
 	answer: Record<string, unknown>;
 	breakFs: boolean;
+	/** `$.session.id()` throws (a plugin that fails while judging a call). */
+	breakSession: boolean;
+	/** Milliseconds the clock moves on at every reading (0 = it stands still). */
+	tick: number;
 	/** What `git status --porcelain` prints. */
 	status: string;
 	/** Files that exist before the test (path → text), e.g. `.claude/watchdog.json`. */
 	seed: Record<string, string>;
 };
 
-export const fresh = (over: Partial<World> = {}): World => ({ env: { HOME: "/home/t" }, dirs: [], listing: [], repo: "/work/main", root: "/work/wt", session: "01HZABCD-EFGH-1234", answer: { result: {}, text: "ok" }, breakFs: false, status: "", seed: {}, ...over });
+export const fresh = (over: Partial<World> = {}): World => ({ env: { HOME: "/home/t" }, dirs: [], listing: [], repo: "/work/main", root: "/work/wt", session: "01HZABCD-EFGH-1234", answer: { result: {}, text: "ok" }, breakFs: false, breakSession: false, tick: 0, status: "", seed: {}, ...over });
 
 /** Strips a Windows drive letter and backslashes, as the engine's test mapping needs. */
 export const norm = (p: string): string => p.replace(/\\/g, "/").replace(/^[A-Za-z]:/, "");
@@ -47,8 +51,12 @@ export function setup(on: On, w: World) {
 		const written: Entry[] = [...files.keys()].filter((p) => p.startsWith(`${dir}/`) && !p.slice(dir.length + 1).includes("/")).map((p, i) => ({ name: p.slice(dir.length + 1), kind: "file", size: (files.get(p) ?? "").length, mtimeMs: 10 + i, isLink: false }));
 		return { value: [...w.listing, ...written.filter((f) => !w.listing.some((l) => l.name === f.name))] };
 	});
-	on("clock.now", () => ({ value: new Date(2026, 0, 5, 12).getTime() }));
-	on("session.id", () => ({ value: w.session }));
+	let ticks = 0;
+	on("clock.now", () => ({ value: new Date(2026, 0, 5, 12).getTime() + (ticks += w.tick) }));
+	on("session.id", () => {
+		if (w.breakSession) throw new Error("boom");
+		return { value: w.session };
+	});
 	on("session.cwd", () => ({ value: w.root }));
 	on("session.root", () => ({ value: w.root }));
 	on("session.repo", () => ({ value: w.repo === null ? null : { root: w.repo, remote: null, internal: false, name: null } }));
