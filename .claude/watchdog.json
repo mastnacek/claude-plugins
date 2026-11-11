@@ -1,3 +1,5 @@
 {
-  "profile": ["W29"]
+  "rules": {
+    "W29": { "enabled": true, "mode": "block" }
+  }
 }
