@@ -22,3 +22,18 @@ export function pendingFor(config: TranslateConfig, run: CommandRun): PendingTra
 	if (!config.enabled || run.command === OWN_COMMAND || !isAnsweredByModel(run)) return null;
 	return { targetLanguage: config.targetLanguage, translateResponses: config.translateResponses };
 }
+
+/**
+ * Whether the arguments are prose worth translating, or values the command
+ * compares exactly. A plugin's skill or manifest command is namespaced
+ * (`plugin:skill`) and gets free text; a command a plugin registers from code
+ * (`/tts help`, `/spec-check`) has no colon and reads subcommands — translated,
+ * `help` came back as "Help." and the command no longer knew it. The person's
+ * own commands and skills take prose. `$.command.list()` gives no argument
+ * schema, so the name's shape is the only signal.
+ */
+export function argsAreProse(run: CommandRun): boolean {
+	if (!isAnsweredByModel(run) || run.command === OWN_COMMAND) return false;
+	if (run.source === "user") return true;
+	return run.command.includes(":");
+}

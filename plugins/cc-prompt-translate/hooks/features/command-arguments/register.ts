@@ -10,7 +10,7 @@ import { withProgress } from "../../shared/progress";
 import { detectLanguageOrCode } from "../../shared/translation/detect";
 import { translate } from "../../shared/translation/translate";
 import type { PendingTranslation } from "../../shared/types";
-import { pendingFor } from "./pending";
+import { argsAreProse, pendingFor } from "./pending";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const pendingAtom = atom({ plugin: "cc-prompt-translate", key: "pending" } as const, null as PendingTranslation | null);
@@ -30,7 +30,7 @@ export function registerCommandArguments(on: On): void {
 		const pending = pendingFor(config, { command: e.command, originKind: e.origin.kind, source });
 		if (!pending) return next(e);
 		await update($, pendingAtom, () => pending);
-		if (!e.args.trim()) return next(e);
+		if (!e.args.trim() || !argsAreProse({ command: e.command, originKind: e.origin.kind, source })) return next(e);
 		if (detectLanguageOrCode(e.args).isEnglishOrCode) return next(e);
 		const result = await withProgress($, () => translate($, e.args, "English", "prompt"));
 		if (result.degraded) return next(e);
