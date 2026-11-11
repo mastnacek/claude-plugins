@@ -153,6 +153,13 @@ test("W16 a gate command piped into tail/head/grep without pipefail", () => {
 	expect(check("W16", [bash("set -o pipefail; claude plugin test . | tail -5"), bash("claude plugin test ."), bash("ls | tail -3"), bash("claude plugin test . | cat; echo ${PIPESTATUS[0]}")])).toEqual([]);
 });
 
+test("W16 says how the exit code was hidden: pipe, || or ;", () => {
+	const ev = (c: string): string => check("W16", [bash(c)])[0]?.evidence ?? "";
+	expect(ev("claude plugin test . | tail -5")).toContain("v rouře do tail bez pipefail");
+	expect(ev("claude plugin test . || true")).toContain("za ním „||“, exit kód se ztratí");
+	expect(ev("claude plugin test .; echo done")).toContain("za ním „;“, exit kód se ztratí");
+});
+
 test("W17 slow commands and a slow gate", () => {
 	expect(check("W17", [bash("cargo build", { durationMs: 130_000 })]).length).toBe(1);
 	expect(check("W17", [bash("cargo build", { durationMs: 120_000 }), bash("ls", { durationMs: 1 })])).toEqual([]);

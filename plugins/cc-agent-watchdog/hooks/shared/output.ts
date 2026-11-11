@@ -49,11 +49,14 @@ export function scorecard(v: Verdict, meta: { sid8: string; date?: string }, uma
 	for (const x of v.violations) per.set(x.rule, (per.get(x.rule) ?? 0) + 1);
 	const off = v.violations.reduce((s, x) => s + x.points, 0);
 	lines.push({ text: `Souhrn: ${v.calls} volání · ${count} porušení (${instants} instant) · odečet −${off}${per.size > 0 ? ` · ${[...per].map(([r, n]) => `${r}×${n}`).join(" ")}` : ""}`, tone: "dim" });
-	if (v.waivers.requested > 0) lines.push({ text: `výjimky: ${v.waivers.requested} žádostí, ${v.waivers.granted} povoleno, ${v.waivers.used} použito`, tone: "dim" });
+	if (v.waivers.requested > 0) lines.push({ text: `výjimky: ${requests(v.waivers.requested)}, ${v.waivers.granted} povoleno, ${v.waivers.used} použito`, tone: "dim" });
 	if (uma) lines.push({ text: `🧠 sezení mělo ${factCount(factsAt(uma).length)} UMA v kontextu`, tone: "dim" });
 	const tone: Out["tone"] = instants > 0 ? "error" : count > 0 ? "warning" : "success";
 	return { text, out: { title, tone, lines } };
 }
+
+/** Czech plural: 1 žádost, 2–4 žádosti, 0 and 5+ žádostí. */
+export const requests = (n: number): string => `${n} ${n === 1 ? "žádost" : n >= 2 && n <= 4 ? "žádosti" : "žádostí"}`;
 
 /** `/watch report all`: one line per session. */
 export function overview(rows: Array<{ file: Pick<LogFile, "date" | "sid8" | "role">; verdict: Verdict }>): Result {

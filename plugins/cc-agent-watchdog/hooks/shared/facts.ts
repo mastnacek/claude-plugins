@@ -137,13 +137,16 @@ function matchesGate(cmd: Cmd, words: string[]): boolean {
 }
 
 /** Does this call run gate item `item`; is its exit code hidden behind a pipe without pipefail. */
-export function gateRun(ev: ToolEv, item: string, cfg: Config): { runs: boolean; masked: boolean } {
+export function gateRun(ev: ToolEv, item: string, cfg: Config): Run {
 	const words = gateWords(item);
 	return runOf(ev, cfg, (c) => matchesGate(c, words));
 }
 
-/** Does this call run a command `isIt` accepts; is its exit code hidden behind a pipe without pipefail. */
-export function runOf(ev: ToolEv, cfg: Config, isIt: (cmd: Cmd) => boolean): { runs: boolean; masked: boolean } {
+/** Whether a call runs a command; whether its exit code is hidden, and how (`how`, Czech, for the report). */
+export type Run = { runs: boolean; masked: boolean; how?: string };
+
+/** Does this call run a command `isIt` accepts; is its exit code hidden (pipe without pipefail, `||`, `;`). */
+export function runOf(ev: ToolEv, cfg: Config, isIt: (cmd: Cmd) => boolean): Run {
 	if (ev.tool !== "Bash" || ev.denied) return { runs: false, masked: false };
 	const { cmds } = factsOf(ev, cfg);
 	const at = cmds.findIndex(isIt);
@@ -153,7 +156,9 @@ export function runOf(ev: ToolEv, cfg: Config, isIt: (cmd: Cmd) => boolean): { r
 	const piped = cmd.pipeOut && next !== undefined && MASKERS.has(nameOf(next)) && !/pipefail|PIPESTATUS/.test(ev.command ?? "");
 	// `make test || true`, `make test; true`, `npm test; git diff`: the line's exit code is not the command's.
 	const swallowed = next !== undefined && (cmd.after === "||" || cmd.after === ";");
-	return { runs: true, masked: piped || swallowed };
+	if (piped) return { runs: true, masked: true, how: `v rouře do ${nameOf(next as Cmd)} bez pipefail` };
+	if (swallowed) return { runs: true, masked: true, how: `za ním „${cmd.after}“, exit kód se ztratí` };
+	return { runs: true, masked: false };
 }
 
 export const failed = (ev: ToolEv): boolean => ev.isError || (ev.exitCode !== undefined && ev.exitCode !== 0);

@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.3.1
+
+### Fixed
+- Waiver summary declines in Czech: „1 žádost“, „2 žádosti“, „5 žádostí“ (was „1 žádostí“).
+- W16 says how the gate's exit code was hidden — „v rouře do tail bez pipefail“, „za ním „||“ …“ or „za ním „;“ …“ —
+  instead of „v rouře“ for every case; the rule text and the W14 evidence follow.
+
+## 0.3.0
 
 ### Changed
 - **W21 no longer ends the score because of a secret in a tool's output.** Instant failure remains only for *reading login files*

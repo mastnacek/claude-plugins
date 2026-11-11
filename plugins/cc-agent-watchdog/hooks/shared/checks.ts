@@ -181,8 +181,13 @@ function w18(events: readonly Ev[], cfg: Config): Hit[] {
 function w16(events: readonly Ev[], cfg: Config): Hit[] {
 	const hits: Hit[] = [];
 	for (const ev of bashCalls(events)) {
-		const masked = cfg.gate.find((g) => gateRun(ev, g, cfg).masked);
-		if (masked) hits.push({ ts: ev.ts, evidence: `${masked} v rouře bez pipefail — ${describe(ev)}`, points: 5 });
+		for (const g of cfg.gate) {
+			const r = gateRun(ev, g, cfg);
+			if (r.masked) {
+				hits.push({ ts: ev.ts, evidence: `${g} ${r.how} — ${describe(ev)}`, points: 5 });
+				break;
+			}
+		}
 	}
 	return hits;
 }
@@ -212,7 +217,7 @@ function w14(events: readonly Ev[], cfg: Config): Hit[] {
 			for (const item of cfg.gate) {
 				const last = after.map((e) => ({ e, r: gateRun(e, item, cfg) })).filter((x) => x.r.runs).at(-1);
 				if (!last) problems.push(`„${item}“ se po poslední úpravě nespustilo`);
-				else if (last.r.masked) problems.push(`„${item}“ běželo v rouře bez pipefail`);
+				else if (last.r.masked) problems.push(`„${item}“ běželo se skrytým exit kódem (${last.r.how})`);
 				else if (failed(last.e)) problems.push(`„${item}“ skončilo chybou`);
 			}
 		} else {
@@ -220,7 +225,7 @@ function w14(events: readonly Ev[], cfg: Config): Hit[] {
 			const last = runs.at(-1);
 			if (!last) problems.push("po poslední úpravě nebyl spuštěn žádný ověřovací příkaz (test, build, lint …)");
 			else if (failed(last.e)) problems.push(`poslední ověřovací příkaz skončil chybou: ${describe(last.e, 60)}`);
-			else if (!runs.some((x) => !x.r.masked && !failed(x.e))) problems.push("ověřovací příkaz běžel v rouře bez pipefail, exit kód nelze věřit");
+			else if (!runs.some((x) => !x.r.masked && !failed(x.e))) problems.push("ověřovací příkaz běžel se skrytým exit kódem (roura bez pipefail, „||“ nebo „;“)");
 		}
 		if (problems.length > 0) hits.push({ ts: turn.ts, evidence: `tvrzení o dokončení: ${problems.join("; ")}`, instant: true });
 	});

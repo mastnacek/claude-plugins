@@ -32,7 +32,7 @@ test("the live ledger whole: both claims fail — `npm test; git diff` and `make
 	const v = evaluate(parseEvents(LOG), cfg);
 	const w14 = v.violations.filter((x) => x.rule === "W14");
 	expect(w14.length).toBe(2);
-	expect(w14[1]?.evidence).toContain("exit kód nelze věřit");
+	expect(w14[1]?.evidence).toContain("se skrytým exit kódem");
 	expect(v.instant).toBe(true);
 });
 

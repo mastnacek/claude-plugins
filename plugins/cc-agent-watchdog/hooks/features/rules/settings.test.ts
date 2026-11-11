@@ -128,7 +128,7 @@ test("/watch report: a violation covered by an exception is shown as allowed and
 	const has = (re: RegExp) => framed($ as never, r.text ?? "", re);
 	expect(await has(/⚠ −2 · W29 · .* · Bash sed -i 's\/a\/b\/' \/work\/wt\/src\/before.ts/)).toBe(true);
 	expect(await has(/✅ povoleno výjimkou W29 \(\d\d:\d\d:\d\d\) · Bash sed -i .*a\.ts · „hromadná úprava“/)).toBe(true);
-	expect(await has(/výjimky: 2 žádostí, 1 povoleno, 1 použito/)).toBe(true);
+	expect(await has(/výjimky: 2 žádosti, 1 povoleno, 1 použito/)).toBe(true);
 	expect(w.session).toBe("SETTING1-x");
 	expect(eventsOf(files, only(files)).some((e) => (e as { kind: string }).kind === "waiver")).toBe(true);
 });
