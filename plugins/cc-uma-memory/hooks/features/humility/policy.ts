@@ -27,7 +27,7 @@ export function parseVerdict(text: string | undefined): Verdict {
 export function absolute(path: string, cwd: string): string {
 	const slashed = path.replace(/\\/g, "/");
 	const full = /^([A-Za-z]:)?\//.test(slashed) ? slashed : `${cwd.replace(/\\/g, "/").replace(/\/$/, "")}/${slashed}`;
-	const head = /^[A-Za-z]:/.exec(full)?.[0] ?? "";
+	const head = /^[A-Za-z]:/.exec(full)?.[0].toLowerCase() ?? ""; // Windows: `D:` = `d:`
 	const parts: string[] = [];
 	for (const part of full.slice(head.length).split("/")) {
 		if (part === "" || part === ".") continue;

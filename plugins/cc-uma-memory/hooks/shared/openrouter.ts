@@ -9,6 +9,7 @@
 // `openrouter.key`). The key lives only in a local variable of complete().
 
 import type { EngineInterface } from "claude-code";
+import { homeDir } from "./home";
 
 type $ = EngineInterface;
 
@@ -52,7 +53,7 @@ async function resolveKey($: $): Promise<string | undefined> {
 	const fromEnv = await $.env.get("OPENROUTER_API_KEY");
 	if (fromEnv) return fromEnv;
 	try {
-		const home = await $.env.get("HOME");
+		const home = await homeDir($);
 		if (!home) return undefined;
 		return keyFromAuthFile(await $.fs.read(`${home}/.pi/agent/auth.json`), Date.now());
 	} catch {

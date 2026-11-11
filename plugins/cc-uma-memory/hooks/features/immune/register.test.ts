@@ -5,6 +5,9 @@ import { expect, mock, test } from "claude-code/testing";
 import type { On } from "claude-code";
 import { resetImmuneCache } from "./register";
 
+/** The engine hands the plugin `X:\…` paths on Windows; the files are kept under POSIX keys. */
+const norm = (p: string): string => p.replace(/\\/g, "/").replace(/^[A-Za-z]:/, "");
+
 const SECRET = "sk-or-SECRET-KEY-123";
 const VSA = { id: "01M4D7S5", title: "Strict Vertical Slice Architecture", fact_type: "decision", body: "Feature slices never import each other directly. Shared contracts flow through uma-core or src/shared." };
 const TOUCHING = "The change mirrors rule vocabulary on purpose: feature slices never import each other directly; shared contracts flow through the shared kernel instead of slice-to-slice imports.";
@@ -32,7 +35,7 @@ function setup(on: On, o: Opts = {}) {
 	});
 	mock.env(on, { HOME: "/h", ...(o.env ?? {}) });
 	on("fs.read", (_$, e) => {
-		const text = o.files?.[e.path];
+		const text = o.files?.[norm(e.path)];
 		if (text === undefined) throw new Error("ENOENT");
 		return { value: text } as never;
 	});
@@ -342,4 +345,20 @@ test("/uma immune: report, switch, persisted; stats read the decision log", asyn
 	expect((await mounted.find({ type: "Box" }))?.props).toMatchObject({ borderStyle: "round", borderColor: "claude" });
 	expect(await mounted.find({ type: "Text", text: /doporučeno Ano/ })).toBeDefined();
 	expect((await run($, "immune-model nonsense")).text).toContain("Neplatné ID modelu");
+});
+
+test("recommendation: pi's auth file is found under USERPROFILE when HOME is missing", async ($, on) => {
+	resetImmuneCache();
+	const { seen } = setup(on, { ...withRules, settings: { immune: "ask" }, llm: "unrelated", env: { HOME: "", USERPROFILE: "C:/Users/u" }, files: { "/Users/u/.pi/agent/auth.json": JSON.stringify({ openrouter: { key: SECRET } }) } });
+	await start($);
+	await write($, "/w/src/a.ts", TOUCHING);
+	expect(seen.requests[0]?.headers.Authorization).toBe(`Bearer ${SECRET}`);
+});
+
+test("recommendation: no HOME and no USERPROFILE is no key → no request", async ($, on) => {
+	resetImmuneCache();
+	const { seen } = setup(on, { ...withRules, settings: { immune: "ask" }, env: { HOME: "" }, files: { "/h/.pi/agent/auth.json": JSON.stringify({ openrouter: { key: SECRET } }) } });
+	await start($);
+	await write($, "/w/src/a.ts", TOUCHING);
+	expect(seen.requests).toHaveLength(0);
 });

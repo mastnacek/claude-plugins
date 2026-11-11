@@ -48,4 +48,5 @@ způsob, jak hypotézu vyslovit; zdržoval by v `-p` a rozhodoval by člověk m�
 - Matcher na MCP nástroj je přetypovaný: typy matcheru znají MCP názvy jen z posledního připojení serveru.
 - Selhání řezu (čtení stavu, transcriptu) úpravu propustí — brána nesmí rozbít práci.
 - Subagent: hook běží i pro jeho `Write`/`Edit`; hypotézu hledá v jeho vlastní konverzaci (`agentId`), označení je ale společné pro sezení.
+- **Windows:** `absolute()` převádí `\` na `/` a písmeno disku na malé (`D:\a\b` = `d:/a/b`), zbytek cesty zůstává; označené adresáře jsou proto v malém tvaru disku.
 - Změní-li se tvar `humilityState`, přidej `shape` atomu (dnes bez; stav je jen sezení).

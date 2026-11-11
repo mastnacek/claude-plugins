@@ -3,6 +3,9 @@
 import { expect, mock, test } from "claude-code/testing";
 import type { On } from "claude-code";
 
+/** The engine hands the plugin `X:\…` paths on Windows; the stat mock knows POSIX keys. */
+const norm = (p: string): string => p.replace(/\\/g, "/").replace(/^[A-Za-z]:/, "");
+
 const WRITE = "mcp__plugin_cc-uma-memory_uma__uma_write";
 const SUPERSEDE = "mcp__plugin_cc-uma-memory_uma__uma_supersede";
 
@@ -15,7 +18,7 @@ function setup(on: On, mode: "ask" | "off", answer: string | string[] | "no-ui",
 	on("session.id", () => ({ value: "s1" }));
 	on("ui.status", () => ({ value: undefined }));
 	on("fs.exists", () => ({ value: false }));
-	on("fs.stat", (_$, e) => ({ value: stat(e.path) }) as never);
+	on("fs.stat", (_$, e) => ({ value: stat(norm(e.path)) }) as never);
 	on("ui.log", () => ({ value: undefined }));
 	const seen: { questions: string[]; options: string[][]; headers: string[]; ran: string[]; inputs: Record<string, unknown>[] } = { questions: [], options: [], headers: [], ran: [], inputs: [] };
 	const script = Array.isArray(answer) ? [...answer] : undefined;

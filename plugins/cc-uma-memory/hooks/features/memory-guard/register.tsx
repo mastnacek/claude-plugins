@@ -12,6 +12,7 @@
 
 import type { EngineInterface, On, PluginState, ShapedValue } from "claude-code";
 import { atom, read, update } from "claude-code";
+import { claudeConfigDir } from "../../shared/home";
 import { addToTail, buildBadge } from "./badge";
 import { effectiveState, setAutoMemory } from "./settings";
 import type { Layers, MemoryState } from "./settings";
@@ -39,10 +40,10 @@ const MAX_OUTPUTS = 20;
 type Paths = { global: string | undefined; project: string; local: string };
 
 async function paths($: $): Promise<Paths> {
-	const home = await $.env.get("HOME");
+	const dir = await claudeConfigDir($);
 	const cwd = await $.session.cwd();
 	return {
-		global: home ? `${home}/.claude/settings.json` : undefined,
+		global: dir ? `${dir}/settings.json` : undefined,
 		project: `${cwd}/.claude/settings.json`,
 		local: `${cwd}/.claude/settings.local.json`,
 	};

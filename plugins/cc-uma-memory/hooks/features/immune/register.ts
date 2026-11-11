@@ -18,6 +18,7 @@
 
 import type { EngineInterface, On, PluginState, ShapedValue } from "claude-code";
 import { atom, read, update } from "claude-code";
+import { homeDir } from "../../shared/home";
 import { complete } from "../../shared/openrouter";
 import { applicableRules, breachOf, outcomeOfScan, patternBlindSpot, ruleYaml, scanArgv, languageOf } from "./contracts";
 import type { ContractBreach, ContractRule } from "./contracts";
@@ -79,9 +80,9 @@ async function fetchRules($: $, cwd: string): Promise<RuleL1[]> {
 /** ast-grep from PATH, else the copy pi installed under ~/.pi/agent/npm; null = none. */
 async function findAstGrep($: $, cwd: string): Promise<string | null> {
 	if (astGrepBin !== undefined) return astGrepBin;
-	const home = await $.env.get("HOME");
+	const home = await homeDir($);
 	const base = home ? `${home}/.pi/agent/npm/node_modules/@ast-grep` : undefined;
-	const candidates = ["ast-grep", ...(base ? [`${base}/cli-linux-x64-gnu/ast-grep`, `${base}/cli-linux-x64-musl/ast-grep`, `${base}/cli-darwin-arm64/ast-grep`, `${base}/cli-darwin-x64/ast-grep`] : [])];
+	const candidates = ["ast-grep", ...(base ? [`${base}/cli-linux-x64-gnu/ast-grep`, `${base}/cli-linux-x64-musl/ast-grep`, `${base}/cli-darwin-arm64/ast-grep`, `${base}/cli-darwin-x64/ast-grep`, `${base}/cli-win32-x64-msvc/ast-grep.exe`] : [])];
 	for (const bin of candidates) {
 		try {
 			if ((await $.process.run([bin, "--version"], { cwd, timeoutMs: CHECK_TIMEOUT_MS })).exitCode === 0) return (astGrepBin = bin);

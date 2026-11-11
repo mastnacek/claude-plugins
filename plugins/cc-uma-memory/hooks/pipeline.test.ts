@@ -1,15 +1,20 @@
 // /uma claude-memory off --global end to end over an in-memory file system.
 
+import type { On } from "claude-code";
+import type { TestBody } from "claude-code/testing";
 import { expect, mock, test } from "claude-code/testing";
+
+/** The engine hands the plugin `X:\…` paths on Windows; the files are kept under POSIX keys. */
+const norm = (p: string): string => p.replace(/\\/g, "/").replace(/^[A-Za-z]:/, "");
 
 test("/uma claude-memory off --global writes the key, keeps the rest, status says vypnuta", async ($, on) => {
 	mock.store(on);
 	mock.env(on, { HOME: "/home/t" });
 	const files = new Map<string, string>([["/home/t/.claude/settings.json", '{"theme":"dark"}']]);
-	on("fs.exists", (_$, e) => ({ value: files.has(e.path) }));
-	on("fs.read", (_$, e) => ({ value: files.get(e.path) ?? "" }));
+	on("fs.exists", (_$, e) => ({ value: files.has(norm(e.path)) }));
+	on("fs.read", (_$, e) => ({ value: files.get(norm(e.path)) ?? "" }));
 	on("fs.write", (_$, e) => {
-		files.set(e.path, e.text);
+		files.set(norm(e.path), e.text);
 		return { value: undefined };
 	});
 	on("session.cwd", () => ({ value: "/work" }));
@@ -54,10 +59,10 @@ test("a write overridden by another layer says so in the first line", async ($, 
 	mock.store(on);
 	mock.env(on, { HOME: "/home/t" });
 	const files = new Map<string, string>([["/work/.claude/settings.local.json", '{"autoMemoryEnabled": true}']]);
-	on("fs.exists", (_$, e) => ({ value: files.has(e.path) }));
-	on("fs.read", (_$, e) => ({ value: files.get(e.path) ?? "" }));
+	on("fs.exists", (_$, e) => ({ value: files.has(norm(e.path)) }));
+	on("fs.read", (_$, e) => ({ value: files.get(norm(e.path)) ?? "" }));
 	on("fs.write", (_$, e) => {
-		files.set(e.path, e.text);
+		files.set(norm(e.path), e.text);
 		return { value: undefined };
 	});
 	on("session.cwd", () => ({ value: "/work" }));
@@ -79,10 +84,10 @@ test("/uma claude-memory is drawn: a status frame with the three paths, a succes
 	mock.store(on);
 	mock.env(on, { HOME: "/home/t" });
 	const files = new Map<string, string>();
-	on("fs.exists", (_$, e) => ({ value: files.has(e.path) }));
-	on("fs.read", (_$, e) => ({ value: files.get(e.path) ?? "" }));
+	on("fs.exists", (_$, e) => ({ value: files.has(norm(e.path)) }));
+	on("fs.read", (_$, e) => ({ value: files.get(norm(e.path)) ?? "" }));
 	on("fs.write", (_$, e) => {
-		files.set(e.path, e.text);
+		files.set(norm(e.path), e.text);
 		return { value: undefined };
 	});
 	on("session.cwd", () => ({ value: "/work" }));
@@ -103,4 +108,41 @@ test("/uma claude-memory is drawn: a status frame with the three paths, a succes
 	expect((await changed.find({ type: "Box" }))?.props.borderColor).toBe("success");
 	const bad = await draw("claude-memory maybe");
 	expect((await bad.find({ type: "Box" }))?.props.borderColor).toBe("warning");
+});
+
+/** `/uma claude-memory off --global` with the given environment; returns the settings files written (POSIX keys). */
+async function globalWrite($: Parameters<TestBody>[0], on: On, env: Record<string, string>): Promise<Map<string, string>> {
+	mock.store(on);
+	mock.env(on, env);
+	const files = new Map<string, string>();
+	on("fs.exists", (_$, e) => ({ value: files.has(norm(e.path)) }));
+	on("fs.read", (_$, e) => ({ value: files.get(norm(e.path)) ?? "" }));
+	on("fs.write", (_$, e) => {
+		files.set(norm(e.path), e.text);
+		return { value: undefined };
+	});
+	on("session.cwd", () => ({ value: "/work" }));
+	on("ui.status", () => ({ value: undefined }));
+	await $.command.run({ command: "uma", args: "claude-memory off --global", origin: { kind: "composer" }, presentation: { isFullscreen: false, columns: 80 } });
+	return files;
+}
+
+test("global settings: HOME gives HOME/.claude/settings.json", async ($, on) => {
+	const files = await globalWrite($, on, { HOME: "/home/t", USERPROFILE: "C:/Users/u" });
+	expect([...files.keys()]).toEqual(["/home/t/.claude/settings.json"]);
+});
+
+test("global settings: without HOME, USERPROFILE/.claude/settings.json", async ($, on) => {
+	const files = await globalWrite($, on, { HOME: "", USERPROFILE: "C:/Users/u" });
+	expect([...files.keys()]).toEqual(["/Users/u/.claude/settings.json"]);
+});
+
+test("global settings: CLAUDE_CONFIG_DIR wins", async ($, on) => {
+	const files = await globalWrite($, on, { HOME: "/home/t", CLAUDE_CONFIG_DIR: "/cfg" });
+	expect([...files.keys()]).toEqual(["/cfg/settings.json"]);
+});
+
+test("global settings: no home at all writes nothing", async ($, on) => {
+	const files = await globalWrite($, on, { HOME: "" });
+	expect(files.size).toBe(0);
 });

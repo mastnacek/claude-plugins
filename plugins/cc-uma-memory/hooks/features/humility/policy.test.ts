@@ -42,6 +42,23 @@ test("reads count once per file and only under a flag", () => {
 	expect(withRead(flags, "/w/other/z.ts")).toBe(flags);
 });
 
+test("Windows paths: backslashes, drive letter case, a cwd with backslashes", () => {
+	expect(absolute("src\\a.ts", "D:\\w")).toBe("d:/w/src/a.ts");
+	expect(absolute("D:\\a\\b\\c.ts", "D:\\w")).toBe("d:/a/b/c.ts");
+	expect(absolute("d:/a/b/c.ts", "D:\\w")).toBe("d:/a/b/c.ts");
+	expect(absolute("src\\..\\lib\\a.ts", "D:/w/")).toBe("d:/w/lib/a.ts");
+	expect(dirOf("D:\\w\\src\\a.ts", "D:\\w")).toBe("d:/w/src");
+});
+
+test("Windows paths: a flag on D:\\a\\b governs d:/a/b/c.ts and D:\\a\\b\\c.ts alike", () => {
+	const flags = flagsOf(["D:\\a\\b\\x.ts"], "D:\\w", 3);
+	expect(flags.map((f) => f.dir)).toEqual(["d:/a/b"]);
+	expect(flagForPath(flags, absolute("d:/a/b/c.ts", "D:\\w"))?.dir).toBe("d:/a/b");
+	expect(flagForPath(flags, absolute("D:\\a\\b\\c.ts", "D:\\w"))?.dir).toBe("d:/a/b");
+	expect(flagForPath(flags, absolute("D:\\a\\b-other\\c.ts", "D:\\w"))).toBeUndefined();
+	expect(flagForPath(flags, absolute("E:\\a\\b\\c.ts", "D:\\w"))).toBeUndefined();
+});
+
 test("hypothesis line: Hypothesis / Hypotéza, bold or quoted, with substance; a bare mention is not one", () => {
 	expect(statesHypothesis("Hypothesis: the router forwards by prefix and the cache is per request")).toBe(true);
 	expect(statesHypothesis("Some text\n**Hypotéza:** modul drží stav jen v paměti procesu")).toBe(true);
