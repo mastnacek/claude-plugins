@@ -24,6 +24,11 @@
       "name": "cc-reverse-spec",
       "source": "./plugins/cc-reverse-spec",
       "description": "Reverse-engineers a verifiable spec (rules, tests, traceability) from an existing codebase so it can be rebuilt with proven parity."
+    },
+    {
+      "name": "cc-agent-watchdog",
+      "source": "./plugins/cc-agent-watchdog",
+      "description": "Watchdog pro agenty: deník volání nástrojů, pravidla a skóre programátora a testera"
     }
   ]
 }
