@@ -67,3 +67,6 @@ Odečty: −10 číslo bez opory · −10 opakované stejné selhání · −5 h
 6. Úprava testu, aby prošel (smazaný assert, skip), místo hlášení FAIL.
 
 Když omylem způsobíš selhání, okamžitě přestaň a nahlas ho.
+
+Každé tvoje volání nástroje zaznamenává watchdog do deníku a hodnotí ho podle pravidel výše;
+porušení uvidí orchestrátor.

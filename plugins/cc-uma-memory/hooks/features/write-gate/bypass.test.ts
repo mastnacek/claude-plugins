@@ -17,6 +17,22 @@ test("isUmaMemoryFilePath covers the macOS and Linux global stores", () => {
 	expect(isUmaMemoryFilePath("/home/x/projects/app/src/main.rs")).toBe(false);
 });
 
+test("isUmaMemoryFilePath guards the short Windows/macOS global stores", () => {
+	expect(isUmaMemoryFilePath("C:\\Users\\user\\AppData\\Roaming\\uma\\global\\fact\\01.md")).toBe(true);
+	expect(isUmaMemoryFilePath("/Users/x/Library/Application Support/uma/global/decision/01.md")).toBe(true);
+});
+
+test("isUmaMemoryFilePath ignores the watchdog log next to the store", () => {
+	expect(isUmaMemoryFilePath("C:\\Users\\user\\AppData\\Roaming\\uma\\agent-watchdog\\log.jsonl")).toBe(false);
+	expect(isUmaMemoryFilePath("/Users/x/Library/Application Support/uma/agent-watchdog/log.jsonl")).toBe(false);
+	expect(isUmaMemoryFilePath("/home/x/.local/share/uma/agent-watchdog/log.jsonl")).toBe(false);
+});
+
+test("bash guard covers the short global store and not the watchdog dir", () => {
+	expect(bypass('echo x >> "$APPDATA/uma/global/f.md"')).toBe(true);
+	expect(bypass('echo x >> "$APPDATA/uma/agent-watchdog/log"')).toBe(false);
+});
+
 test("catches quoted, uma-cli and every memory-writing subcommand", () => {
 	expect(bypass('"/path/to/uma.exe" write --title x')).toBe(true);
 	expect(bypass("uma-cli supersede 01ABC --title x")).toBe(true);
