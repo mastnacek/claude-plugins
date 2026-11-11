@@ -8,6 +8,7 @@
 import type { EngineInterface, Register } from "claude-code";
 import { registerMemoryGuard, startMemoryGuard } from "./features/memory-guard/register";
 import { registerRecall } from "./features/recall/register";
+import { registerRules } from "./features/rules/register";
 import { registerUmaCommand, startUmaCommand } from "./features/uma-command/register";
 import { registerWriteGate } from "./features/write-gate/register";
 
@@ -30,5 +31,6 @@ export const register: Register = (on) => {
 	registerUmaCommand(on);
 	registerMemoryGuard(on);
 	registerRecall(on);
+	registerRules(on);
 	registerWriteGate(on);
 };

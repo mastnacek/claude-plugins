@@ -1,9 +1,10 @@
 // uma-command — the /uma command's shell: registers it, answers help and unknown
-// subcommands, draws multi-line output, completes subcommands, and owns the two
-// persisted switches (`/uma recall`, `/uma write-gate`) that other slices read.
+// subcommands, draws multi-line output, completes subcommands, and owns the
+// persisted switches (`/uma recall`, `/uma write-gate`, `/uma append`) that other slices
+// read, and the read-only commands a person runs to look into the memory.
 //
 //   start                  registers /uma, loads the switches from $.store into `settings`
-//   command.run {uma}      recall, write-gate, help; anything else goes down to the slice that owns
+//   command.run {uma}      recall, write-gate, append, search/list/read/timeline/doctor/reindex/export, help; anything else goes down to the slice that owns
 //                          it (claude-memory), and if none answers, the unknown-subcommand text
 //   ui.render CommandOutput draws a multi-line output from `commandOutputs` in its row
 //   prompt.autocomplete    completes subcommands and their arguments
@@ -13,18 +14,20 @@
 
 import type { EngineInterface, On, PromptAutocompleteSuggestion } from "claude-code";
 import { atom, read, update } from "claude-code";
-import { parseStored, recallCommand, writeGateCommand } from "./settings";
+import { failedRun, isQuery, missingBinary, planQuery } from "./queries";
+import { appendCommand, parseStored, recallCommand, writeGateCommand } from "./settings";
 import type { Settings } from "./settings";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Record<string, string>);
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask" } as Settings);
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true } as Settings, { shape: "settings-2" });
 
 type $ = EngineInterface;
 
 const COMMAND = "uma";
 const STORE_KEY = "settings";
 const MAX_OUTPUTS = 20;
+const QUERY_TIMEOUT_MS = 30_000;
 
 const HELP = [
 	"/uma — paměť UMA",
@@ -33,15 +36,38 @@ const HELP = [
 	"/uma claude-memory on [--global]   zapne ji",
 	"/uma recall [on|off]               vzpomínky z UMA se přidají k promptu (výchozí zapnuto, platí ve všech sezeních)",
 	"/uma write-gate [ask|off]          dialog před zápisem do paměti UMA (výchozí ask, platí ve všech sezeních)",
+	"/uma append [on|off]               aktivní rozhodnutí a vzory z UMA v system promptu (výchozí zapnuto, platí ve všech sezeních)",
+	"/uma search <dotaz>                hledání ve faktech",
+	"/uma list [global|<projekt>]       výpis faktů",
+	"/uma read <id>                     jeden fakt",
+	"/uma timeline [--id <ULID>] [--all] jak se fakty vyvíjely (řetězy nahrazení)",
+	"/uma doctor                        zpráva o zdraví úložiště a indexu (jen čte)",
+	"/uma reindex                       přebuduje index z markdownových souborů",
+	"/uma export --out <složka>         zapíše fakta jako balíček OKF do složky",
 	"/uma help                          tato nápověda",
 ].join("\n");
+
+/** A look into the memory: `uma` runs in the session's cwd (it scopes facts by git root); nothing is written. */
+async function runQuery($: $, sub: Parameters<typeof planQuery>[0], args: string[]): Promise<string> {
+	const plan = planQuery(sub, args);
+	if ("usage" in plan) return plan.usage;
+	try {
+		const run = await $.process.run(plan.argv, { cwd: await $.session.cwd(), timeoutMs: QUERY_TIMEOUT_MS });
+		if (run.exitCode !== 0) return failedRun(sub, run.exitCode, run.stderr || run.stdout);
+		return plan.render(run.stdout);
+	} catch (error) {
+		return missingBinary(error instanceof Error ? error.message.split("\n")[0] ?? "" : String(error));
+	}
+}
 
 async function runCommand($: $, args: string): Promise<string | undefined> {
 	const [sub, arg, ...rest] = args.trim().split(/\s+/).filter(Boolean);
 	if (sub === undefined || sub === "help") return HELP;
-	if (sub !== "recall" && sub !== "write-gate") return undefined;
+	if (isQuery(sub)) return runQuery($, sub, [arg, ...rest].filter((a): a is string => a !== undefined));
+	if (sub !== "recall" && sub !== "write-gate" && sub !== "append") return undefined;
 	const current = await read($, settingsAtom);
-	const result = sub === "recall" ? recallCommand(current, arg, rest.length) : writeGateCommand(current, arg, rest.length);
+	const change = sub === "recall" ? recallCommand : sub === "append" ? appendCommand : writeGateCommand;
+	const result = change(current, arg, rest.length);
 	if (result.settings !== current) {
 		await $.store.set(STORE_KEY, result.settings);
 		await update($, settingsAtom, () => result.settings);
@@ -60,11 +86,23 @@ function completions(text: string, token: string): PromptAutocompleteSuggestion[
 			["claude-memory", "automatická paměť Claude Code — ne UMA"],
 			["recall", "vzpomínky z UMA k promptu"],
 			["write-gate", "schvalování zápisu do paměti"],
+			["append", "pravidla UMA v system promptu"],
+			["search", "hledání ve faktech"],
+			["list", "výpis faktů"],
+			["read", "jeden fakt"],
+			["timeline", "vývoj faktů"],
+			["doctor", "zpráva o zdraví úložiště"],
+			["reindex", "přebudování indexu"],
+			["export", "export do balíčku OKF"],
 			["help", "nápověda"],
 		];
 	} else if (words[0] === "claude-memory" && words.length <= 3) options = [["on"], ["off"], ["--global"]];
 	else if (words[0] === "recall" && words.length === 2) options = [["on"], ["off"]];
 	else if (words[0] === "write-gate" && words.length === 2) options = [["ask"], ["off"]];
+	else if (words[0] === "append" && words.length === 2) options = [["on"], ["off"]];
+	else if (words[0] === "list" && words.length === 2) options = [["global", "jen globální fakta"]];
+	else if (words[0] === "timeline" && words.length >= 2) options = [["--id", "jen řetěz s tímto ID"], ["--all", "i nikdy nenahrazená fakta"]];
+	else if (words[0] === "export" && words.length === 2) options = [["--out", "cílová složka"]];
 	else return [];
 	return options
 		.filter(([name]) => name.startsWith(prefix))
@@ -127,7 +165,7 @@ export async function startUmaCommand($: EngineInterface): Promise<void> {
 	await $.command.register({
 		name: COMMAND,
 		description: "Paměť UMA: vzpomínky k promptu, schvalování zápisu, automatická paměť Claude",
-		argumentHint: "claude-memory | recall | write-gate [on|off|ask] | help",
+		argumentHint: "search | list | read | timeline | doctor | reindex | export | recall | append | write-gate | claude-memory | help",
 	});
 	const stored = parseStored(await $.store.get(STORE_KEY));
 	await update($, settingsAtom, () => stored);

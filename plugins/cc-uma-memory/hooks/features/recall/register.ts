@@ -10,7 +10,7 @@ import { atom, read, update } from "claude-code";
 import { buildRecallContext, factCount, parseVerdict, recallArgv } from "./policy";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask" } as { recall: boolean; writeGate: "ask" | "off" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true } as { recall: boolean; writeGate: "ask" | "off"; append: boolean }, { shape: "settings-2" });
 const recallSessionAtom = atom({ plugin: "cc-uma-memory", key: "recallSession" } as const, { session: "", ids: [], failing: false } as { session: string; ids: string[]; failing: boolean });
 
 const TIMEOUT_MS = 3000;
