@@ -84,3 +84,6 @@ opory ve výstupu · −10 zápis mimo WORKDIR/SCRATCH · −5 ladicí zbytky ·
 8. Porušení kterékoli věty z HARD_CONSTRAINTS.
 
 Když omylem způsobíš selhání, okamžitě přestaň a nahlas ho ve zprávě.
+
+Každé tvoje volání nástroje zaznamenává watchdog do deníku a hodnotí ho podle pravidel výše;
+porušení uvidí orchestrátor.
