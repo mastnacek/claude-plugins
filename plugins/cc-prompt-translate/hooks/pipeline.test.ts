@@ -2,6 +2,7 @@
 // leaves as English with the hidden note, the final answer is translated back
 // and drawn in place of the English, and the original prompt is drawn above.
 
+import type { TestBody } from "claude-code/testing";
 import { expect, mock, test } from "claude-code/testing";
 
 const CZ_PROMPT = "oprav prosím chybu v src/app.ts, nefunguje přihlášení";
@@ -183,16 +184,20 @@ test("a translation rejected as too short still counts its cost", async ($, on) 
 	expect(Math.round(cost * 1e6), "the paid calls are counted (micro-USD)").toBe(calls * 100);
 });
 
-test("with log on, each prompt leaves its lines in the day's log", async ($, on) => {
+/** The engine hands the plugin `X:` paths on Windows; the files are kept under POSIX keys. */
+const norm = (p: string): string => p.replace(/\\/g, "/").replace(/^[A-Za-z]:/, "");
+
+/** Runs two prompts with the log on under `env`; returns the log files written (POSIX keys). */
+async function loggedFiles($: Parameters<TestBody>[0], on: On, env: Record<string, string>): Promise<Map<string, string>> {
 	mock.store(on, { config: { log: true } });
 	engineBottom(on);
-	mock.env(on, { OPENROUTER_API_KEY: "test-key", HOME: "/home/t" });
+	mock.env(on, { OPENROUTER_API_KEY: "test-key", ...env });
 	mock.clock(on);
 	const files = new Map<string, string>();
-	on("fs.exists", (_$, e) => ({ value: files.has(e.path) }));
-	on("fs.read", (_$, e) => ({ value: files.get(e.path) ?? "" }));
+	on("fs.exists", (_$, e) => ({ value: files.has(norm(e.path)) }));
+	on("fs.read", (_$, e) => ({ value: files.get(norm(e.path)) ?? "" }));
 	on("fs.write", (_$, e) => {
-		files.set(e.path, e.text);
+		files.set(norm(e.path), e.text);
 		return { value: undefined };
 	});
 	on("session.cwd", () => ({ value: "/work" }));
@@ -208,7 +213,11 @@ test("with log on, each prompt leaves its lines in the day's log", async ($, on)
 	await $.prompt.submit({ text: CZ_PROMPT, origin: { kind: "composer" }, wait: false });
 	await $.prompt.submit({ text: "Please add tests for the parser.", origin: { kind: "composer" }, wait: false });
 	for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
+	return files;
+}
 
+test("with log on, each prompt leaves its lines in the day's log", async ($, on) => {
+	const files = await loggedFiles($, on, { HOME: "/home/t" });
 	const log = [...files].find(([path]) => path.startsWith("/home/t/.claude/prompt-translate/log/"));
 	expect(log?.[0]).toMatch(/\/\d{4}-\d{2}-\d{2}\.jsonl$/);
 	const lines = (log?.[1] ?? "").trim().split("\n").map((l) => JSON.parse(l) as Record<string, unknown>);
@@ -243,4 +252,54 @@ test("an answer already in Czech is not sent for translation", async ($, on) => 
 	await clock.advance(10);
 	for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
 	expect(chatCalls, "no second call for an answer already in Czech").toBe(1);
+});
+
+test("log folder: without HOME it is under USERPROFILE", async ($, on) => {
+	const files = await loggedFiles($, on, { HOME: "", USERPROFILE: "C:/Users/u" });
+	expect([...files.keys()].some((p) => p.startsWith("/Users/u/.claude/prompt-translate/log/"))).toBe(true);
+});
+
+test("log folder: CLAUDE_CONFIG_DIR wins", async ($, on) => {
+	const files = await loggedFiles($, on, { HOME: "/home/t", CLAUDE_CONFIG_DIR: "/cfg" });
+	expect([...files.keys()].some((p) => p.startsWith("/cfg/prompt-translate/log/"))).toBe(true);
+	expect([...files.keys()].some((p) => p.startsWith("/home/t/"))).toBe(false);
+});
+
+test("log folder: no home at all, no log and no failure", async ($, on) => {
+	const files = await loggedFiles($, on, { HOME: "" });
+	expect(files.size).toBe(0);
+});
+
+async function keyUsedWith($: Parameters<TestBody>[0], on: On, env: Record<string, string>, auth: Record<string, string>): Promise<string | undefined> {
+	mock.store(on);
+	engineBottom(on);
+	mock.env(on, env);
+	mock.clock(on);
+	on("fs.exists", (_$, e) => ({ value: norm(e.path) in auth }));
+	on("fs.read", (_$, e) => ({ value: auth[norm(e.path)] ?? "" }));
+	let bearer: string | undefined;
+	on("http.fetch", async (_$, e) => {
+		if (e.url.includes("chat/completions")) {
+			bearer = (e.init?.headers as Record<string, string> | undefined)?.Authorization;
+			return { value: reply(EN_PROMPT) };
+		}
+		return { value: { status: 404, ok: false, headers: {}, text: "{}" } };
+	});
+	await $.prompt.submit({ text: CZ_PROMPT, origin: { kind: "composer" }, wait: false });
+	for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
+	return bearer;
+}
+
+const PI_AUTH = JSON.stringify({ openrouter: { type: "api_key", key: "pi-key" } });
+
+test("pi's key: found under HOME", async ($, on) => {
+	expect(await keyUsedWith($, on, { HOME: "/home/t" }, { "/home/t/.pi/agent/auth.json": PI_AUTH })).toBe("Bearer pi-key");
+});
+
+test("pi's key: found under USERPROFILE when HOME is missing", async ($, on) => {
+	expect(await keyUsedWith($, on, { USERPROFILE: "C:/Users/u" }, { "/Users/u/.pi/agent/auth.json": PI_AUTH })).toBe("Bearer pi-key");
+});
+
+test("pi's key: no home, no key, the prompt goes on untranslated", async ($, on) => {
+	expect(await keyUsedWith($, on, {}, { "/Users/u/.pi/agent/auth.json": PI_AUTH })).toBeUndefined();
 });

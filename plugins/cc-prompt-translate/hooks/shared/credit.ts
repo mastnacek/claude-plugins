@@ -5,6 +5,7 @@
 import type { EngineInterface } from "claude-code";
 import { atom, read, update } from "claude-code";
 import { getConfig, modelBackend } from "./config";
+import { homeDir } from "./home";
 import type { BalanceInfo, CreditInfo } from "./types";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
@@ -99,7 +100,7 @@ export async function getUsdToCzkRate($: $): Promise<number | undefined> {
 export async function getOpenRouterApiKey($: $): Promise<string | undefined> {
 	const envKey = await $.env.get("OPENROUTER_API_KEY");
 	if (envKey) return envKey;
-	const home = await $.env.get("HOME");
+	const home = await homeDir($);
 	if (!home) return undefined;
 	try {
 		const path = `${home}/.pi/agent/auth.json`;

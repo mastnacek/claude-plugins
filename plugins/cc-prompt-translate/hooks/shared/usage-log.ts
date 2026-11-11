@@ -6,6 +6,7 @@
 
 import type { EngineInterface } from "claude-code";
 import { getConfig } from "./config";
+import { claudeConfigDir } from "./home";
 
 export type LogEvent = { kind: string } & Record<string, unknown>;
 
@@ -25,11 +26,11 @@ export function clip(text: string, max = 300): string {
 
 async function write($: EngineInterface, event: LogEvent): Promise<void> {
 	if (!(await getConfig($)).log) return;
-	const home = await $.env.get("HOME");
-	if (!home) return;
+	const dir = await claudeConfigDir($);
+	if (!dir) return;
 	const now = new Date();
 	const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-	const path = `${home}/.claude/prompt-translate/log/${day}.jsonl`;
+	const path = `${dir}/prompt-translate/log/${day}.jsonl`;
 	const before = (await $.fs.exists(path)) ? await $.fs.read(path) : "";
 	await $.fs.write(path, `${before}${JSON.stringify({ ts: now.toISOString(), ...event })}\n`);
 }
