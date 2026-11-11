@@ -7,11 +7,12 @@ tags:
   - cc-uma-memory
   - write-gate
   - k-revizi
-status: stable
+status: deprecated
 generated:
   by: pi-agent/1.1
   at: "2026-11-11T01:44:20.754945778+00:00"
 since: "2026-11-11T01:44:20.754946652+00:00"
+until: "2026-11-11T17:38:30.900109426+00:00"
 ---
 Zjištěno 2026-11-11 při práci programátora na pi-uma (Proposal 11, krok 3): brána `write-gate` v cc-uma-memory (`hooks/features/write-gate/bypass.ts`) ukázala dialog u `sed -i … README.md`, protože výraz sedu obsahoval text `.uma/.state/debts.json`. Paměti se příkaz nedotkl.
 
