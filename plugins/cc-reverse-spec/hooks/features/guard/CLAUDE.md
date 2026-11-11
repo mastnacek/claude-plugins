@@ -30,4 +30,5 @@ Kdyby zmizel, vynucování zůstane jen na slovech ve skillu.
 
 - `legacy-old/` ani `legacy.md` v kořeni nejsou `legacy/` (porovnává se celý první segment).
 - Cesta mimo pracovní složku se nehlídá (`null`), stejně jako soubor jménem `legacy` v kořeni.
+- **Windows:** `\` se před dělením mění na `/`; absolutní je i `X:/…`; `\proj\x` bez disku dostane disk z cwd. Písmeno disku se porovnává bez ohledu na velikost (`d:` = `D:`), zbytek cesty přesně tak, jak je: složky na Windows velikost nerozlišují, ale řez je nepřevádí (best effort, jako symlinky).
 - Pracovní složka sezení = kořen projektu; sezení spuštěné v podsložce `legacy/` nechrání nic.

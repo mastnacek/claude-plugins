@@ -29,5 +29,5 @@ promptem. Kdyby zmizel, čísla by byla jen v `/spec-check`.
 - Počítání je záměrně hrubší než `check` (regexy, ne `parseRule`): neplatná `confidence` se nepočítá nikam.
 - Chyba při počítání se spolkne — stavový řádek nestojí za pád tool callu.
 - Zápis přes `Bash` (a smazání souboru) status nepřepočítá; obnoví ho další zápis nebo `session.start`.
-- `relative.ts` je opis z `guard`; měnit společně.
+- `relative.ts` je opis z `guard` (včetně windowsových cest: `\`, písmeno disku bez ohledu na velikost); měnit společně.
 - `startStatus` chybu zaloguje jedním řádkem (`$.ui.log`) místo spolknutí; po zápisu nástroje se chyba mlčky spolkne.

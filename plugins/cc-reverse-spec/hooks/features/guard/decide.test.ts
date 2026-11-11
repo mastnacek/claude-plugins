@@ -38,3 +38,25 @@ describe("decide", () => {
 		expect(decide(CWD, "/work/legacy/a.bas")).toBeNull();
 	});
 });
+
+describe("decide on Windows paths", () => {
+	const WIN = "D:\\proj";
+
+	test("backslash and drive-letter spellings are refused", () => {
+		expect(decide(WIN, "D:\\proj\\legacy\\a.cs")).toContain("read-only oracle");
+		expect(decide(WIN, "d:\\proj\\legacy\\a.cs")).toContain("read-only oracle");
+		expect(decide("d:/proj", "D:/proj/generated/a.py")).toContain("regenerate");
+		expect(decide(WIN, "D:/proj\\legacy/a.cs")).not.toBeNull();
+		expect(decide(WIN, "legacy\\a.cs")).not.toBeNull();
+		expect(decide(WIN, "src\\..\\generated\\a.py")).not.toBeNull();
+		expect(decide(WIN, "\\proj\\legacy\\a.cs")).not.toBeNull();
+	});
+
+	test("allowed, outside and look-alike Windows paths", () => {
+		expect(decide(WIN, "D:\\proj\\src\\a.cs")).toBeNull();
+		expect(decide(WIN, "D:\\proj\\legacy-old\\a.cs")).toBeNull();
+		expect(decide(WIN, "D:\\other\\legacy\\a.cs")).toBeNull();
+		expect(decide(WIN, "E:\\proj\\legacy\\a.cs")).toBeNull();
+		expect(decide(WIN, "..\\legacy\\a.cs")).toBeNull();
+	});
+});
