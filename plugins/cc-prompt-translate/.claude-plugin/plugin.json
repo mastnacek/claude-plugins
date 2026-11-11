@@ -1,6 +1,6 @@
 {
   "name": "cc-prompt-translate",
-  "version": "0.8.5",
+  "version": "0.9.0",
   "description": "Překládá prompty do angličtiny a finální odpovědi zpět do češtiny (port pi-prompt-translate-czk)",
   "author": {
     "name": "mastnacek"
