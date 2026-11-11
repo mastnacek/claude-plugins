@@ -34,6 +34,25 @@ cp target/release/uma ~/.local/bin/   # any directory on PATH
 
 - `uma_read`, `uma_list`, `uma_search`, `uma_consolidate` — read-only.
 - `uma_write`, `uma_supersede` — write; enabled by `--allow-writes`.
+- `uma_skill_invoke` — expands a stored skill template into a command; never runs it (you run it with your shell tool). Needs `uma` from pi-uma `master` after 0.17.8.
+- `uma_skeptic` — the adversarial Skeptic: a typed critique of a planned change (failure mode, devil objection, risk level, `suggested_debt`). Read-only, advisory.
+- `uma_humility` — Familiarity Index: how well memory covers the code you are about to touch; `low` means read at least 3 related files first. Read-only, advisory.
+
+`uma_skeptic` and `uma_humility` ask the judge model `google/gemini-3.5-flash-lite` on OpenRouter (override with `UMA_JUDGE_MODEL`). The key comes from `OPENROUTER_API_KEY` or pi's login in `~/.pi/agent/auth.json`; without a key they answer offline and say so in `judged_by`.
+
+The read-only tools never need a prompt. To stop Claude Code asking for them, add to `permissions.allow`:
+
+```json
+"mcp__plugin_cc-uma-memory_uma__uma_read",
+"mcp__plugin_cc-uma-memory_uma__uma_list",
+"mcp__plugin_cc-uma-memory_uma__uma_search",
+"mcp__plugin_cc-uma-memory_uma__uma_consolidate",
+"mcp__plugin_cc-uma-memory_uma__uma_skill_invoke",
+"mcp__plugin_cc-uma-memory_uma__uma_skeptic",
+"mcp__plugin_cc-uma-memory_uma__uma_humility"
+```
+
+**Project or global?** The MCP server runs in the folder where the Claude Code session started. Started inside a git repository, new facts go to that project's `.uma/`; started elsewhere (e.g. your home folder), they go to the global store unless the call names a `scope`.
 
 Writes are approved by the write gate (see above). Claude Code's own MCP permission prompt may ask once more; add `mcp__plugin_cc-uma-memory_uma__uma_write` and `mcp__plugin_cc-uma-memory_uma__uma_supersede` to `permissions.allow` if you want only the plugin's dialog. Storage: global `~/.local/share/uma/global`, per project `<git root>/.uma`. New tools are added in the Rust core, not in this plugin.
 
