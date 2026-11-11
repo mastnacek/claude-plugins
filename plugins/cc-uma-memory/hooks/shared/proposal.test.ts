@@ -1,7 +1,6 @@
 import { expect, test } from "claude-code/testing";
-import { APPROVE, EDIT, REJECT, approvedInput, fieldQuestion, fullTextQuestion, normalizeScope, parseTags, previewOf, scopeOption, toggleScope, withField, wrap } from "./proposal";
+import { APPROVE, EDIT, REJECT, approvedInput, fieldQuestion, fullTextQuestion, normalizeScope, optionOf, parseTags, previewOf, scopeOption, toggleScope, withField, wrap } from "./proposal";
 import type { Proposal } from "./proposal";
-import { optionOf } from "./dialog";
 
 const base: Proposal = {
 	title: "Použít VSA", body: "Tělo", tags: ["a", "b"], type: "decision", scope: "proj", initialScope: "proj", projectName: "proj",

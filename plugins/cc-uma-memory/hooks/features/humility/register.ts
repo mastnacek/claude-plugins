@@ -19,7 +19,7 @@ import { absolute, decide, flagsOf, parseVerdict, statesHypothesis, withRead } f
 import type { Flag } from "./policy";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean }, { shape: "settings-4" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev" }, { shape: "settings-5" });
 const stateAtom = atom({ plugin: "cc-uma-memory", key: "humilityState" } as const, { session: "", intent: "", since: 0, flags: [] } as { session: string; intent: string; since: number; flags: Flag[] });
 
 type $ = EngineInterface;

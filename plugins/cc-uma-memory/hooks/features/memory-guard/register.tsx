@@ -3,7 +3,7 @@
 //
 //   start                  reads the three settings layers into memoryState
 //   command.run {uma}      answers `claude-memory [on|off] [--global]`, passes the rest down
-//   ui.render PromptHint   adds the tag [UMA] / [UMA ⚠ CC] (+ ↻ once changed) to its tail
+//   ui.render PromptHint   adds the tag [UMA] / [UMA ⚠ CC] (+ ↻ once changed, ⚖N debts, 📝N waiting drafts) to its tail
 //
 // The command itself (registration, help, drawing multi-line output,
 // completion) is the uma-command slice's. A plugin's command text goes into the
@@ -20,6 +20,7 @@ import type { Layers, MemoryState } from "./settings";
 const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Record<string, string>);
 const memoryStateAtom = atom({ plugin: "cc-uma-memory", key: "memoryState" } as const, null as MemoryState | null);
 const debtStateAtom = atom({ plugin: "cc-uma-memory", key: "debtState" } as const, { blocking: 0, reminders: 0, continuing: false, failing: false } as { blocking: number; reminders: number; continuing: boolean; failing: boolean });
+const stagingStateAtom = atom({ plugin: "cc-uma-memory", key: "stagingState" } as const, { pending: 0 } as { pending: number });
 const memoryChangedAtom = atom({ plugin: "cc-uma-memory", key: "memoryChanged" } as const, false);
 
 type $ = EngineInterface;
@@ -112,7 +113,7 @@ export function registerMemoryGuard(on: On): void {
 	on("ui.render", { component: "PromptHint" }, async ($, e, next) => {
 		const state = await read($, memoryStateAtom);
 		if (!state) return next(e);
-		const badge = buildBadge(state.enabled, await read($, memoryChangedAtom), (await read($, debtStateAtom)).blocking);
+		const badge = buildBadge(state.enabled, await read($, memoryChangedAtom), (await read($, debtStateAtom)).blocking, (await read($, stagingStateAtom)).pending);
 		return next({ ...e, props: { ...e.props, tail: addToTail(e.props.tail, badge) } });
 	});
 }

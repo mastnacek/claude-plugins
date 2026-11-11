@@ -1,14 +1,15 @@
 // settings.ts — pure logic of uma-command: the three persisted switches, how a
 // stored value is read back, and what `/uma recall` / `/uma write-gate` / `/uma append` answer.
 
+export type ShadowMode = "off" | "on" | "jev";
 export type ImmuneMode = "off" | "warn" | "ask" | "auto";
 /** `immuneModel` "" = the default model of the immune recommendation (OpenRouter). */
-export type Settings = { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: ImmuneMode; immuneModel: string; humility: boolean };
+export type Settings = { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: ImmuneMode; immuneModel: string; humility: boolean; shadow: ShadowMode };
 
 /** The model the immune recommendation asks by default (kept equal to immune/recommendation.ts: slices share no code). */
 export const DEFAULT_IMMUNE_MODEL = "google/gemini-3.5-flash-lite";
 
-export const DEFAULTS: Settings = { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false };
+export const DEFAULTS: Settings = { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on" };
 
 /** What `$.store` held; anything unreadable falls back to the default for that key. */
 export function parseStored(value: unknown): Settings {
@@ -20,6 +21,7 @@ export function parseStored(value: unknown): Settings {
 		immune: obj.immune === "off" || obj.immune === "warn" || obj.immune === "ask" || obj.immune === "auto" ? obj.immune : DEFAULTS.immune,
 		immuneModel: typeof obj.immuneModel === "string" && MODEL_ID_RE.test(obj.immuneModel) ? obj.immuneModel : DEFAULTS.immuneModel,
 		humility: typeof obj.humility === "boolean" ? obj.humility : DEFAULTS.humility,
+		shadow: obj.shadow === "off" || obj.shadow === "on" || obj.shadow === "jev" ? obj.shadow : DEFAULTS.shadow,
 	};
 }
 
@@ -87,4 +89,17 @@ export function humilityCommand(current: Settings, arg: string | undefined, extr
 	if ((arg !== "on" && arg !== "off") || extra > 0) return { settings: current, text: "Neznámý argument. Zkus /uma humility [on|off]." };
 	const settings = { ...current, humility: arg === "on" };
 	return { settings, text: `Brána pokory: ${word(settings.humility)} (po verdiktu LOW z uma_humility zastaví první úpravu kódu, dokud nepřečteš soubory a nevyslovíš hypotézu; platí hned, ve všech sezeních)` };
+}
+
+const SHADOW_DESCRIPTIONS: Record<ShadowMode, string> = {
+	off: "vypnut, nic se nesbírá",
+	on: "sbírá obnovu po pádu sestavení/testů, tvou opravu a změnu závislostí jako koncepty (heuristika, bez sítě)",
+	jev: "totéž, ale každý koncept posoudí Jev přes OpenRouter (výchozí google/gemini-3.5-flash-lite; vyžaduje klíč)",
+};
+
+/** `/uma shadow [on|off|jev]` — the shadow worker: drafts for `/uma review`, never a write to memory. Without an argument it only reports. */
+export function shadowCommand(current: Settings, arg: string | undefined, extra: number): SettingResult {
+	if (arg === undefined) return { settings: current, text: `Stínový pracovník: ${current.shadow} — ${SHADOW_DESCRIPTIONS[current.shadow]}` };
+	if ((arg !== "on" && arg !== "off" && arg !== "jev") || extra > 0) return { settings: current, text: "Neznámý argument. Zkus /uma shadow [on|off|jev]." };
+	return { settings: { ...current, shadow: arg }, text: `Stínový pracovník: ${arg} — ${SHADOW_DESCRIPTIONS[arg]} (platí hned, ve všech sezeních; koncepty posuzuješ v /uma review)` };
 }

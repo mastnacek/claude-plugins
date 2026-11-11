@@ -1,5 +1,5 @@
 import { expect, test } from "claude-code/testing";
-import { DEFAULTS, appendCommand, immuneCommand, immuneModelCommand, parseStored, recallCommand, writeGateCommand } from "./settings";
+import { DEFAULTS, appendCommand, immuneCommand, immuneModelCommand, parseStored, recallCommand, shadowCommand, writeGateCommand } from "./settings";
 
 test("stored value: junk and missing keys fall back to the defaults", () => {
 	expect(parseStored(undefined)).toEqual(DEFAULTS);
@@ -51,4 +51,15 @@ test("immune-model: default, custom id, junk refused", () => {
 	expect(immuneModelCommand(DEFAULTS, "novendor", 0).settings).toEqual(DEFAULTS);
 	expect(parseStored({ immuneModel: "x/y:free" }).immuneModel).toBe("x/y:free");
 	expect(parseStored({ immuneModel: "junk" }).immuneModel).toBe("");
+});
+
+test("shadow: report, on|off|jev, refuse; a stored junk value falls back to on", () => {
+	expect(DEFAULTS.shadow).toBe("on");
+	expect(shadowCommand(DEFAULTS, undefined, 0).text).toContain("Stínový pracovník: on");
+	expect(shadowCommand(DEFAULTS, "off", 0).settings.shadow).toBe("off");
+	expect(shadowCommand(DEFAULTS, "jev", 0).text).toContain("Jev");
+	expect(shadowCommand(DEFAULTS, "maybe", 0).settings).toBe(DEFAULTS);
+	expect(shadowCommand(DEFAULTS, "on", 1).settings).toBe(DEFAULTS);
+	expect(parseStored({ shadow: "nope" }).shadow).toBe("on");
+	expect(parseStored({ shadow: "jev" }).shadow).toBe("jev");
 });

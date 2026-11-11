@@ -10,8 +10,11 @@ import { registerDebt } from "./features/debt/register";
 import { registerHumility } from "./features/humility/register";
 import { registerImmune } from "./features/immune/register";
 import { registerMemoryGuard, startMemoryGuard } from "./features/memory-guard/register";
+import { registerMuscleSynthesis } from "./features/muscle-synthesis/register";
 import { registerRecall } from "./features/recall/register";
 import { registerRules } from "./features/rules/register";
+import { registerShadow } from "./features/shadow/register";
+import { registerStaging, startStaging } from "./features/staging/register";
 import { registerUmaCommand, startUmaCommand } from "./features/uma-command/register";
 import { registerWriteGate } from "./features/write-gate/register";
 
@@ -28,6 +31,7 @@ export const register: Register = (on) => {
 	on("session.start", async ($, e, next) => {
 		await guarded($, "uma-command", startUmaCommand($));
 		await guarded($, "memory-guard", startMemoryGuard($));
+		await guarded($, "staging", startStaging($));
 		return next(e);
 	});
 
@@ -37,9 +41,14 @@ export const register: Register = (on) => {
 	registerMemoryGuard(on);
 	registerRecall(on);
 	registerRules(on);
+	registerStaging(on);
 	registerWriteGate(on);
 	// After write-gate: it denies the store first. Humility before immune: the cheap
 	// deny without processes goes first, immune judges only what humility lets through.
 	registerHumility(on);
 	registerImmune(on);
+	// Shadow worker and its proposals: tool.call / prompt.submit with matchers (write-gate and recall
+	// hold the unmatched ones). They read the tool's result from `next` and do nothing on a deny.
+	registerShadow(on);
+	registerMuscleSynthesis(on);
 };

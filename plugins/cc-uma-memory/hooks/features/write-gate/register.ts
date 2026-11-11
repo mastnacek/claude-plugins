@@ -19,14 +19,14 @@
 import type { EngineInterface, On } from "claude-code";
 import { atom, read } from "claude-code";
 import { isBypassingBashCommand, isUmaMemoryFilePath, musclePlanOfCommand } from "./bypass";
-import { ACCEPT_RUN, DENIED_REASON, FILE_DENY_REASON, NO_UI_REASON, REJECT_RUN, SUPERSEDE_TOOL, WRITE_TOOL, optionOf, previewOfCommand, verdictOf } from "./dialog";
+import { ACCEPT_RUN, DENIED_REASON, FILE_DENY_REASON, NO_UI_REASON, REJECT_RUN, SUPERSEDE_TOOL, WRITE_TOOL, previewOfCommand, verdictOf } from "./dialog";
 import { MUSCLE_CHANGED, MUSCLE_DENIED, MUSCLE_DRY_RUN_FAILED, MUSCLE_NO_HASH, MUSCLE_NO_NAME, MUSCLE_NO_UI_REASON, MUSCLE_ONE_PER_COMMAND, dryRunArgv, parseDryRun, previewOfMuscle } from "./muscle";
 import type { MuscleRun } from "./bypass";
-import { APPROVE, BACK, BACK_FULL, DONE, EDIT, HEADER, PICK_BODY, PICK_FULL, PICK_TAGS, PICK_TITLE, REJECT, approvedInput, fieldQuestion, fullTextQuestion, normalizeScope, previewOf, scopeOption, tagsOf, toggleScope, withField } from "./proposal";
-import type { EditField, Proposal } from "./proposal";
+import { APPROVE, BACK, BACK_FULL, DONE, EDIT, HEADER, PICK_BODY, PICK_FULL, PICK_TAGS, PICK_TITLE, REJECT, approvedInput, fieldQuestion, fullTextQuestion, normalizeScope, optionOf, previewOf, scopeOption, tagsOf, toggleScope, withField } from "../../shared/proposal";
+import type { EditField, Proposal } from "../../shared/proposal";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean }, { shape: "settings-4" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev" }, { shape: "settings-5" });
 
 type $ = EngineInterface;
 

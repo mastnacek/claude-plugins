@@ -19,3 +19,9 @@ test("open blocking debts add ⚖N after the other marks; none leaves the tag as
 	expect(buildBadge(false, false, 2)).toBe("[UMA ⚖2]");
 	expect(buildBadge(true, true, 1)).toBe("[UMA ⚠ CC ↻ ⚖1]");
 });
+
+test("waiting drafts add 📝N last; none leaves the tag as it was", () => {
+	expect(buildBadge(false, false, 0, 0)).toBe("[UMA]");
+	expect(buildBadge(false, false, 0, 3)).toBe("[UMA 📝3]");
+	expect(buildBadge(true, true, 2, 1)).toBe("[UMA ⚠ CC ↻ ⚖2 📝1]");
+});

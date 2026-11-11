@@ -1,9 +1,9 @@
 // badge.ts — what the tag under the prompt says, as plain text:
 // [UMA] (Claude's memory off), [UMA ⚠ CC] (on), " ↻" before "]" once changed,
-// " ⚖N" after it while N blocking debts are open.
+// " ⚖N" after it while N blocking debts are open, " 📝N" while N staged drafts wait for review.
 
-export function buildBadge(enabled: boolean, changed: boolean, debts = 0): string {
-	return `[${enabled ? "UMA ⚠ CC" : "UMA"}${changed ? " ↻" : ""}${debts > 0 ? ` ⚖${debts}` : ""}]`;
+export function buildBadge(enabled: boolean, changed: boolean, debts = 0, drafts = 0): string {
+	return `[${enabled ? "UMA ⚠ CC" : "UMA"}${changed ? " ↻" : ""}${debts > 0 ? ` ⚖${debts}` : ""}${drafts > 0 ? ` 📝${drafts}` : ""}]`;
 }
 
 /** Adds the badge after another plugin's tail (if any), separated by a space. */

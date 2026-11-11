@@ -1,6 +1,6 @@
 // uma-command — the /uma command's shell: registers it, answers help and unknown
 // subcommands, draws multi-line output, completes subcommands, and owns the
-// persisted switches (`/uma recall`, `/uma write-gate`, `/uma append`, `/uma humility`) that other slices
+// persisted switches (`/uma recall`, `/uma write-gate`, `/uma append`, `/uma humility`, `/uma shadow`) that other slices
 // read, and the read-only commands a person runs to look into the memory.
 //
 //   start                  registers /uma, loads the switches from $.store into `settings`
@@ -15,12 +15,12 @@
 import type { EngineInterface, On, PromptAutocompleteSuggestion } from "claude-code";
 import { atom, read, update } from "claude-code";
 import { failedRun, isQuery, missingBinary, planQuery } from "./queries";
-import { appendCommand, humilityCommand, immuneCommand, immuneModelCommand, parseStored, recallCommand, writeGateCommand } from "./settings";
+import { appendCommand, humilityCommand, immuneCommand, immuneModelCommand, parseStored, recallCommand, shadowCommand, writeGateCommand } from "./settings";
 import type { Settings } from "./settings";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Record<string, string>);
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false } as Settings, { shape: "settings-4" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on" } as Settings, { shape: "settings-5" });
 
 type $ = EngineInterface;
 
@@ -41,6 +41,9 @@ const HELP = [
 	"/uma immune stats                  jak jsi odpovídal na dialogy interceptoru",
 	"/uma immune-model [<id>|default]   model OpenRouteru pro doporučení v dialogu (výchozí google/gemini-3.5-flash-lite)",
 	"/uma humility [on|off]            brána pokory: po verdiktu LOW z uma_humility zastaví první Write/Edit, dokud nepřečteš soubory a nevyslovíš hypotézu (výchozí off)",
+	"/uma shadow [on|off|jev]           stínový pracovník: sbírá koncepty (obnova po pádu, tvá oprava, závislosti, opakované příkazy); jev = posoudí je Jev přes OpenRouter (výchozí on)",
+	"/uma review                        projde koncepty a každý ukáže dialogem: schválit / upravit / přeskočit / zamítnout",
+	"/uma staging list|show <id>|discard <id>  koncepty čekající na posouzení",
 	"/uma search <dotaz>                hledání ve faktech",
 	"/uma list [global|<projekt>]       výpis faktů",
 	"/uma read <id>                     jeden fakt",
@@ -70,9 +73,9 @@ async function runCommand($: $, args: string): Promise<string | undefined> {
 	if (sub === undefined || sub === "help") return HELP;
 	if (isQuery(sub)) return runQuery($, sub, [arg, ...rest].filter((a): a is string => a !== undefined));
 	if (sub === "immune" && arg === "stats") return undefined; // the immune slice owns its log
-	if (sub !== "recall" && sub !== "write-gate" && sub !== "append" && sub !== "immune" && sub !== "immune-model" && sub !== "humility") return undefined;
+	if (sub !== "recall" && sub !== "write-gate" && sub !== "append" && sub !== "immune" && sub !== "immune-model" && sub !== "humility" && sub !== "shadow") return undefined;
 	const current = await read($, settingsAtom);
-	const change = sub === "recall" ? recallCommand : sub === "append" ? appendCommand : sub === "immune" ? immuneCommand : sub === "immune-model" ? immuneModelCommand : sub === "humility" ? humilityCommand : writeGateCommand;
+	const change = sub === "recall" ? recallCommand : sub === "append" ? appendCommand : sub === "immune" ? immuneCommand : sub === "immune-model" ? immuneModelCommand : sub === "humility" ? humilityCommand : sub === "shadow" ? shadowCommand : writeGateCommand;
 	const result = change(current, arg, rest.length);
 	if (result.settings !== current) {
 		await $.store.set(STORE_KEY, result.settings);
@@ -96,6 +99,9 @@ function completions(text: string, token: string): PromptAutocompleteSuggestion[
 			["immune", "imunitní interceptor úprav kódu"],
 			["immune-model", "model OpenRouteru pro doporučení"],
 			["humility", "brána pokory před úpravou neznámého kódu"],
+			["shadow", "stínový pracovník sbírající koncepty"],
+			["review", "posouzení konceptů"],
+			["staging", "koncepty čekající na posouzení"],
 			["search", "hledání ve faktech"],
 			["list", "výpis faktů"],
 			["read", "jeden fakt"],
@@ -112,6 +118,8 @@ function completions(text: string, token: string): PromptAutocompleteSuggestion[
 	else if (words[0] === "append" && words.length === 2) options = [["on"], ["off"]];
 	else if (words[0] === "immune" && words.length === 2) options = [["off"], ["warn"], ["ask"], ["auto"], ["stats", "jak jsi odpovídal na dialogy"]];
 	else if (words[0] === "humility" && words.length === 2) options = [["on"], ["off"]];
+	else if (words[0] === "shadow" && words.length === 2) options = [["on"], ["off"], ["jev", "koncepty posuzuje Jev přes OpenRouter"]];
+	else if (words[0] === "staging" && words.length === 2) options = [["list", "koncepty ke schválení"], ["show", "jeden koncept"], ["discard", "zahodit koncept"]];
 	else if (words[0] === "immune-model" && words.length === 2) options = [["default", "google/gemini-3.5-flash-lite"]];
 	else if (words[0] === "debt" && words.length === 2) options = [["list", "otevřené i vyrovnané dluhy"], ["clear", "smazat všechny dluhy"]];
 	else if (words[0] === "list" && words.length === 2) options = [["global", "jen globální fakta"]];
@@ -179,7 +187,7 @@ export async function startUmaCommand($: EngineInterface): Promise<void> {
 	await $.command.register({
 		name: COMMAND,
 		description: "Paměť UMA: vzpomínky k promptu, schvalování zápisu, automatická paměť Claude",
-		argumentHint: "search | list | read | timeline | doctor | reindex | export | debt | recall | append | write-gate | immune | immune-model | humility | claude-memory | help",
+		argumentHint: "search | list | read | timeline | doctor | reindex | export | debt | recall | append | write-gate | immune | immune-model | humility | shadow | review | staging | claude-memory | help",
 	});
 	const stored = parseStored(await $.store.get(STORE_KEY));
 	await update($, settingsAtom, () => stored);

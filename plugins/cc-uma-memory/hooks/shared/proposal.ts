@@ -188,3 +188,13 @@ export function approvedInput(input: Record<string, unknown>, v: Proposal): Reco
 	if (v.scope !== v.initialScope) out.scope = v.scope.toLowerCase() === "global" ? "global" : v.projectName;
 	return out;
 }
+
+/**
+ * The option the answer names, as the plugin spelled it. The dialog hands a label
+ * back without its emoji variation selector (U+FE0F: "✏️" comes back "✏"), so a
+ * plain `===` misses it and the pick would read as free text. Free text stays as typed.
+ */
+export function optionOf(answer: string, options: readonly string[]): string {
+	const bare = (t: string): string => t.replace(/\uFE0F/g, "").trim();
+	return options.find((o) => bare(o) === bare(answer)) ?? answer;
+}

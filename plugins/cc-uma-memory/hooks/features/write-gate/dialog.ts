@@ -2,7 +2,7 @@
 // (pi's immune-dialog texts), the denial reasons and how an answer is read.
 // The memory-write window itself is proposal.ts.
 
-import { T } from "./proposal";
+import { T } from "../../shared/proposal";
 
 export const WRITE_TOOL = "mcp__plugin_cc-uma-memory_uma__uma_write";
 export const SUPERSEDE_TOOL = "mcp__plugin_cc-uma-memory_uma__uma_supersede";
@@ -49,13 +49,3 @@ export const DENIED_REASON = "Uživatel návrh zápisu do paměti UMA zamítl. N
 export const NO_UI_REASON = "Zápis do paměti UMA vyžaduje souhlas uživatele, ale nelze se zeptat (bez dialogu). Nezapsáno.";
 
 export const FILE_DENY_REASON = "Soubory paměti UMA se nemění přímo. Paměť se mění jen nástrojem uma_write (nebo uma_supersede), aby zápis mohl uživatel schválit.";
-
-/**
- * The option the answer names, as the plugin spelled it. The dialog hands a label
- * back without its emoji variation selector (U+FE0F: "✏️" comes back "✏"), so a
- * plain `===` misses it and the pick would read as free text. Free text stays as typed.
- */
-export function optionOf(answer: string, options: readonly string[]): string {
-	const bare = (t: string): string => t.replace(/\uFE0F/g, "").trim();
-	return options.find((o) => bare(o) === bare(answer)) ?? answer;
-}

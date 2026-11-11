@@ -2,7 +2,7 @@
 // dry-run report and the dialog that shows its steps. The hook in register.ts
 // asks the engine itself, so the dialog shows what will run, not what the model says.
 
-import { T } from "./proposal";
+import { T } from "../../shared/proposal";
 
 export interface MuscleStep {
 	command: string;

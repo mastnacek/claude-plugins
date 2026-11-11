@@ -30,7 +30,7 @@ test("/uma recall off is stored for later sessions and read back at the next sta
 	await start($);
 	expect((await run($, "recall")).text).toContain("zapnut");
 	expect((await run($, "recall off")).text).toContain("vypnut");
-	expect(store.get("settings")).toEqual({ recall: false, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false });
+	expect(store.get("settings")).toEqual({ recall: false, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on" });
 	expect((await run($, "recall")).text).toBe("Recall do promptu: vypnut");
 });
 
@@ -76,7 +76,7 @@ test("/uma append off is stored; /uma list runs uma in the session's cwd, the mo
 	const seen = withProcess(on, { exitCode: 0, stdout: "fact A\nfact B\n", stderr: "" });
 	await start($);
 	expect((await run($, "append off")).text).toContain("vypnuta");
-	expect(store.get("settings")).toEqual({ recall: true, writeGate: "ask", append: false, immune: "warn", immuneModel: "", humility: false });
+	expect(store.get("settings")).toEqual({ recall: true, writeGate: "ask", append: false, immune: "warn", immuneModel: "", humility: false, shadow: "on" });
 	const out = await run($, "list global");
 	expect(out.text).toBe("Fakta (global): 2 řádků výpisu (ukázán uživateli)");
 	expect(seen.argv).toEqual([["uma", "list", "--scope", "global"]]);
