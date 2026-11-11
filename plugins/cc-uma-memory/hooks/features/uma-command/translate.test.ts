@@ -82,7 +82,8 @@ test("a list is shown translated; the model's line and the engine's call are unt
 	expect(seen.requests).toHaveLength(1);
 	const mounted = await mountOutput($, out.text as string);
 	expect(await mounted.find({ type: "Text", text: cs("Use deep modules") })).toBeDefined();
-	expect(await mounted.find({ type: "Text", text: /🌐 překlad, uloží se anglický originál/ })).toBeDefined();
+	expect(await mounted.find({ type: "Text", text: /🌐 přeloženo pro zobrazení, uložený originál je anglicky/ })).toBeDefined();
+	expect(await mounted.find({ type: "Text", text: /uloží se anglický originál/ })).toBeUndefined();
 });
 
 test("a read translates the title and the body in ONE request", async ($, on) => {
@@ -93,6 +94,9 @@ test("a read translates the title and the body in ONE request", async ($, on) =>
 	expect(seen.requests).toHaveLength(1);
 	const mounted = await mountOutput($, out.text as string);
 	expect(await mounted.find({ type: "Text", text: /CS\[First line\./ })).toBeDefined();
+	// the body lines sit in a box indented by 3, so they wrap indented
+	const lineBox = (await mounted.find({ type: "Box", paddingLeft: 3 })) ?? undefined;
+	expect(lineBox).toBeDefined();
 });
 
 test("lang en: nothing is asked, the facts are shown as stored", async ($, on) => {

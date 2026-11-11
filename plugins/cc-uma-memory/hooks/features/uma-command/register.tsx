@@ -161,7 +161,16 @@ export function drawOutput(Box: Components["Box"], Text: Components["Text"], out
 		if (parts.length > 0) body.push(<Text key="p">{"   "}{parts}</Text>);
 		if (it.id) body.push(<Text key="i" dimColor>{`   🆔 ${it.id}`}</Text>);
 		if (it.tags && it.tags.length > 0) body.push(<Text key="g" dimColor>{`   🏷️  ${it.tags.join(" · ")}`}</Text>);
-		for (const [j, line] of (it.lines ?? []).entries()) body.push(<Text key={`l${j}`}>{"   "}{styled(line || " ", undefined, false)}</Text>);
+		// Detail lines (a fact's body) sit in a box indented by 3, so a long line wraps indented, not from column 0.
+		if (it.lines && it.lines.length > 0) {
+			body.push(
+				<Box key="d" flexDirection="column" paddingLeft={3}>
+					{it.lines.map((line, j) => (
+						<Box key={`l${j}`}>{styled(line || " ", undefined, false)}</Box>
+					))}
+				</Box>,
+			);
+		}
 		rows.push(
 			<Box key={`i${i}`} flexDirection="column" marginTop={1}>
 				{body}

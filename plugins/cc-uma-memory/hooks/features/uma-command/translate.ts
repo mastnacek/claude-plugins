@@ -6,7 +6,7 @@
 // A failure leaves the original frame with a dim note saying why.
 
 import type { EngineInterface } from "claude-code";
-import { LABEL_TRANSLATED, translateTexts } from "../../shared/translate";
+import { LABEL_LISTING, translateTexts } from "../../shared/translate";
 import type { Lang } from "../../shared/translate";
 import type { Out, Result } from "./output";
 
@@ -35,5 +35,5 @@ export async function translateResult($: EngineInterface, result: Result, prose:
 		if (!withBody(it)) return { ...it, title };
 		return { ...it, title, lines: (shown.texts[k++] as string).split("\n") };
 	});
-	return { text: result.text, out: { ...out, items, lines: [...lines, { text: LABEL_TRANSLATED, tone: "dim" }] } };
+	return { text: result.text, out: { ...out, items, lines: [...lines, { text: LABEL_LISTING, tone: "dim" }] } };
 }

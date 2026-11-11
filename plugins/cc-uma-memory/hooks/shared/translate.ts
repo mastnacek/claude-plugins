@@ -51,6 +51,8 @@ const marker = (n: number): string => `<<<UMA-${n}>>>`;
 
 /** What the person is told when the original is shown instead of a translation. */
 export const LABEL_TRANSLATED = "🌐 překlad, uloží se anglický originál";
+/** The same fact, in a listing (`/uma search|list|read|timeline`): there is nothing to approve there. */
+export const LABEL_LISTING = "🌐 přeloženo pro zobrazení, uložený originál je anglicky";
 export const noteUnavailable = (why: string): string => `⚠ překlad nedostupný (${why}) — ukázán originál`;
 
 /** The session's translations, by the English text they were made from. */
