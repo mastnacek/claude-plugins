@@ -38,6 +38,7 @@ pi rozšíření podle `docs/port-z-pi.md`.
 - **Nový plugin, krok za krokem** → `docs/novy-plugin.md`
 - **Port rozšíření z pi** (tabulka pi → Claude Code, co zahodit) → `docs/port-z-pi.md`
 - **Kód hooků:** řezy, hluboké moduly, pasti enginu, kdy nový řez → `docs/architektura.md`
+- **Vzhled výstupu v TUI** (rámeček, barvy, emoji — vždy, když plugin něco vypisuje nebo kreslí) → `docs/vystup-v-tui.md`
 - **API enginu** (`$`, události, `ui.render`, `$.state`, testy) → skill `plugin-authoring`
 - **Balení a marketplace** (`plugin.json`, validace, `claude plugin eval`) → agent `claude-code-guide`
 - **Commit, větve, vydání nové verze** → `docs/git-a-vydani.md`
