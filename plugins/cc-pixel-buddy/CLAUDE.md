@@ -36,4 +36,19 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 
 ## Řezy
 
-<!-- Jeden řádek na řez: název — co dělá jednou větou. -->
+- `mood` — nálada postavičky podle práce (tabulka pravidel: spí, přemýšlí, slaví, ustaraný, spokojený, výchozí).
+- `stats` — statistiky dne v `$.store`: tahy, chyby, úpravy, commity, testy.
+- `hints` — užitečné hlášky (3× stejná chyba, kontext 80 %, 2 h práce, commit), každá jednou.
+- `face` — kreslení: proužek nad promptem a panel.
+- `command` — `/buddy`: stav, `open`, `close`, `mute on|off`.
+
+`shared/classify.ts` pozná z volání nástroje commit, test, úpravu souboru (používají `mood`, `stats`, `hints`);
+`shared/world.ts` je maketa enginu jen pro testy.
+
+Události bez matcheru (`session.start`, `turn.start`, `turn.complete`, `tool.call`) hookuje jen kořen a volá funkce
+řezů jménem. `tool.call` hook kořene jen čte výsledek (`next(e)`), nic nezamítá ani nepřepisuje.
+
+## Nepatří sem
+
+Péče o parťáka (feed / pet), zamítání nebo úpravy volání nástrojů a promptů, spouštění čehokoli, sdílení kódu či
+stavu s jinými pluginy.
