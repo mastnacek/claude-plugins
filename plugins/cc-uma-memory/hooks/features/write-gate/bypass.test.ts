@@ -174,3 +174,70 @@ test("uma debt clear is gated; add, settle, list and check stay free", () => {
 	expect(bypass("uma debt list --all --json")).toBe(false);
 	expect(bypass("uma debt check --origin claude-code --json")).toBe(false);
 });
+
+test("false alarms: text of an expression or value is not a write target", () => {
+	expect(bypass("sed -i 's|x|.uma/.state/debts.json|' README.md")).toBe(false);
+	expect(bypass("sed -i 's/x/see .uma/a.md/' README.md")).toBe(false);
+	expect(bypass("sed -i s/x/.uma\\/a/ README.md")).toBe(false);
+	expect(bypass("sed -e 's/x/.uma/y/' -e p README.md")).toBe(false);
+	expect(bypass("sed --expression='s/x/.uma/y/' README.md")).toBe(false);
+	expect(bypass("sed -n 's/new/.uma/f/p' README.md")).toBe(false);
+	expect(bypass("cp x /tmp/y 2>/dev/null")).toBe(false);
+	expect(bypass("cp .uma/a /tmp/b")).toBe(false);
+	expect(bypass("cp -t /tmp .uma/a")).toBe(false);
+	expect(bypass("echo '.uma/x.md' > out.txt")).toBe(false);
+	expect(bypass('echo "see .uma/x.md; and > .uma/y" > out.txt')).toBe(false);
+	expect(bypass('git commit -m "docs: .uma/ and uma write"')).toBe(false);
+	expect(bypass("dd if=.uma/x.md of=/tmp/y")).toBe(false);
+	expect(bypass("touch -r .uma/x.md /tmp/y")).toBe(false);
+	expect(bypass("truncate -r .uma/x.md /tmp/y")).toBe(false);
+	expect(bypass("ln -s .uma/a link")).toBe(false);
+	expect(bypass("rsync -a .uma/ /tmp/backup/")).toBe(false);
+	expect(bypass("it's fine; echo hi")).toBe(false);
+});
+
+test("real writes stay caught: sed, cp, mv, tee, rm, dd and friends", () => {
+	expect(bypass("sed -i s/x/y/ .uma/a.md")).toBe(true);
+	expect(bypass("sed -i.bak 's/x/y/' .uma/a.md")).toBe(true);
+	expect(bypass("sed -e 's/x/y/' -i .uma/a.md")).toBe(true);
+	expect(bypass("sed 's/x/y/w .uma/f'")).toBe(true);
+	expect(bypass("sed -n 's/x/y/gw .uma/f' README.md")).toBe(true);
+	expect(bypass("sed -n -e 'p;w .uma/f' README.md")).toBe(true);
+	expect(bypass("sed -i 's/x/y/' README.md .uma/a.md")).toBe(true);
+	expect(bypass("cp x .uma/")).toBe(true);
+	expect(bypass("cp x .uma/y 2>/dev/null")).toBe(true);
+	expect(bypass("cp -t .uma x")).toBe(true);
+	expect(bypass("cp --target-directory=.uma x")).toBe(true);
+	expect(bypass('cp x ".uma/a b.md"')).toBe(true);
+	expect(bypass("cp -rt .uma src")).toBe(true);
+	expect(bypass("mv .uma/a /tmp")).toBe(true);
+	expect(bypass("mv a .uma/b")).toBe(true);
+	expect(bypass("install -m 644 x .uma/y")).toBe(true);
+	expect(bypass("install -d .uma/new")).toBe(true);
+	expect(bypass("rsync -a --remove-source-files .uma/ /tmp/b/")).toBe(true);
+	expect(bypass("rsync -a src/ .uma/")).toBe(true);
+	expect(bypass("ln -s x .uma/link")).toBe(true);
+	expect(bypass("tee .uma/x")).toBe(true);
+	expect(bypass("tee -a .uma/x")).toBe(true);
+	expect(bypass("rm .uma/x")).toBe(true);
+	expect(bypass("rm -rf .uma")).toBe(true);
+	expect(bypass("touch .uma/x")).toBe(true);
+	expect(bypass("chmod 600 .uma/x")).toBe(true);
+	expect(bypass("dd if=/dev/zero of=.uma/x bs=1")).toBe(true);
+	expect(bypass("truncate -s 0 .uma/x")).toBe(true);
+	expect(bypass("echo hi >> .uma/x")).toBe(true);
+	expect(bypass('echo hi > ".uma/a b.md"')).toBe(true);
+});
+
+test("wrappers and heredocs still see the real operands", () => {
+	expect(bypass("bash -c 'sed -i s/x/y/ .uma/a.md'")).toBe(true);
+	expect(bypass("bash -c 'echo ok; cp x .uma/'")).toBe(true);
+	expect(bypass('sudo bash -c "uma write --title x; echo done"')).toBe(true);
+	expect(bypass("sudo cp x .uma/")).toBe(true);
+	expect(bypass("sudo mv .uma/a /tmp")).toBe(true);
+	expect(bypass("bash -c 'sed -i \"s|x|.uma/y|\" README.md'")).toBe(false);
+	expect(bypass("sudo sed -i 's|x|.uma/y|' README.md")).toBe(false);
+	expect(bypass("tee .uma/x <<EOF\nhello\nEOF")).toBe(true);
+	expect(bypass("cat > README.md <<EOF\nsed -i s/x/y/ .uma/a.md\nEOF")).toBe(false);
+	expect(bypass("python3 -c \"open('.uma/x','w')\"")).toBe(true);
+});

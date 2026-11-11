@@ -92,13 +92,72 @@ function withoutHeredocBodies(command: string): string {
 	return out.join("\n");
 }
 
-/** Splits a shell line into command segments (crude, but quote-tolerant). */
-function segments(command: string): string[][] {
-	return withoutHeredocBodies(command)
+/** Old, quote-blind split: operators and whitespace anywhere. Kept as the fail-closed fallback
+ *  when a quote is never closed (a stray apostrophe must not hide a command behind it). */
+function naiveSegments(text: string): string[][] {
+	return text
 		.split(/[|;&\n]+/)
 		.map((s) => s.trim())
 		.filter(Boolean)
 		.map((s) => s.split(/\s+/).map((t) => t.replace(/^["'`]+|["'`]+$/g, "")));
+}
+
+/** Quote-aware split into segments of tokens: `| ; & \n` and whitespace end a segment/token only
+ *  outside quotes; the quote characters are dropped, so `".uma/a b.md"` is ONE token and
+ *  `'s|x|y|'` never splits. `\"` inside double quotes is a literal quote. Null on an unclosed quote. */
+function scanSegments(text: string): string[][] | null {
+	const segs: string[][] = [];
+	let toks: string[] = [];
+	let cur = "";
+	let has = false;
+	let quote = "";
+	const endToken = () => {
+		if (has || cur) toks.push(cur.replace(/^`+|`+$/g, ""));
+		cur = "";
+		has = false;
+	};
+	const endSegment = () => {
+		endToken();
+		if (toks.length > 0) segs.push(toks);
+		toks = [];
+	};
+	for (let i = 0; i < text.length; i++) {
+		const c = text[i] ?? "";
+		if (quote) {
+			if (c === quote) quote = "";
+			else if (quote === '"' && c === "\\" && text[i + 1] === '"') {
+				cur += '"';
+				i++;
+			} else cur += c;
+			continue;
+		}
+		if (c === "'" || c === '"') {
+			quote = c;
+			has = true;
+		} else if (c === "\n" || c === "|" || c === ";" || c === "&") endSegment();
+		else if (/\s/.test(c)) endToken();
+		else cur += c;
+	}
+	if (quote) return null;
+	endSegment();
+	return segs;
+}
+
+function scanOrNaive(text: string): string[][] {
+	return scanSegments(text) ?? naiveSegments(text);
+}
+
+/** A shell wrapper (`sudo bash -c "a; b"`) is replaced by the segments of its body, recursively. */
+function expandWrapper(tokens: string[], depth: number): string[][] {
+	const rest = tokens.slice(commandIndexAfter(tokens, true));
+	const body = unwrapShell(rest);
+	if (body === undefined || body.length === 0 || depth >= 8) return [tokens];
+	return scanOrNaive(body.join(" ")).flatMap((t) => expandWrapper(t, depth + 1));
+}
+
+/** Splits a shell line into command segments (crude, but quote-aware), wrapper bodies inlined. */
+function segments(command: string): string[][] {
+	return scanOrNaive(withoutHeredocBodies(command)).flatMap((t) => expandWrapper(t, 0));
 }
 
 /** True when a token names a UMA executable (quotes/path already stripped). */
@@ -143,7 +202,7 @@ function redirectWritesStore(tokens: string[]): boolean {
  *  `Set-Content .uma/x.md` count like `cp` and `tee`. */
 const MUTATING_UTILS = new Set([
 	"tee", "cp", "mv", "rm", "del", "sed", "truncate", "dd",
-	"install", "rsync", "python", "python3", "perl", "node",
+	"install", "rsync", "ln", "touch", "chmod", "chown", "chgrp", "python", "python3", "perl", "node",
 	// cmd.exe builtins
 	"copy", "move", "ren", "rename", "erase", "rd", "rmdir", "xcopy", "robocopy",
 	// PowerShell cmdlets (and their common aliases)
@@ -206,22 +265,125 @@ function unwrapAll(tokens: string[]): string[] {
 	return rest;
 }
 
+interface ParsedArgs {
+	opts: { name: string; value?: string }[];
+	operands: string[];
+}
+
+/** Options split from operands. `short` lists letters taking a value (`-t DIR`, `-tDIR`), `long` the
+ *  `--name VALUE` options (`--name=VALUE` is always one token), `stop` letters whose rest is an
+ *  attached suffix (`sed -i.bak`). `--` ends options; a lone `-` is an operand. */
+function parseArgs(args: string[], short: string, long: string[], stop = ""): ParsedArgs {
+	const opts: ParsedArgs["opts"] = [];
+	const operands: string[] = [];
+	let onlyOperands = false;
+	for (let i = 0; i < args.length; i++) {
+		const token = args[i] ?? "";
+		if (onlyOperands || token === "-" || !token.startsWith("-")) operands.push(token);
+		else if (token === "--") onlyOperands = true;
+		else if (token.startsWith("--")) {
+			const eq = token.indexOf("=");
+			const name = eq < 0 ? token : token.slice(0, eq);
+			if (eq >= 0) opts.push({ name, value: token.slice(eq + 1) });
+			else if (long.includes(name)) opts.push({ name, value: args[++i] ?? "" });
+			else opts.push({ name });
+		} else {
+			for (let j = 1; j < token.length; j++) {
+				const c = token[j] ?? "";
+				if (short.includes(c)) {
+					opts.push({ name: `-${c}`, value: token.slice(j + 1) || (args[++i] ?? "") });
+					break;
+				}
+				opts.push({ name: `-${c}` });
+				if (stop.includes(c)) break;
+			}
+		}
+	}
+	return { opts, operands };
+}
+
+/** Redirections are not operands (`cp x .uma/y 2>/dev/null` must still see `.uma/y` as the last one). */
+function withoutRedirects(args: string[]): string[] {
+	const out: string[] = [];
+	for (let i = 0; i < args.length; i++) {
+		const token = args[i] ?? "";
+		if (/^&?\d*>>?$/.test(token) || /^\d*<{1,3}-?$/.test(token)) i++;
+		else if (/^&?\d*>/.test(token) || /^\d*</.test(token)) continue;
+		else out.push(token);
+	}
+	return out;
+}
+
+/** Paths a `w`/`W` command or `s///w` flag of a sed script writes to (to end of line). */
+function sedWriteTargets(script: string): string[] {
+	return [...script.matchAll(/(?:^|[;{}\s/|,#@!])[gIimpe0-9]*[wW]\s*([^\n]*)/g)].map((m) => m[1] ?? "");
+}
+
+/** sed: the script (first operand without -e/-f, or the -e values) is not a file; the files and any
+ *  `w` target in the script are. `-f FILE` is a read of a script. */
+function sedTargets(args: string[]): string[] {
+	const p = parseArgs(args, "efl", ["--expression", "--file", "--line-length"], "i");
+	const scripts = p.opts.filter((o) => o.name === "-e" || o.name === "--expression").map((o) => o.value ?? "");
+	const operands = [...p.operands];
+	if (scripts.length === 0 && !p.opts.some((o) => o.name === "-f" || o.name === "--file")) {
+		const script = operands.shift();
+		if (script !== undefined) scripts.push(script);
+	}
+	return [...operands, ...scripts.flatMap(sedWriteTargets)];
+}
+
+/** cp/mv/install/rsync/ln: the destination (last operand or `-t DIR`) is written; `mv` (and rsync
+ *  with `--remove-source-files`) also removes its sources; `install -d` makes every operand. */
+function transferTargets(cmd: string, args: string[]): string[] {
+	const short = cmd === "rsync" ? "efTM" : cmd === "install" ? "tSmog" : "tS";
+	const long = cmd === "rsync" ? ["--exclude", "--include", "--filter", "--rsh", "--log-file", "--backup-dir", "--temp-dir"] : ["--target-directory", "--suffix", "--mode", "--owner", "--group"];
+	const p = parseArgs(args, short, long);
+	if (cmd === "install" && p.opts.some((o) => o.name === "-d" || o.name === "--directory")) return p.operands;
+	const dir = cmd === "rsync" ? undefined : p.opts.find((o) => o.name === "-t" || o.name === "--target-directory")?.value;
+	const writes = dir !== undefined ? [dir] : p.operands.slice(-1);
+	const sources = dir !== undefined ? p.operands : p.operands.slice(0, -1);
+	if (cmd === "mv" || p.opts.some((o) => o.name === "--remove-source-files" || o.name === "--remove-sent-files")) writes.push(...sources);
+	for (const o of p.opts) if (o.name === "--log-file" || o.name === "--backup-dir") writes.push(o.value ?? "");
+	return writes;
+}
+
+/** The arguments of a mutating utility that name what it writes. Expression/value text is not one;
+ *  a utility without a parser here (python, node, cmd.exe builtins, cmdlets…) keeps every argument
+ *  (fail-closed), so `node --eval="…writeFileSync('.uma/x',…)"` cannot hide in an option. */
+function mutatedOperands(cmd: string, args: string[]): string[] {
+	switch (cmd) {
+		case "sed":
+			return sedTargets(args);
+		case "cp":
+		case "mv":
+		case "install":
+		case "rsync":
+		case "ln":
+			return transferTargets(cmd, args);
+		case "tee":
+		case "rm":
+		case "chmod":
+		case "chown":
+		case "chgrp":
+			return parseArgs(args, "", ["--reference"]).operands;
+		case "touch":
+			return parseArgs(args, "rdt", ["--reference", "--date", "--time"]).operands;
+		case "truncate":
+			return parseArgs(args, "sr", ["--size", "--reference"]).operands;
+		case "dd":
+			return args.filter((a) => a.startsWith("of=")).map((a) => a.slice(3));
+		default:
+			return args;
+	}
+}
+
 /** True when the segment's effective command is a file-mutating utility and
- *  some other token touches a store path. Every token except the command
- *  itself counts as an operand — flags included, so `dd of=.uma/x` and
- *  `node --eval="...writeFileSync('.uma/x',...)"` cannot hide in an option. */
+ *  one of the files it mutates is a store path (see mutatedOperands). */
 function utilityWritesStore(tokens: string[]): boolean {
-	for (const skipEnv of [false, true]) {
-		const cmdIdx = commandIndexAfter(tokens, skipEnv);
-		const cmd = executableName(tokens[cmdIdx] ?? "");
-		if (cmd && MUTATING_UTILS.has(cmd)) return tokens.some((t, idx) => idx !== cmdIdx && tokenTouchesStore(t));
-	}
-	// The same check on the body of a shell wrapper.
-	const body = unwrapAll(tokens);
-	if (body !== tokens && body.length > 0 && MUTATING_UTILS.has(executableName(body[0] ?? ""))) {
-		return body.some((t, idx) => idx !== 0 && tokenTouchesStore(t));
-	}
-	return false;
+	const rest = unwrapAll(tokens);
+	const cmd = executableName(rest[0] ?? "");
+	if (!cmd || !MUTATING_UTILS.has(cmd)) return false;
+	return mutatedOperands(cmd, withoutRedirects(rest.slice(1))).some(tokenTouchesStore);
 }
 
 /** True when a shell segment persists into a store: an output redirection into
