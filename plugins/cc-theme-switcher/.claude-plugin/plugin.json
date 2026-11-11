@@ -1,6 +1,6 @@
 {
   "name": "cc-theme-switcher",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Rotates the Claude Code theme by the sun: dawn, day, dusk and night palettes.",
   "author": { "name": "mastnacek" },
   "homepage": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-theme-switcher",
