@@ -11,7 +11,8 @@
 
 import type { On } from "claude-code";
 import { atom, read, update } from "claude-code";
-import { LANGUAGE_RULE, RULE_TYPES, formatRules, parseRules, rulesArgv } from "./policy";
+import { recordContext } from "../../shared/audit";
+import { LANGUAGE_RULE, MAX_RULES, RULE_TYPES, formatRules, parseRules, rulesArgv } from "./policy";
 import type { Rule } from "./policy";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
@@ -56,6 +57,8 @@ export function registerRules(on: On): void {
 			}
 			text = formatRules(rules);
 			await update($, rulesSessionAtom, () => ({ session, text, failing: false }));
+			// Audit trail: the ids of the rules that really went into the prompt (once per fetch, not per request).
+			await recordContext($, { source: "rules", factIds: rules.slice(0, MAX_RULES).map((r) => r.id).filter(Boolean), scope: "session" });
 		}
 
 		if (!text) return composed;

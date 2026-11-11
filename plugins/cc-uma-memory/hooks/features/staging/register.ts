@@ -14,6 +14,7 @@ import type { EngineInterface, On, PluginState, ShapedValue } from "claude-code"
 import { atom, read, update } from "claude-code";
 import { BACK, BACK_FULL, DONE, HEADER, APPROVE, REJECT, fieldQuestion, fullTextQuestion, optionOf, withField, PICK_BODY, PICK_FULL, PICK_TITLE } from "../../shared/proposal";
 import type { EditField, Proposal } from "../../shared/proposal";
+import { suspiciousFact, warnedOptions, warnedQuestion } from "../../shared/suspicious";
 import { displayOf } from "../../shared/translate";
 import type { Display } from "../../shared/translate";
 import { EDIT_DRAFT, EDIT_PICKS, SKIP_DRAFT, USAGE, approveArgv, discardArgv, isDraftId, listArgv, listResult, noDrafts, parseDrafts, proposalOf, questionOf, reviewSummary, sentence, showResult } from "./policy";
@@ -98,8 +99,9 @@ async function reviewOne($: $, d: Draft, index: number, total: number, projectNa
 	for (;;) {
 		// Display only: Czech translation in the preview; `v` and the approve call carry the stored original.
 		shown = await displayOf($, shown, v.title, v.body, lang);
-		const question = questionOf(d, v, index, total, shown);
-		const answer = await ask($, question, [APPROVE, EDIT_DRAFT, SKIP_DRAFT, REJECT]);
+		const findings = suspiciousFact(v.title, v.body, v.tags);
+		const question = warnedQuestion(questionOf(d, v, index, total, shown), findings);
+		const answer = await ask($, question, warnedOptions([APPROVE, EDIT_DRAFT, SKIP_DRAFT, REJECT], findings));
 		// Dismissed, no one to ask, or text typed under "Other": the review stops, nothing is decided for the rest.
 		if (answer === undefined || (answer !== APPROVE && answer !== EDIT_DRAFT && answer !== SKIP_DRAFT && answer !== REJECT)) return "stop";
 		if (answer === EDIT_DRAFT) {

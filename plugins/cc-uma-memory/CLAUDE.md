@@ -37,7 +37,7 @@ Zápis do paměti schvaluje řez `write-gate` (dialog před `uma_write` / `uma_s
 hooks/
   register.tsx        kořen kompozice — jen zapojí řezy
   features/<řez>/     jedna funkce = jedna složka (hooky, logika, testy, CLAUDE.md)
-  shared/             technika bez obchodní logiky; nezná řezy (dnes `openrouter.ts` — jedna otázka modelu na OpenRouteru, `proposal.ts` — model a texty dialogu návrhu zápisu, sdílené `write-gate` a `staging`; `translate.ts` — překlad faktů jen pro zobrazení: OpenRouter, cache sezení, poznámka při selhání; používá ho pět řezů)
+  shared/             technika bez obchodní logiky; nezná řezy (dnes `openrouter.ts` — jedna otázka modelu na OpenRouteru, `proposal.ts` — model a texty dialogu návrhu zápisu, sdílené `write-gate` a `staging`; `translate.ts` — překlad faktů jen pro zobrazení: OpenRouter, cache sezení, poznámka při selhání; používá ho pět řezů; `suspicious.ts` — kontrola návrhu faktu na otrávení paměti, sdílí `write-gate` a `staging`; `audit.ts` — sidecar `….uma.jsonl` s ID faktů v kontextu, píší `recall` a `rules`, formát je sdílený kontrakt souboru s `cc-agent-watchdog`)
 types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 ```
 
@@ -45,7 +45,7 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 
 <!-- Jeden řádek na řez: název — co dělá jednou větou. -->
 - uma-command — příkaz `/uma` (registrace, nápověda, doplňování, kreslení výstupu) a trvalé přepínače `/uma recall`, `/uma write-gate`, `/uma append`, `/uma immune`, `/uma immune-model`, `/uma humility`, `/uma shadow` a `/uma lang` (`$.store`, atom `settings`; jediný zapisovatel) a čtecí příkazy `/uma search|list|read|timeline|doctor|reindex|export|debt [list|clear]` (fakta ukazuje přeložená do češtiny, model čte originál).
-- memory-guard — `/uma claude-memory [on|off] [--global]` vypne/zapne automatickou paměť Claude (`autoMemoryEnabled`) a stav drží pod promptem jako štítek `[💾 UMA]` / `[💾 UMA ⚠ CC]` (+ ` ⚖N` při otevřených dluzích, ` 📝N` při konceptech čekajících na posouzení). Ostatní podpříkazy `/uma` pošle dolů.
+- memory-guard — `/uma claude-memory [on|off] [--global]` vypne/zapne automatickou paměť Claude (`autoMemoryEnabled`) a stav drží pod promptem jako štítek `[💾 🟢 UMA]` / `[💾 🟡 UMA ⚠ CC]` (semafor za 💾: 🔴 dluhy, 🟡 paměť Claude nebo koncepty, jinak 🟢; + ` ⚖N` při otevřených dluzích, ` 📝N` při konceptech čekajících na posouzení). Ostatní podpříkazy `/uma` pošle dolů.
 - recall — před promptem zeptá `uma recall check` a pasáže k úkolu přidá jako skrytý kontext (anti-echo přes `recallSession`); poradní, při chybě prompt projde beze změny.
 - rules — aktivní fakty typu `decision` a `pattern` přidá do system promptu jako sekci `session` (port z pi, text doslova, nejvýš 10; vypíná `/uma append off`); načte je jednou za sezení; vedle nich vždy sekce `cc-uma-memory:language` (fakta zapisuj anglicky).
 - debt — na konci tahu hlavního agenta zeptá `uma debt check` a při otevřených blokujících dluzích pošle modelu připomínku jako nový prompt (`$.prompt.submit`, nejvýš 2 na běh, pak jen řádek logu); počet dluhů jde do štítku ` ⚖N`.

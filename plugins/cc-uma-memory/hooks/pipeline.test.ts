@@ -43,14 +43,14 @@ test("/uma claude-memory off --global writes the key, keeps the rest, status say
 	await $.session.start({ cwd: "/work", surface: "terminal", isInteractive: true });
 	expect(statuses).toEqual([undefined]); // only the clean-up of the 0.1.0 line
 	await mountHint();
-	expect(tail).toBe("[other] [💾 UMA ⚠ CC]");
+	expect(tail).toBe("[other] [💾 🟡 UMA ⚠ CC]");
 
 	const result = await $.command.run({ command: "uma", args: "claude-memory off --global", origin: { kind: "composer" }, presentation: { isFullscreen: false, columns: 80 } });
 	expect(JSON.parse(files.get("/home/t/.claude/settings.json") ?? "{}")).toEqual({ theme: "dark", autoMemoryEnabled: false });
 	expect(String(JSON.stringify(result))).toContain("vypnuta");
 	expect(statuses).toEqual([undefined]);
 	await mountHint();
-	expect(tail).toContain("[💾 UMA");
+	expect(tail).toContain("[💾 🟢 UMA");
 	expect(tail).toContain("↻");
 	expect(tail?.startsWith("[other] ")).toBe(true);
 });
@@ -170,7 +170,7 @@ test("/clear: a new session without session.start gets its switches and the labe
 	await ($.prompt as unknown as { edit: (i: unknown) => Promise<unknown> }).edit({ origin: { kind: "composer" }, text: "", cursor: 0, start: 0, end: 0, inputText: "/" });
 	await mountHint();
 	expect(logs).toEqual([]);
-	expect(tail).toContain("[💾 UMA");
+	expect(tail).toContain("[💾 🟡 UMA");
 	const out = await $.command.run({ command: "uma", args: "lang", origin: { kind: "composer" }, presentation: { isFullscreen: false, columns: 80 } });
 	expect(JSON.stringify(out)).toContain("Jazyk zobrazení faktů: en");
 });

@@ -24,6 +24,7 @@ import { MUSCLE_CHANGED, MUSCLE_DENIED, MUSCLE_DRY_RUN_FAILED, MUSCLE_NO_HASH, M
 import type { MuscleRun } from "./bypass";
 import { APPROVE, BACK, BACK_FULL, DONE, EDIT, HEADER, PICK_BODY, PICK_FULL, PICK_TAGS, PICK_TITLE, REJECT, approvedInput, fieldQuestion, fullTextQuestion, normalizeScope, optionOf, previewOf, scopeOption, tagsOf, toggleScope, withField } from "../../shared/proposal";
 import type { EditField, Proposal } from "../../shared/proposal";
+import { suspiciousFact, warnedOptions, warnedQuestion } from "../../shared/suspicious";
 import { displayOf } from "../../shared/translate";
 import type { Display } from "../../shared/translate";
 
@@ -164,7 +165,9 @@ async function review($: $, tool: string, input: Record<string, unknown>): Promi
 		// Display only: the preview shows the Czech translation, `v` (what is saved) stays the English original.
 		// After an edit of title or body the old translation is dropped and the new text translated.
 		shown = await displayOf($, shown, v.title, v.body, lang);
-		const answer = await ask($, previewOf(v, shown), [APPROVE, EDIT, scopeOption(v), REJECT]);
+		// A suspicious proposal gets a warning header and "Reject" as the first (default) choice; approving stays possible.
+		const findings = suspiciousFact(v.title, v.body, v.tags);
+		const answer = await ask($, warnedQuestion(previewOf(v, shown), findings), warnedOptions([APPROVE, EDIT, scopeOption(v), REJECT], findings));
 		if (answer === undefined) return { deny: NO_UI_REASON };
 		if (answer === APPROVE) return approvedInput(input, v);
 		if (answer === REJECT) return { deny: DENIED_REASON };

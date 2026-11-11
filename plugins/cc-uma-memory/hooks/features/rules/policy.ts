@@ -2,7 +2,7 @@
 // output is read, and the exact system-prompt text (a port of pi's
 // `formatRulesForSystemPrompt`, English like the model's instructions).
 
-export type Rule = { title: string; fact_type: string; body: string };
+export type Rule = { id: string; title: string; fact_type: string; body: string };
 
 /** Fact types that act as rules, in the order pi lists them. */
 export const RULE_TYPES = ["decision", "pattern"] as const;
@@ -25,6 +25,7 @@ export function parseRules(stdout: string): Rule[] | undefined {
 	return parsed
 		.filter((f): f is Record<string, unknown> => typeof f === "object" && f !== null)
 		.map((f) => ({
+			id: typeof f.id === "string" ? f.id : "",
 			title: typeof f.title === "string" ? f.title : "",
 			fact_type: typeof f.fact_type === "string" ? f.fact_type : "",
 			body: typeof f.body === "string" ? f.body : "",

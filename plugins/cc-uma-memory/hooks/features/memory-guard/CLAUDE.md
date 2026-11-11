@@ -11,8 +11,8 @@ v nastavení.
 
 - `startMemoryGuard` (`register.tsx`) — jednou smaže řádek z verze 0.1.0 (`$.ui.status(undefined)`) a spočítá `memoryState`.
 - `command.run {uma}` — odpovídá jen na `claude-memory [on|off] [--global]`, ostatní podpříkazy pošle dolů (`next`); modelu vrátí jen první řádek výstupu.
-- `ui.render PromptHint` — štítek přes pole `tail` props `PromptHint` (engine ho kreslí tlumeně na konci řádku, nezalomí ho; vlastní `<Box>` by ho zalomil): `[💾 UMA]` (paměť Claude vypnutá), `[💾 UMA ⚠ CC]` (zapnutá), před `]` ` ↻` po změně v sezení, ` ⚖N` při N otevřených blokujících dluzích (z `debtState`, píše ho `debt`), ` 📝N` při N konceptech čekajících na `/uma review` (z `stagingState`, píše ho `staging`). Cizí `tail` zachová. Bez barev, jen čte atomy.
-- `badge.ts` — čisté funkce `buildBadge(enabled, changed, debts)` → text a `addToTail`.
+- `ui.render PromptHint` — štítek přes pole `tail` props `PromptHint` (engine ho kreslí tlumeně na konci řádku, nezalomí ho; vlastní `<Box>` by ho zalomil): `[💾 🟢 UMA]` (paměť Claude vypnutá), `[💾 🟡 UMA ⚠ CC]` (zapnutá); **semafor hned za 💾**: 🔴 při otevřených blokujících dluzích (⚖N), jinak 🟡 při aktivní paměti Claude (⚠ CC) nebo konceptech čekajících na posouzení (📝N), jinak 🟢 (`light` v `badge.ts`; příklady `[💾 🟡 UMA 📝3]`, `[💾 🔴 UMA ⚖2 📝1]`); před `]` ` ↻` po změně v sezení, ` ⚖N` při N otevřených blokujících dluzích (z `debtState`, píše ho `debt`), ` 📝N` při N konceptech čekajících na `/uma review` (z `stagingState`, píše ho `staging`). Cizí `tail` zachová. Bez barev, jen čte atomy.
+- `badge.ts` — čisté funkce `light(enabled, debts, drafts)` (semafor), `buildBadge(enabled, changed, debts, drafts)` → text a `addToTail`.
 - `settings.ts` — čistá logika: `effectiveState` (global < projekt < lokální < výchozí = zapnuto) a `setAutoMemory` (mění jen jeden klíč, nevalidní JSON nepřepíše).
 
 Příkaz `/uma` (registrace, nápověda, kreslení víceřádkového výstupu, doplňování) patří řezu `uma-command`; tady je jen logika podpříkazu `claude-memory`.

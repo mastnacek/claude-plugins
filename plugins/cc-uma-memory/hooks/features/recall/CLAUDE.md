@@ -10,6 +10,7 @@ skrytý kontext. Kdyby zmizel, paměť zůstane dostupná jen přes nástroje MC
 
 - `prompt.submit` (`register.ts`) — není-li prompt příkaz (`/…`, `e.command`, `e.isMeta`), pochází-li od uživatele a je-li `settings.recall` zapnuto, spustí `uma recall check --judge jev --max 3 --json [--exclude ID]… -- <prompt>` přes `$.process.run` (cwd sezení, timeout 3 s) a vrátí `next({ ...e, context: [...e.context, text] })`.
 - `policy.ts` — čistá logika: `recallArgv`, `parseVerdict`, `buildRecallContext` (hlavička + `- [typ] titulek (scope): úryvek`, bez značek `[match]`), `factCount` (český plurál).
+- Po vložení zapíše `recordContext` (`shared/audit`) událost `{kind:"uma-context", source:"recall", factIds, scope:"prompt"}` do sidecaru `….uma.jsonl` (sdílený kontrakt souboru s `cc-agent-watchdog`, viz `shared/audit.ts` a README). Jen ID, žádný obsah; chyba zápisu prompt neovlivní.
 - Vložení ukáže jeden řádek `$.ui.log` (`🧠 recall: 2 fakta`); bez nálezu je ticho.
 
 ## Kontrakt

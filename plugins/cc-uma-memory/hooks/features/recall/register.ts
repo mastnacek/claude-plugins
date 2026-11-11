@@ -7,6 +7,7 @@
 
 import type { On } from "claude-code";
 import { atom, read, update } from "claude-code";
+import { recordContext } from "../../shared/audit";
 import { buildRecallContext, factCount, parseVerdict, recallArgv } from "./policy";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
@@ -51,6 +52,7 @@ export function registerRecall(on: On): void {
 		await update($, recallSessionAtom, (s) => ({ session, ids: [...(s.session === session ? s.ids : []), ...(context?.ids ?? [])], failing: false }));
 		if (!context) return next(e);
 		$.ui.log(`🧠 recall: ${factCount(context.ids.length)}`);
+		await recordContext($, { source: "recall", factIds: context.ids, scope: "prompt" });
 		return next({ ...e, context: [...(e.context ?? []), context.text] });
 	});
 }
