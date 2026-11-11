@@ -15,12 +15,12 @@
 import type { EngineInterface, On, PromptAutocompleteSuggestion } from "claude-code";
 import { atom, read, update } from "claude-code";
 import { failedRun, isQuery, missingBinary, planQuery } from "./queries";
-import { appendCommand, parseStored, recallCommand, writeGateCommand } from "./settings";
+import { appendCommand, immuneCommand, immuneModelCommand, parseStored, recallCommand, writeGateCommand } from "./settings";
 import type { Settings } from "./settings";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Record<string, string>);
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true } as Settings, { shape: "settings-2" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "" } as Settings, { shape: "settings-3" });
 
 type $ = EngineInterface;
 
@@ -37,6 +37,9 @@ const HELP = [
 	"/uma recall [on|off]               vzpomínky z UMA se přidají k promptu (výchozí zapnuto, platí ve všech sezeních)",
 	"/uma write-gate [ask|off]          dialog před zápisem do paměti UMA (výchozí ask, platí ve všech sezeních)",
 	"/uma append [on|off]               aktivní rozhodnutí a vzory z UMA v system promptu (výchozí zapnuto, platí ve všech sezeních)",
+	"/uma immune [off|warn|ask|auto]    imunitní interceptor před Write/Edit mimo úložiště UMA (výchozí warn: varování jedním řádkem; ask: dialog; auto: ověřený kontrakt blokuje hned)",
+	"/uma immune stats                  jak jsi odpovídal na dialogy interceptoru",
+	"/uma immune-model [<id>|default]   model OpenRouteru pro doporučení v dialogu (výchozí google/gemini-3.5-flash-lite)",
 	"/uma search <dotaz>                hledání ve faktech",
 	"/uma list [global|<projekt>]       výpis faktů",
 	"/uma read <id>                     jeden fakt",
@@ -65,9 +68,10 @@ async function runCommand($: $, args: string): Promise<string | undefined> {
 	const [sub, arg, ...rest] = args.trim().split(/\s+/).filter(Boolean);
 	if (sub === undefined || sub === "help") return HELP;
 	if (isQuery(sub)) return runQuery($, sub, [arg, ...rest].filter((a): a is string => a !== undefined));
-	if (sub !== "recall" && sub !== "write-gate" && sub !== "append") return undefined;
+	if (sub === "immune" && arg === "stats") return undefined; // the immune slice owns its log
+	if (sub !== "recall" && sub !== "write-gate" && sub !== "append" && sub !== "immune" && sub !== "immune-model") return undefined;
 	const current = await read($, settingsAtom);
-	const change = sub === "recall" ? recallCommand : sub === "append" ? appendCommand : writeGateCommand;
+	const change = sub === "recall" ? recallCommand : sub === "append" ? appendCommand : sub === "immune" ? immuneCommand : sub === "immune-model" ? immuneModelCommand : writeGateCommand;
 	const result = change(current, arg, rest.length);
 	if (result.settings !== current) {
 		await $.store.set(STORE_KEY, result.settings);
@@ -88,6 +92,8 @@ function completions(text: string, token: string): PromptAutocompleteSuggestion[
 			["recall", "vzpomínky z UMA k promptu"],
 			["write-gate", "schvalování zápisu do paměti"],
 			["append", "pravidla UMA v system promptu"],
+			["immune", "imunitní interceptor úprav kódu"],
+			["immune-model", "model OpenRouteru pro doporučení"],
 			["search", "hledání ve faktech"],
 			["list", "výpis faktů"],
 			["read", "jeden fakt"],
@@ -102,6 +108,8 @@ function completions(text: string, token: string): PromptAutocompleteSuggestion[
 	else if (words[0] === "recall" && words.length === 2) options = [["on"], ["off"]];
 	else if (words[0] === "write-gate" && words.length === 2) options = [["ask"], ["off"]];
 	else if (words[0] === "append" && words.length === 2) options = [["on"], ["off"]];
+	else if (words[0] === "immune" && words.length === 2) options = [["off"], ["warn"], ["ask"], ["auto"], ["stats", "jak jsi odpovídal na dialogy"]];
+	else if (words[0] === "immune-model" && words.length === 2) options = [["default", "google/gemini-3.5-flash-lite"]];
 	else if (words[0] === "debt" && words.length === 2) options = [["list", "otevřené i vyrovnané dluhy"], ["clear", "smazat všechny dluhy"]];
 	else if (words[0] === "list" && words.length === 2) options = [["global", "jen globální fakta"]];
 	else if (words[0] === "timeline" && words.length >= 2) options = [["--id", "jen řetěz s tímto ID"], ["--all", "i nikdy nenahrazená fakta"]];
@@ -168,7 +176,7 @@ export async function startUmaCommand($: EngineInterface): Promise<void> {
 	await $.command.register({
 		name: COMMAND,
 		description: "Paměť UMA: vzpomínky k promptu, schvalování zápisu, automatická paměť Claude",
-		argumentHint: "search | list | read | timeline | doctor | reindex | export | debt | recall | append | write-gate | claude-memory | help",
+		argumentHint: "search | list | read | timeline | doctor | reindex | export | debt | recall | append | write-gate | immune | immune-model | claude-memory | help",
 	});
 	const stored = parseStored(await $.store.get(STORE_KEY));
 	await update($, settingsAtom, () => stored);

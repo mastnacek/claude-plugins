@@ -32,6 +32,7 @@ oprávnění MCP nástrojů v Claude Code a obchvaty jsou otevřené.
 |---|---|
 | přepínač `/uma write-gate` | `uma-command` |
 | samotné nástroje `uma_*` | MCP server `uma` (Rust jádro) |
+| imunitní kontrola úprav kódu mimo úložiště | `immune` |
 | vkládání vzpomínek do promptu | `recall` |
 | druhý dotaz Claude Code na oprávnění MCP nástroje | nastavení oprávnění uživatele (`permissions.allow`) |
 
