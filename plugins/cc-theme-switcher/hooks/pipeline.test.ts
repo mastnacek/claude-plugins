@@ -26,22 +26,25 @@ interface World {
 	clock: ReturnType<typeof mock.clock>;
 }
 
+/** The engine hands the plugin `X:\…` paths on Windows; the files are kept under POSIX keys. */
+const norm = (p: string): string => p.replace(/\\/g, "/").replace(/^[A-Za-z]:/, "");
+
 /** What the engine does beneath the plugin: files in memory, a clock, an environment, a log. */
 function world(on: On, files: Record<string, string> = {}, env: Record<string, string> = {}): World {
-	const state: Omit<World, "clock"> = { files: new Map(Object.entries(files)), logs: [], writes: [], reads: [], processes: [] };
+	const state: Omit<World, "clock"> = { files: new Map(Object.entries(files).map(([p, text]) => [norm(p), text])), logs: [], writes: [], reads: [], processes: [] };
 	mock.env(on, { HOME, ...env });
 	const clock = mock.clock(on, { now: NOON });
 	on("fs.exists", (_$, e) => ({
-		value: state.files.has(e.path) || [...state.files.keys()].some((p) => p.startsWith(`${e.path}/`)),
+		value: state.files.has(norm(e.path)) || [...state.files.keys()].some((p) => p.startsWith(`${norm(e.path)}/`)),
 	}));
 	on("fs.read", (_$, e) => {
-		state.reads.push(e.path);
-		const text = state.files.get(e.path);
+		state.reads.push(norm(e.path));
+		const text = state.files.get(norm(e.path));
 		return text === undefined ? { deny: `ENOENT ${e.path}` } : { value: text };
 	});
 	on("fs.write", (_$, e) => {
-		state.files.set(e.path, e.text);
-		state.writes.push(e.path);
+		state.files.set(norm(e.path), e.text);
+		state.writes.push(norm(e.path));
 		return { value: undefined };
 	});
 	on("process.run", (_$, e) => {
@@ -153,4 +156,37 @@ test("a settings file that is not JSON is never overwritten", async ($, on) => {
 	const result = await tts($, "off");
 	expect(result.text).toContain("nejde přečíst");
 	expect(w.files.get(SETTINGS_FILE)).toBe("{ not json");
+});
+
+test("home folder: without HOME the theme goes under USERPROFILE", async ($, on) => {
+	const w = world(on, {}, { HOME: "", USERPROFILE: "C:/Users/u" });
+	await start($);
+	expect(w.writes).toContain("/Users/u/.claude/themes/tts.json");
+});
+
+test("home folder: HOME wins over USERPROFILE", async ($, on) => {
+	const w = world(on, {}, { USERPROFILE: "C:/Users/u" });
+	await start($);
+	expect(w.writes).toContain(THEME_FILE);
+	expect(w.writes.some((p) => p.includes("/Users/u/"))).toBe(false);
+});
+
+test("home folder: CLAUDE_CONFIG_DIR wins over both", async ($, on) => {
+	const w = world(on, {}, { CLAUDE_CONFIG_DIR: "/cfg", USERPROFILE: "C:/Users/u" });
+	await start($);
+	expect(w.writes).toContain("/cfg/themes/tts.json");
+	expect(w.writes).not.toContain(THEME_FILE);
+});
+
+test("home folder: no home at all is said once, nothing is written", async ($, on) => {
+	const w = world(on, {}, { HOME: "" });
+	await start($).catch(() => undefined);
+	expect(w.writes).toHaveLength(0);
+});
+
+test("home folder: herdr config is found under USERPROFILE when HOME is missing", async ($, on) => {
+	const w = world(on, { "/Users/u/.config/herdr/config.toml": "[ui]\nsidebar_width = 24\n" }, { HOME: "", USERPROFILE: "C:/Users/u" });
+	await start($);
+	await tts($, "herdr on");
+	expect(w.files.get("/Users/u/.config/herdr/config.toml") ?? "").toContain('name = "solarized-light"');
 });

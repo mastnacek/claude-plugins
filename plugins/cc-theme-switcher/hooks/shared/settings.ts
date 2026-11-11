@@ -6,6 +6,7 @@
 // says so, and refuses to save until the user repairs the file.
 
 import type { EngineInterface } from "claude-code";
+import { homeDir } from "./home";
 import { PALETTES } from "./palettes";
 import { type Slot, SLOTS } from "./solar";
 
@@ -76,8 +77,8 @@ export function normalizeSettings(raw: unknown): Settings {
 export async function claudeDir($: $): Promise<string> {
 	const custom = (await $.env.get("CLAUDE_CONFIG_DIR"))?.trim();
 	if (custom) return custom;
-	const home = (await $.env.get("HOME"))?.trim();
-	if (!home) throw new Error("nenalezen domovský adresář (HOME)");
+	const home = await homeDir($);
+	if (!home) throw new Error("nenalezen domovský adresář (HOME, USERPROFILE)");
 	return `${home}/.claude`;
 }
 

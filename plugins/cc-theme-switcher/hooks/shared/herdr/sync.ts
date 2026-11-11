@@ -37,15 +37,18 @@ export function herdrBin(env: Env): string {
 
 async function readEnv($: $): Promise<Env> {
 	// Literal names: the validator lists the variables a module reads.
-	const [HERDR_CONFIG_PATH, XDG_CONFIG_HOME, HERDR_ENV, TERM_PROGRAM, HERDR_BIN_PATH, HOME, PATH] = await Promise.all([
+	const [HERDR_CONFIG_PATH, XDG_CONFIG_HOME, HERDR_ENV, TERM_PROGRAM, HERDR_BIN_PATH, HOME_, USERPROFILE, PATH] = await Promise.all([
 		$.env.get("HERDR_CONFIG_PATH"),
 		$.env.get("XDG_CONFIG_HOME"),
 		$.env.get("HERDR_ENV"),
 		$.env.get("TERM_PROGRAM"),
 		$.env.get("HERDR_BIN_PATH"),
 		$.env.get("HOME"),
+		$.env.get("USERPROFILE"),
 		$.env.get("PATH"),
 	]);
+	// Windows has USERPROFILE and no HOME.
+	const HOME = HOME_?.trim() || USERPROFILE?.trim() || undefined;
 	return { HERDR_CONFIG_PATH, XDG_CONFIG_HOME, HERDR_ENV, TERM_PROGRAM, HERDR_BIN_PATH, HOME, PATH };
 }
 
