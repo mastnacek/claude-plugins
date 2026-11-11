@@ -5,9 +5,11 @@
 //   tool.call uma_write, uma_supersede  step dialog ($.ui.ask): preview → approve / edit / scope / reject;
 //                                        approve passes the edited input, anything else is a deny
 //   tool.call Write, Edit, NotebookEdit  into the store → deny (also through a symlink)
-//   tool.call Bash                       a command that would change memory → yes/no dialog
+//   tool.call Bash                       a command that would change memory → yes/no dialog;
+//                                        `uma muscle run <name> --confirm` → dry-run by the hook, dialog with the steps, --plan-hash checked
 //
-// `/uma write-gate off` removes the dialog only; Write/Edit into the store stay refused.
+// `/uma write-gate off` removes the memory dialogs only; Write/Edit into the store stay refused
+// and a routine run is still asked (running processes is not writing memory).
 //
 // Why $.ui.ask and not a strip/pane with buttons: a tool.call hook has a budget of
 // its OWN time (10 s) that runs while it waits for its own Promise and pauses only
@@ -16,8 +18,10 @@
 
 import type { EngineInterface, On } from "claude-code";
 import { atom, read } from "claude-code";
-import { isBypassingBashCommand, isUmaMemoryFilePath } from "./bypass";
+import { isBypassingBashCommand, isUmaMemoryFilePath, musclePlanOfCommand } from "./bypass";
 import { ACCEPT_RUN, DENIED_REASON, FILE_DENY_REASON, NO_UI_REASON, REJECT_RUN, SUPERSEDE_TOOL, WRITE_TOOL, optionOf, previewOfCommand, verdictOf } from "./dialog";
+import { MUSCLE_CHANGED, MUSCLE_DENIED, MUSCLE_DRY_RUN_FAILED, MUSCLE_NO_HASH, MUSCLE_NO_NAME, MUSCLE_NO_UI_REASON, MUSCLE_ONE_PER_COMMAND, dryRunArgv, parseDryRun, previewOfMuscle } from "./muscle";
+import type { MuscleRun } from "./bypass";
 import { APPROVE, BACK, BACK_FULL, DONE, EDIT, HEADER, PICK_BODY, PICK_FULL, PICK_TAGS, PICK_TITLE, REJECT, approvedInput, fieldQuestion, fullTextQuestion, normalizeScope, previewOf, scopeOption, tagsOf, toggleScope, withField } from "./proposal";
 import type { EditField, Proposal } from "./proposal";
 
@@ -28,15 +32,16 @@ type $ = EngineInterface;
 
 
 /** Asks; undefined = the user said yes, otherwise the deny. No one to ask is a no. */
-async function confirm($: $, question: string, accept: string, reject: string): Promise<{ deny: string } | undefined> {
+async function confirm($: $, question: string, accept: string, reject: string, noUi = NO_UI_REASON, denied?: string): Promise<{ deny: string } | undefined> {
 	let answer: string;
 	try {
 		answer = await $.ui.ask(question, { options: [accept, reject] });
 	} catch {
-		return { deny: NO_UI_REASON };
+		return { deny: noUi };
 	}
 	const verdict = verdictOf(optionOf(answer, [accept, reject]), accept, reject);
-	return verdict.ok ? undefined : { deny: verdict.reason };
+	if (verdict.ok) return undefined;
+	return { deny: denied !== undefined && verdict.reason === DENIED_REASON ? denied : verdict.reason };
 }
 
 /** Where the path really lands: itself, or the existing folder it would be created in. Undefined when unplaceable. */
@@ -75,6 +80,34 @@ function editedNote(input: Record<string, unknown>, reviewed: Record<string, unk
 		.filter((k) => JSON.stringify(input[k]) !== JSON.stringify(reviewed[k]))
 		.map((k) => `${k}: ${JSON.stringify(reviewed[k])}`);
 	return `Uživatel návrh před uložením upravil; do paměti UMA se zapsalo: ${changed.join(", ")}.`;
+}
+
+/** Dry-run timeout: the engine only reads the routine and hashes it. */
+const MUSCLE_DRY_RUN_TIMEOUT_MS = 5000;
+
+/**
+ * The gate for `uma muscle run <name> --confirm`: the hook runs the dry-run itself and
+ * shows its steps. Always asks (also with `/uma write-gate off`: running processes is not
+ * writing memory). Undefined = the user approved this very plan; otherwise the deny.
+ */
+async function reviewMuscle($: $, command: string): Promise<{ deny: string } | undefined> {
+	const { runs, other } = musclePlanOfCommand(command);
+	const run: MuscleRun | undefined = runs[0];
+	if (runs.length !== 1 || other || run === undefined) return { deny: MUSCLE_ONE_PER_COMMAND };
+	if (!run.name) return { deny: MUSCLE_NO_NAME };
+	if (!run.planHash) return { deny: MUSCLE_NO_HASH };
+	let stdout: string;
+	try {
+		const done = await $.process.run(dryRunArgv(run.name), { cwd: await $.session.cwd(), timeoutMs: MUSCLE_DRY_RUN_TIMEOUT_MS });
+		if (done.exitCode !== 0) return { deny: MUSCLE_DRY_RUN_FAILED(run.name, (done.stderr || done.stdout).trim().split("\n")[0] || `uma skončila kódem ${done.exitCode}`) };
+		stdout = done.stdout;
+	} catch (error) {
+		return { deny: MUSCLE_DRY_RUN_FAILED(run.name, error instanceof Error ? error.message.split("\n")[0] ?? "" : String(error)) };
+	}
+	const plan = parseDryRun(stdout);
+	if (!plan) return { deny: MUSCLE_DRY_RUN_FAILED(run.name, "výstup nemá otisk plánu (starší uma?)") };
+	if (plan.planHash !== run.planHash.trim().toLowerCase()) return { deny: MUSCLE_CHANGED };
+	return confirm($, previewOfMuscle(run.name, plan), ACCEPT_RUN, REJECT_RUN, MUSCLE_NO_UI_REASON, MUSCLE_DENIED);
 }
 
 const isMemoryTool = (tool: string): boolean => tool === WRITE_TOOL || tool === SUPERSEDE_TOOL;
@@ -157,6 +190,7 @@ export function registerWriteGate(on: On): void {
 		}
 		if (e.tool === "Write" || e.tool === "Edit") return (await touchesStore($, e.file_path)) ? { deny: FILE_DENY_REASON } : next(e);
 		if (e.tool === "NotebookEdit") return (await touchesStore($, e.notebook_path)) ? { deny: FILE_DENY_REASON } : next(e);
+		if (e.tool === "Bash" && musclePlanOfCommand(e.command).runs.length > 0) return (await reviewMuscle($, e.command)) ?? next(e);
 		if (e.tool === "Bash" && isBypassingBashCommand(e.command)) {
 			if ((await read($, settingsAtom)).writeGate === "off") return next(e);
 			return (await confirm($, previewOfCommand(e.command), ACCEPT_RUN, REJECT_RUN)) ?? next(e);

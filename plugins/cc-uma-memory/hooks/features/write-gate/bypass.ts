@@ -43,9 +43,56 @@ export function isUmaMemoryFilePath(targetPath: string): boolean {
 	return globalMarkers.some((m) => norm.includes(m) || norm.endsWith(m.slice(0, -1)));
 }
 
+/** Heredoc operator: `<<EOF`, `<<-EOF`, `<<'EOF'`, `<<"EOF"`, `<< EOF`; never the here-string `<<<`. */
+const HEREDOC_RE = /(?<!<)<<(?!<)(-?)\s*(?:'([^']*)'|"([^"]*)"|\\?([A-Za-z0-9_]+))/g;
+
+/** Commands that run what they read: a heredoc body given to them is code, not text. */
+const SCRIPT_READERS = new Set(["bash", "sh", "zsh", "dash", "ksh", "fish", "python", "python3", "node", "perl", "ruby", "php", "deno", "bun", "cmd", "powershell", "pwsh", "eval", "xargs", "source", "."]);
+const SCRIPT_READER_VERSIONED_RE = /^(python|node|perl|ruby|php)[\d.]*$/;
+
+/** True when any token of the line names a shell/interpreter (also after a wrapper, a path or a pipe:
+ *  `cat <<EOF | sh` feeds the body to sh). Conservative: a mere mention counts. */
+function lineRunsScripts(line: string): boolean {
+	return line
+		.split(/[|;&\s]+/)
+		.map((t) => executableName(t.replace(/^["'`]+|["'`]+$/g, "")))
+		.some((name) => SCRIPT_READERS.has(name) || SCRIPT_READER_VERSIONED_RE.test(name));
+}
+
+/**
+ * Drops the bodies (and terminators) of heredocs whose reader is not a shell or
+ * interpreter, so text written into a file (`cat > README.md <<'EOF'`) is not judged
+ * as commands. The operator line stays: its redirect target is still checked. A body
+ * given to a shell/interpreter stays (it runs); an unterminated heredoc stays whole.
+ */
+function withoutHeredocBodies(command: string): string {
+	const lines = command.split("\n");
+	const out: string[] = [];
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i] ?? "";
+		out.push(line);
+		const docs = [...line.matchAll(HEREDOC_RE)].map((m) => ({ dash: m[1] === "-", delim: m[2] ?? m[3] ?? m[4] ?? "" }));
+		if (docs.length === 0) continue;
+		const runs = lineRunsScripts(line);
+		for (const doc of docs) {
+			let end = -1;
+			for (let j = i + 1; j < lines.length; j++) {
+				const candidate = doc.dash ? (lines[j] ?? "").replace(/^\t+/, "") : (lines[j] ?? "");
+				if (candidate === doc.delim) {
+					end = j;
+					break;
+				}
+			}
+			if (runs || end < 0) continue; // runs: judged as today; unterminated: judge the whole rest
+			i = end; // skip body and terminator
+		}
+	}
+	return out.join("\n");
+}
+
 /** Splits a shell line into command segments (crude, but quote-tolerant). */
 function segments(command: string): string[][] {
-	return command
+	return withoutHeredocBodies(command)
 		.split(/[|;&\n]+/)
 		.map((s) => s.trim())
 		.filter(Boolean)
@@ -194,4 +241,59 @@ export function isBypassingBashCommand(command: string): boolean {
 		if (isUmaExecutable(rest[0] ?? "") && subcommandMutatesMemory(rest.slice(1))) return true;
 	}
 	return commandWritesMemoryPath(command);
+}
+
+/** One `uma muscle run <name> --confirm` found in a shell command. */
+export interface MuscleRun {
+	/** Routine name; empty when the command gives none. */
+	name: string;
+	/** The `--plan-hash` value; undefined when the flag is missing or has no value. */
+	planHash: string | undefined;
+}
+
+/** Flags of `uma muscle run` that take a value in the next token (the `--flag=value` form is one token). */
+const MUSCLE_VALUE_FLAGS = new Set(["--plan-hash"]);
+
+/** The run this segment makes, or undefined when its effective command is not `uma muscle run … --confirm`. */
+function muscleRunOf(tokens: string[]): MuscleRun | undefined {
+	const rest = unwrapAll(tokens);
+	if (!isUmaExecutable(rest[0] ?? "")) return undefined;
+	const args = rest.slice(1);
+	if (args[0]?.toLowerCase() !== "muscle" || args[1]?.toLowerCase() !== "run") return undefined;
+	const operands = args.slice(2);
+	if (!operands.some((t) => t.toLowerCase() === "--confirm")) return undefined;
+	let name = "";
+	let planHash: string | undefined;
+	for (let i = 0; i < operands.length; i++) {
+		const token = operands[i] ?? "";
+		const flag = token.toLowerCase();
+		if (flag.startsWith("--plan-hash=")) {
+			planHash = token.slice("--plan-hash=".length) || undefined;
+		} else if (MUSCLE_VALUE_FLAGS.has(flag)) {
+			const value = operands[i + 1];
+			planHash = value !== undefined && !value.startsWith("-") ? value : undefined;
+			i++;
+		} else if (!token.startsWith("-") && !name) {
+			name = token;
+		}
+	}
+	return { name, planHash };
+}
+
+/**
+ * The routines a shell command would run with `--confirm` (one per segment), and
+ * whether the command also does something else that changes memory. A command
+ * with `other` set is not one routine run, so the gate refuses it whole.
+ */
+export function musclePlanOfCommand(command: string): { runs: MuscleRun[]; other: boolean } {
+	const runs: MuscleRun[] = [];
+	let other = false;
+	for (const tokens of segments(command)) {
+		const run = muscleRunOf(tokens);
+		if (run) runs.push(run);
+		const rest = unwrapAll(tokens);
+		const mutatesViaUma = !run && isUmaExecutable(rest[0] ?? "") && subcommandMutatesMemory(rest.slice(1));
+		if (mutatesViaUma || redirectWritesStore(tokens) || utilityWritesStore(tokens)) other = true;
+	}
+	return { runs, other };
 }

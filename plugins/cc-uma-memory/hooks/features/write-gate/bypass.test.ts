@@ -1,7 +1,7 @@
 // Ported from pi-uma's approval_gate tests: the pure logic only.
 
 import { expect, test } from "claude-code/testing";
-import { isBypassingBashCommand as bypass, isUmaMemoryFilePath } from "./bypass";
+import { isBypassingBashCommand as bypass, isUmaMemoryFilePath, musclePlanOfCommand } from "./bypass";
 
 test("isUmaMemoryFilePath detects project and global UMA memory paths", () => {
 	expect(isUmaMemoryFilePath(".uma/decision/01ABC.md")).toBe(true);
@@ -108,4 +108,59 @@ test("store-mutating CLI commands are caught, read-only and dry-run spellings ar
 	expect(bypass("uma staging list")).toBe(false);
 	expect(bypass("uma muscle run git-status-log")).toBe(false);
 	expect(bypass("uma domains --help")).toBe(false);
+});
+
+test("musclePlanOfCommand reads name and --plan-hash in every spelling", () => {
+	const one = (c: string) => musclePlanOfCommand(c).runs;
+	expect(one("uma muscle run verify --confirm --plan-hash 9f2c41d07a3be518")).toEqual([{ name: "verify", planHash: "9f2c41d07a3be518" }]);
+	expect(one("uma muscle run verify --confirm --plan-hash=9f2c41d07a3be518 --json")).toEqual([{ name: "verify", planHash: "9f2c41d07a3be518" }]);
+	expect(one('uma muscle run "verify" --confirm --plan-hash "9f2c41d07a3be518"')).toEqual([{ name: "verify", planHash: "9f2c41d07a3be518" }]);
+	expect(one("uma muscle run --plan-hash abc --confirm verify")).toEqual([{ name: "verify", planHash: "abc" }]);
+	expect(one("uma muscle run verify --confirm")).toEqual([{ name: "verify", planHash: undefined }]);
+	expect(one("uma muscle run verify --confirm --plan-hash")).toEqual([{ name: "verify", planHash: undefined }]);
+	expect(one("uma muscle run --confirm")).toEqual([{ name: "", planHash: undefined }]);
+});
+
+test("musclePlanOfCommand sees through wrappers and counts every run", () => {
+	expect(musclePlanOfCommand("sudo env X=1 /usr/bin/uma muscle run a --confirm").runs).toHaveLength(1);
+	expect(musclePlanOfCommand('bash -c "uma muscle run a --confirm --plan-hash h"').runs).toEqual([{ name: "a", planHash: "h" }]);
+	expect(musclePlanOfCommand("uma-cli muscle run a --confirm").runs).toHaveLength(1);
+	expect(musclePlanOfCommand("uma muscle run a --confirm && uma muscle run b --confirm").runs).toHaveLength(2);
+});
+
+test("musclePlanOfCommand: dry-runs and other commands are no runs; other memory changes are flagged", () => {
+	expect(musclePlanOfCommand("uma muscle run a --json").runs).toEqual([]);
+	expect(musclePlanOfCommand("uma muscle list").runs).toEqual([]);
+	expect(musclePlanOfCommand("echo uma muscle run a --confirm").runs).toEqual([]);
+	expect(musclePlanOfCommand("uma muscle run a --confirm").other).toBe(false);
+	expect(musclePlanOfCommand("uma muscle run a --confirm | tee /tmp/out").other).toBe(false);
+	expect(musclePlanOfCommand("uma write --title x && uma muscle run a --confirm").other).toBe(true);
+	expect(musclePlanOfCommand("uma muscle run a --confirm > .uma/x.md").other).toBe(true);
+});
+
+test("heredoc body written to a file is ignored; its redirect target is not", () => {
+	expect(bypass("cat > README.md <<'EOF'\numa muscle run x --confirm\numa write --title x\nEOF")).toBe(false);
+	expect(bypass("tee docs/a.md <<EOF\numa write --title x\nEOF")).toBe(false);
+	expect(bypass('cat > docs/a.md <<"EOF"\numa write --title x\nEOF')).toBe(false);
+	expect(bypass("cat > docs/a.md <<-EOF\n\tuma write --title x\n\tEOF")).toBe(false);
+	expect(musclePlanOfCommand("cat > README.md <<'EOF'\numa muscle run x --confirm\nEOF").runs).toEqual([]);
+	expect(bypass("cat > .uma/x.md <<'EOF'\nhello\nEOF")).toBe(true);
+	expect(bypass("tee .uma/x.md <<EOF\nhello\nEOF")).toBe(true);
+});
+
+test("heredoc body given to a shell or interpreter is still judged", () => {
+	expect(bypass("bash <<'EOF'\numa write --title x\nEOF")).toBe(true);
+	expect(bypass("python3 - <<'EOF'\nimport os; os.system('uma write --title x')\numa write --title x\nEOF")).toBe(true);
+	expect(bypass("sudo env A=1 /bin/sh <<EOF\numa write --title x\nEOF")).toBe(true);
+	expect(bypass("cat <<EOF | sh\numa write --title x\nEOF")).toBe(true);
+	expect(bypass("xargs <<EOF\numa write --title x\nEOF")).toBe(true);
+	expect(musclePlanOfCommand("bash <<'EOF'\numa muscle run x --confirm\nEOF").runs).toHaveLength(1);
+});
+
+test("two heredocs, commands after the terminator, unterminated and here-strings", () => {
+	expect(bypass("cat > a.md <<EOF\numa write --title x\nEOF\ncat > b.md <<EOF\numa write --title y\nEOF")).toBe(false);
+	expect(bypass("cat > a.md <<EOF\nhello\nEOF\numa write --title x")).toBe(true);
+	expect(bypass("cat a.md b.md <<A <<B\numa write --title x\nA\numa write --title y\nB")).toBe(false);
+	expect(bypass("cat > a.md <<EOF\numa write --title x")).toBe(true);
+	expect(bypass("cat <<< 'uma write --title x'")).toBe(false); // here-string: unchanged (the text is an argument, not a command)
 });

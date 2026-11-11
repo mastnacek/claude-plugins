@@ -48,4 +48,4 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 - memory-guard — `/uma claude-memory [on|off] [--global]` vypne/zapne automatickou paměť Claude (`autoMemoryEnabled`) a stav drží pod promptem jako štítek `[UMA]` / `[UMA ⚠ CC]`. Ostatní podpříkazy `/uma` pošle dolů.
 - recall — před promptem zeptá `uma recall check` a pasáže k úkolu přidá jako skrytý kontext (anti-echo přes `recallSession`); poradní, při chybě prompt projde beze změny.
 - rules — aktivní fakty typu `decision` a `pattern` přidá do system promptu jako sekci `session` (port z pi, text doslova, nejvýš 10; vypíná `/uma append off`); načte je jednou za sezení.
-- write-gate — dialog před `uma_write` / `uma_supersede`, zákaz `Write`/`Edit` do úložiště a dialog pro bash, který by měnil paměť (port `approval_gate` z pi).
+- write-gate — dialog před `uma_write` / `uma_supersede`, zákaz `Write`/`Edit` do úložiště dialog pro bash, který by měnil paměť (port `approval_gate` z pi), a brána `uma muscle run --confirm` (kroky z vlastního dry-runu, kontrola `--plan-hash`).

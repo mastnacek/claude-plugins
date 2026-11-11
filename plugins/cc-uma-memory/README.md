@@ -35,6 +35,7 @@ cp target/release/uma ~/.local/bin/   # any directory on PATH
 - `uma_read`, `uma_list`, `uma_search`, `uma_consolidate` — read-only.
 - `uma_write`, `uma_supersede` — write; enabled by `--allow-writes`.
 - `uma_skill_invoke` — expands a stored skill template into a command; never runs it (you run it with your shell tool). Needs `uma` from pi-uma `master` after 0.17.8.
+- `uma_muscle` — operator-curated routines: `list`, or `run <name>` as a **dry-run** that prints the exact steps and a `plan_hash`. It never executes anything (even with `confirm`).
 - `uma_skeptic` — the adversarial Skeptic: a typed critique of a planned change (failure mode, devil objection, risk level, `suggested_debt`). Read-only, advisory.
 - `uma_humility` — Familiarity Index: how well memory covers the code you are about to touch; `low` means read at least 3 related files first. Read-only, advisory.
 
@@ -48,9 +49,12 @@ The read-only tools never need a prompt. To stop Claude Code asking for them, ad
 "mcp__plugin_cc-uma-memory_uma__uma_search",
 "mcp__plugin_cc-uma-memory_uma__uma_consolidate",
 "mcp__plugin_cc-uma-memory_uma__uma_skill_invoke",
+"mcp__plugin_cc-uma-memory_uma__uma_muscle",
 "mcp__plugin_cc-uma-memory_uma__uma_skeptic",
 "mcp__plugin_cc-uma-memory_uma__uma_humility"
 ```
+
+**Running a routine.** Dry-run with `uma_muscle` → the model runs `uma muscle run <name> --confirm --plan-hash <hash>` with Bash → the write gate does its own dry-run and shows a dialog with the steps (`$ command args…`), the routine name and the hash; you answer *Ano, pokračovat* / *Ne, zablokovat*. A command without `--plan-hash`, with a hash that no longer matches the routine, with a failed dry-run, or with more than one routine is refused without a dialog. The dialog appears also with `/uma write-gate off` (running processes is not writing memory), and in `-p` mode the run is refused. For you in a terminal `--plan-hash` stays optional (the CLI); the gate guards the model.
 
 **Project or global?** The MCP server runs in the folder where the Claude Code session started. Started inside a git repository, new facts go to that project's `.uma/`; started elsewhere (e.g. your home folder), they go to the global store unless the call names a `scope`.
 
