@@ -1,6 +1,6 @@
 {
   "name": "cc-agent-watchdog",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Watchdog pro agenty: deník volání nástrojů, pravidla a skóre programátora a testera",
   "author": { "name": "mastnacek" },
   "homepage": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-agent-watchdog",
