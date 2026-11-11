@@ -349,7 +349,7 @@ test("/uma immune: report, switch, persisted; stats read the decision log", asyn
 
 test("recommendation: pi's auth file is found under USERPROFILE when HOME is missing", async ($, on) => {
 	resetImmuneCache();
-	const { seen } = setup(on, { ...withRules, settings: { immune: "ask" }, llm: "unrelated", env: { HOME: "", USERPROFILE: "C:/Users/u" }, files: { "/Users/u/.pi/agent/auth.json": JSON.stringify({ openrouter: { key: SECRET } }) } });
+	const { seen } = setup(on, { ...withRules, settings: { immune: "ask" }, llm: "unrelated", env: { HOME: "", USERPROFILE: "/Users/u" }, files: { "/Users/u/.pi/agent/auth.json": JSON.stringify({ openrouter: { key: SECRET } }) } });
 	await start($);
 	await write($, "/w/src/a.ts", TOUCHING);
 	expect(seen.requests[0]?.headers.Authorization).toBe(`Bearer ${SECRET}`);

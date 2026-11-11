@@ -133,7 +133,7 @@ test("global settings: HOME gives HOME/.claude/settings.json", async ($, on) => 
 });
 
 test("global settings: without HOME, USERPROFILE/.claude/settings.json", async ($, on) => {
-	const files = await globalWrite($, on, { HOME: "", USERPROFILE: "C:/Users/u" });
+	const files = await globalWrite($, on, { HOME: "", USERPROFILE: "/Users/u" });
 	expect([...files.keys()]).toEqual(["/Users/u/.claude/settings.json"]);
 });
 
