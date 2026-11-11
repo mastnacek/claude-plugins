@@ -75,7 +75,14 @@ export function assessEdit(pain: PainVerdict | undefined, rules: RuleL1[], added
 export function isStorePath(targetPath: string): boolean {
 	const norm = targetPath.replace(/\\/g, "/").toLowerCase();
 	if (norm.includes("/.uma/") || norm.startsWith(".uma/") || norm.endsWith("/.uma") || norm === ".uma") return true;
-	const globalMarkers = ["/uma/uma/data/global/", "/uma/data/global/", "/com.uma.uma/global/", "/.local/share/uma/global/"];
+	const globalMarkers = [
+		"/uma/uma/data/global/",
+		"/uma/data/global/",
+		"/com.uma.uma/global/",
+		"/.local/share/uma/global/",
+		"/appdata/roaming/uma/global/",
+		"/application support/uma/global/",
+	];
 	return globalMarkers.some((m) => norm.includes(m) || norm.endsWith(m.slice(0, -1)));
 }
 

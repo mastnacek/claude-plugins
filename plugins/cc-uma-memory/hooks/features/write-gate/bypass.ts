@@ -32,16 +32,25 @@ function subcommandMutatesMemory(tokens: string[]): boolean {
 
 /**
  * True when the path targets a UMA memory store (project `.uma/` or the global
- * store on any platform). Separators and case are normalized; the three real
- * global layouts are known:
- *   Windows: %APPDATA%\uma\uma\data\global
- *   macOS:   ~/Library/Application Support/com.uma.uma/global
+ * store on any platform). Separators and case are normalized; the global
+ * layouts are known:
+ *   Windows: %APPDATA%\uma\global                      (legacy: %APPDATA%\uma\uma\data\global)
+ *   macOS:   ~/Library/Application Support/uma/global  (legacy: …/com.uma.uma/global)
  *   Linux:   ~/.local/share/uma/global
+ * Legacy shapes stay guarded until the data is moved. Siblings of `global/`
+ * (e.g. `uma/agent-watchdog/`) are not the store.
  */
 export function isUmaMemoryFilePath(targetPath: string): boolean {
 	const norm = targetPath.replace(/\\/g, "/").toLowerCase();
 	if (norm.includes("/.uma/") || norm.startsWith(".uma/") || norm.endsWith("/.uma") || norm === ".uma") return true;
-	const globalMarkers = ["/uma/uma/data/global/", "/uma/data/global/", "/com.uma.uma/global/", "/.local/share/uma/global/"];
+	const globalMarkers = [
+		"/uma/uma/data/global/",
+		"/uma/data/global/",
+		"/com.uma.uma/global/",
+		"/.local/share/uma/global/",
+		"/appdata/roaming/uma/global/",
+		"/application support/uma/global/",
+	];
 	return globalMarkers.some((m) => norm.includes(m) || norm.endsWith(m.slice(0, -1)));
 }
 
@@ -172,7 +181,7 @@ function isUmaExecutable(token: string): boolean {
 function tokenTouchesStore(token: string): boolean {
 	const norm = token.replace(/\\/g, "/").toLowerCase();
 	if (norm === ".uma" || /(^|[^a-z0-9_.])\.uma\//.test(norm)) return true;
-	return norm.includes("uma/uma/data/global") || norm.includes("uma/data/global") || norm.includes("com.uma.uma/global") || norm.includes(".local/share/uma/global");
+	return norm.includes("uma/uma/data/global") || norm.includes("uma/data/global") || norm.includes("com.uma.uma/global") || norm.includes(".local/share/uma/global") || /appdata%?\/(roaming\/)?uma\/global/.test(norm) || norm.includes("application support/uma/global");
 }
 
 /** Separate-form output redirections: ">", ">>", "2>", "2>>", "&>", "&>>". */
