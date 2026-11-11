@@ -29,6 +29,11 @@
       "name": "cc-agent-watchdog",
       "source": "./plugins/cc-agent-watchdog",
       "description": "Watchdog pro agenty: deník volání nástrojů, pravidla a skóre programátora a testera"
+    },
+    {
+      "name": "cc-pixel-buddy",
+      "source": "./plugins/cc-pixel-buddy",
+      "description": "Pixelová počítačová hlavička vedle chatu: nálada podle práce, užitečné hlášky a statistiky dne"
     }
   ]
 }
