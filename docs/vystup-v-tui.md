@@ -16,6 +16,9 @@ Text modelu je holý markdown; výstup pluginu proto nikdy nevypadá jako holý 
 - **Barvy z motivu**, ne natvrdo RGB: jmenované barvy enginu (`success`, `warning`,
   `error`, `permission`…), aby to sedělo ve světlém i tmavém motivu.
 - **Stav barvou:** úspěch zeleně, varování žlutě, chyba/zamítnutí červeně.
+- **Barva podle významu.** Texty se rozlišují: čistá funkce pozná význam řádku/hodnoty
+  (chyba, varování, úspěch, ID, cesta, číslo, příkaz, prázdný výsledek) a podle něj
+  zvolí barvu — primárně z polí dat (stav, typ, závažnost), z textu (CZ i EN) jen bez pole.
 - **Model čte holý text.** Kreslený strom je jen pro člověka; `text`/`context`
   výsledku příkazu zůstává čistý text bez ANSI a rámečků (to, co jde do přepisu
   modelu, se nemění kvůli vzhledu).
