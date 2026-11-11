@@ -15,7 +15,7 @@ import { RULE_TYPES, formatRules, parseRules, rulesArgv } from "./policy";
 import type { Rule } from "./policy";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string }, { shape: "settings-3" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean }, { shape: "settings-4" });
 const rulesSessionAtom = atom({ plugin: "cc-uma-memory", key: "rulesSession" } as const, { session: "", text: null, failing: false } as { session: string; text: string | null; failing: boolean });
 
 const TIMEOUT_MS = 5000;

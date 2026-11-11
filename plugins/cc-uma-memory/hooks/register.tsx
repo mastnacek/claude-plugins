@@ -7,6 +7,7 @@
 
 import type { EngineInterface, Register } from "claude-code";
 import { registerDebt } from "./features/debt/register";
+import { registerHumility } from "./features/humility/register";
 import { registerImmune } from "./features/immune/register";
 import { registerMemoryGuard, startMemoryGuard } from "./features/memory-guard/register";
 import { registerRecall } from "./features/recall/register";
@@ -37,6 +38,8 @@ export const register: Register = (on) => {
 	registerRecall(on);
 	registerRules(on);
 	registerWriteGate(on);
-	// After write-gate: it denies the store first; immune judges the rest.
+	// After write-gate: it denies the store first. Humility before immune: the cheap
+	// deny without processes goes first, immune judges only what humility lets through.
+	registerHumility(on);
 	registerImmune(on);
 };

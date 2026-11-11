@@ -26,7 +26,7 @@ import { APPROVE, BACK, BACK_FULL, DONE, EDIT, HEADER, PICK_BODY, PICK_FULL, PIC
 import type { EditField, Proposal } from "./proposal";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string }, { shape: "settings-3" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean }, { shape: "settings-4" });
 
 type $ = EngineInterface;
 

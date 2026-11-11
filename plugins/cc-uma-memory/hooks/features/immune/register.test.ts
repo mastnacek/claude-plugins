@@ -24,7 +24,7 @@ type Opts = {
 };
 
 function setup(on: On, o: Opts = {}) {
-	const store = new Map<string, unknown>([["settings", { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", ...o.settings }]]);
+	const store = new Map<string, unknown>([["settings", { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, ...o.settings }]]);
 	on("store.get", (_$, e) => ({ value: store.get(e.key) }));
 	on("store.set", (_$, e) => {
 		store.set(e.key, JSON.parse(JSON.stringify(e.value)));

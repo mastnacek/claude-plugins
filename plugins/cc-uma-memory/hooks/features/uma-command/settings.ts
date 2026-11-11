@@ -3,12 +3,12 @@
 
 export type ImmuneMode = "off" | "warn" | "ask" | "auto";
 /** `immuneModel` "" = the default model of the immune recommendation (OpenRouter). */
-export type Settings = { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: ImmuneMode; immuneModel: string };
+export type Settings = { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: ImmuneMode; immuneModel: string; humility: boolean };
 
 /** The model the immune recommendation asks by default (kept equal to immune/recommendation.ts: slices share no code). */
 export const DEFAULT_IMMUNE_MODEL = "google/gemini-3.5-flash-lite";
 
-export const DEFAULTS: Settings = { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "" };
+export const DEFAULTS: Settings = { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false };
 
 /** What `$.store` held; anything unreadable falls back to the default for that key. */
 export function parseStored(value: unknown): Settings {
@@ -19,6 +19,7 @@ export function parseStored(value: unknown): Settings {
 		append: typeof obj.append === "boolean" ? obj.append : DEFAULTS.append,
 		immune: obj.immune === "off" || obj.immune === "warn" || obj.immune === "ask" || obj.immune === "auto" ? obj.immune : DEFAULTS.immune,
 		immuneModel: typeof obj.immuneModel === "string" && MODEL_ID_RE.test(obj.immuneModel) ? obj.immuneModel : DEFAULTS.immuneModel,
+		humility: typeof obj.humility === "boolean" ? obj.humility : DEFAULTS.humility,
 	};
 }
 
@@ -77,4 +78,13 @@ export function immuneModelCommand(current: Settings, arg: string | undefined, e
 	if (arg === "default") return { settings: { ...current, immuneModel: "" }, text: `Model imunitního doporučení (OpenRouter): ${shown("")}` };
 	if (!MODEL_ID_RE.test(arg) || arg.length > 100) return { settings: current, text: "Neplatné ID modelu. Čekám tvar OpenRouteru, např. google/gemini-3.5-flash-lite." };
 	return { settings: { ...current, immuneModel: arg }, text: `Model imunitního doporučení (OpenRouter): ${arg} (platí od dalšího dialogu, ve všech sezeních)` };
+}
+
+/** `/uma humility [on|off]` — the humility gate before Write/Edit after a LOW `uma_humility` verdict. Without an argument it only reports. */
+export function humilityCommand(current: Settings, arg: string | undefined, extra: number): SettingResult {
+	const word = (on: boolean) => (on ? "zapnuta" : "vypnuta");
+	if (arg === undefined) return { settings: current, text: `Brána pokory: ${word(current.humility)}` };
+	if ((arg !== "on" && arg !== "off") || extra > 0) return { settings: current, text: "Neznámý argument. Zkus /uma humility [on|off]." };
+	const settings = { ...current, humility: arg === "on" };
+	return { settings, text: `Brána pokory: ${word(settings.humility)} (po verdiktu LOW z uma_humility zastaví první úpravu kódu, dokud nepřečteš soubory a nevyslovíš hypotézu; platí hned, ve všech sezeních)` };
 }
