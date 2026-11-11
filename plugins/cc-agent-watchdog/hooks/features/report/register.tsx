@@ -3,7 +3,7 @@
 //   start                    registers /watch
 //   command.run {watch}      `report [last|all|<id>]` builds the scorecard; `rules` goes down to the rules slice
 //   ui.render CommandOutput  draws a /watch output from `commandOutputs` in a round frame
-//   ui.render PromptHint     adds [👁 85] / [👁 85 ⚠2] / [👁 0 ⛔] to the tail, next to another plugin's tag
+//   ui.render PromptHint     adds [👁 🟢 100] / [👁 🟡 85 ⚠️2] / [👁 🔴 0 ⛔] to the tail, next to another plugin's tag
 //
 // A plugin's command text goes into the model's requests: the model gets only
 // the first line; the full output is data in $.state, drawn here.

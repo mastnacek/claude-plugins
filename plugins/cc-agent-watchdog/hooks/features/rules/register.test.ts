@@ -31,17 +31,17 @@ function hint($: Host, on: Parameters<typeof setup>[0]) {
 	};
 }
 
-test("a coder who commits: the tag turns to [👁 0 ⛔] next to the other plugin's tail", async ($, on) => {
+test("a coder who commits: the tag turns to [👁 🔴 0 ⛔] next to the other plugin's tail", async ($, on) => {
 	const w = fresh({ env: { HOME: "/h", CC_ROLE: "coder" } });
 	setup(on, w);
 	on("turn.complete", (_$, e) => ({ text: e.answer }));
 	const tag = hint($ as never, on);
 	await start($ as never);
 	await finish($ as never, "Pracuji.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 100]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🟢 100]");
 	await call($, { tool: "Bash", command: "git commit -m x" });
 	await finish($ as never, "Pracuji.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 0 ⛔]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🔴 0 ⛔]");
 });
 
 test("violations show as ⚠N with the score", async ($, on) => {
@@ -53,7 +53,7 @@ test("violations show as ⚠N with the score", async ($, on) => {
 	await call($, { tool: "Write", file_path: "/home/t/other/f.txt" });
 	await call($, { tool: "Bash", command: "sleep 60 && ls" });
 	await finish($ as never, "Pracuji.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 88 ⚠2]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🟡 88 ⚠️2]");
 });
 
 test("the orchestrator is not bound by the git rules: score stays 100", async ($, on) => {
@@ -64,7 +64,7 @@ test("the orchestrator is not bound by the git rules: score stays 100", async ($
 	await start($ as never);
 	await call($, { tool: "Bash", command: "git commit -m x && git push" });
 	await finish($ as never, "Hotovo.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 100]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🟢 100]");
 });
 
 test("a project's .claude/watchdog.json gives the gate: 'done' without it is an instant failure, with it a clean score", async ($, on) => {
@@ -75,12 +75,12 @@ test("a project's .claude/watchdog.json gives the gate: 'done' without it is an 
 	await start($ as never);
 	await call($, { tool: "Edit", file_path: "/work/wt/src/a.ts" });
 	await finish($ as never, "Hotovo.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 0 ⛔]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🔴 0 ⛔]");
 	w.session = "GATED002-x";
 	await call($, { tool: "Edit", file_path: "/work/wt/src/a.ts" });
 	await call($, { tool: "Bash", command: "make check" });
 	await finish($ as never, "Hotovo.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 100]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🟢 100]");
 });
 
 test("without a watchdog.json the usual test/build commands are the gate: 'Hotovo, vše ověřeno.' after an edit alone is an instant failure", async ($, on) => {
@@ -91,16 +91,16 @@ test("without a watchdog.json the usual test/build commands are the gate: 'Hotov
 	await start($ as never);
 	await call($, { tool: "Edit", file_path: "/work/wt/src/a.ts" });
 	await finish($ as never, "Hotovo, vše ověřeno.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 0 ⛔]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🔴 0 ⛔]");
 	w.session = "NOGATE02-x";
 	await call($, { tool: "Edit", file_path: "/work/wt/src/a.ts" });
 	await finish($ as never, "Není hotovo, zbývá spustit testy.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 100]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🟢 100]");
 	w.session = "NOGATE03-x";
 	await call($, { tool: "Edit", file_path: "/work/wt/src/a.ts" });
 	await call($, { tool: "Bash", command: "cargo test" });
 	await finish($ as never, "Hotovo, vše ověřeno.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 100]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🟢 100]");
 });
 
 test("a broken watchdog.json leaves the defaults", async ($, on) => {
@@ -111,7 +111,7 @@ test("a broken watchdog.json leaves the defaults", async ($, on) => {
 	await start($ as never);
 	await call($, { tool: "Write", file_path: "/data/out/x" });
 	await finish($ as never, "Pracuji.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 90 ⚠1]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🟡 90 ⚠️1]");
 });
 
 test("a path the project allows, and the project's own protected path", async ($, on) => {
@@ -122,10 +122,10 @@ test("a path the project allows, and the project's own protected path", async ($
 	await start($ as never);
 	await call($, { tool: "Write", file_path: "/data/out/x" });
 	await finish($ as never, "Pracuji.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 100]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🟢 100]");
 	await call($, { tool: "Edit", file_path: "/work/wt/CONTRACT.md" });
 	await finish($ as never, "Pracuji.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 0 ⛔]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🔴 0 ⛔]");
 });
 
 test("debugging leftovers in the work tree cost 5 (and are written to the ledger once)", async ($, on) => {
@@ -136,12 +136,12 @@ test("debugging leftovers in the work tree cost 5 (and are written to the ledger
 	await start($ as never);
 	await finish($ as never, "Pracuji.");
 	await finish($ as never, "Pracuji.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 95 ⚠1]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🟡 95 ⚠️1]");
 	const ledger = [...files].find(([p]) => p.endsWith(".jsonl"))?.[1] ?? "";
 	expect(ledger.split("\n").filter((l) => l.includes('"kind":"scan"')).length).toBe(1);
 	w.status = " M src/a.ts\n";
 	await finish($ as never, "Pracuji.");
-	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 100]");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 🟢 100]");
 });
 
 test("/watch rules lists the active rules of the role; the model gets one line", async ($, on) => {

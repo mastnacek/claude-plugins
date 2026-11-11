@@ -1,6 +1,9 @@
 // The ledger end to end: the hook records a call and never changes its result; where the file goes on every platform.
 
 import { expect, test } from "claude-code/testing";
+import { CFG } from "../../shared/fixture";
+import { RULES } from "../../shared/rules";
+import type { ToolEv } from "../../shared/types";
 import { call, eventsOf, fresh, only, setup } from "../../shared/world";
 import type { Entry } from "../../shared/world";
 
@@ -92,6 +95,24 @@ test("a failing write is a quiet log line; the tool still goes through", async (
 	expect(result.text).toBe("ok");
 	expect(files.size).toBe(0);
 	expect(logged.join("\n")).toContain("deník: zápis selhal");
+});
+
+test("a test token the agent typed itself and the tool echoes back is no secretOut and no W21; a foreign one is −10, not instant", async ($, on) => {
+	const w = fresh({ env: { HOME: "/h", CC_ROLE: "coder" }, session: "OWNTOKEN-x", answer: { result: "x", text: '{"findings":[{"label":"OpenAI API key","preview":"sk-abcde…wx"}]} sk-abcdefghijklmnopqrstuvwx' } });
+	const { files } = setup(on, w);
+	await call($, { tool: "Bash", command: "uma secrets scan --json sk-abcdefghijklmnopqrstuvwx" });
+	const path = only(files);
+	const [own] = eventsOf(files, path);
+	expect(own?.secretOut).toBeUndefined();
+	expect(JSON.stringify(own)).not.toContain("sk-abcdefghijklmnopqrstuvwx");
+	expect(RULES.find((r) => r.id === "W21")?.check([own as ToolEv], CFG)).toEqual([]);
+
+	// The same output after a command that did not contain the token: the tool found it somewhere.
+	w.session = "FOREIGN1-x";
+	await call($, { tool: "Bash", command: "cat build.log" });
+	const [foreign] = eventsOf(files, [...files.keys()].find((k) => k.includes("FOREIGN1")) as string);
+	expect(foreign?.secretOut).toBe(true);
+	expect(RULES.find((r) => r.id === "W21")?.check([foreign as ToolEv], CFG)).toMatchObject([{ points: 10 }]);
 });
 
 test("a call is written with exit code, error excerpt, denial reason — secrets masked", async ($, on) => {

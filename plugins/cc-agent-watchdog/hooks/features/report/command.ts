@@ -8,6 +8,7 @@ import type { Result } from "../../shared/output";
 import { currentRole } from "../../shared/role";
 import { listLogs, openLog, readEvents } from "../../shared/store";
 import type { LogFile } from "../../shared/store";
+import { readUmaContext } from "../../shared/uma";
 
 type $ = EngineInterface;
 
@@ -16,7 +17,7 @@ export const USAGE = "Použití: /watch report [last | all | <id sezení>] · /w
 async function one($: $, file: Pick<LogFile, "path" | "sid8" | "date" | "role">, workdir: string): Promise<Result> {
 	const events = await readEvents($, file.path);
 	const cfg = await loadConfig($, workdir);
-	return scorecard(evaluate(events, cfg, file.role), { sid8: file.sid8, date: file.date });
+	return scorecard(evaluate(events, cfg, file.role), { sid8: file.sid8, date: file.date }, await readUmaContext($, file.path));
 }
 
 export async function reportResult($: $, arg: string): Promise<Result> {

@@ -3,6 +3,8 @@
 
 import type { PluginState, ShapedValue } from "claude-code";
 import type { LogFile } from "./store";
+import { factCount, factsAt, factsLine } from "./uma";
+import type { UmaContext } from "./uma";
 import type { Role, Rule, Verdict } from "./types";
 
 export type Outputs = ShapedValue<PluginState["cc-agent-watchdog"]["commandOutputs"]>;
@@ -20,7 +22,7 @@ export function clock(ms: number): string {
 export const sentence = (title: string, text: string, tone: Out["tone"] = "normal"): Result => ({ text, out: { title, tone, lines: [tone === "normal" ? { text } : { text, tone }] } });
 
 /** `/watch report` for one session: score, every violation with time and evidence, counts. */
-export function scorecard(v: Verdict, meta: { sid8: string; date?: string }): Result {
+export function scorecard(v: Verdict, meta: { sid8: string; date?: string }, uma?: readonly UmaContext[]): Result {
 	const count = v.violations.length;
 	const instants = v.violations.filter((x) => x.instant).length;
 	const title = `${v.role} · ${meta.date ? `${meta.date} · ` : ""}${meta.sid8} · skóre ${v.score}/100`;
@@ -30,12 +32,15 @@ export function scorecard(v: Verdict, meta: { sid8: string; date?: string }): Re
 	for (const x of v.violations) {
 		const mark = x.instant ? "⛔ INSTANT FAIL" : `⚠ −${x.points}`;
 		lines.push({ text: `${mark} · ${x.rule} · ${clock(x.ts)} · ${x.evidence}`, tone: x.instant ? "error" : "warning" });
+		// The UMA facts the model had in context when it happened (only with the sidecar of cc-uma-memory).
+		if (uma) lines.push({ text: `   ${factsLine(factsAt(uma, x.ts))}`, tone: "dim" });
 	}
 	if (count === 0) lines.push({ text: "✔ žádné porušení", tone: "success" });
 	const per = new Map<string, number>();
 	for (const x of v.violations) per.set(x.rule, (per.get(x.rule) ?? 0) + 1);
 	const off = v.violations.reduce((s, x) => s + x.points, 0);
 	lines.push({ text: `Souhrn: ${v.calls} volání · ${count} porušení (${instants} instant) · odečet −${off}${per.size > 0 ? ` · ${[...per].map(([r, n]) => `${r}×${n}`).join(" ")}` : ""}`, tone: "dim" });
+	if (uma) lines.push({ text: `🧠 sezení mělo ${factCount(factsAt(uma).length)} UMA v kontextu`, tone: "dim" });
 	const tone: Out["tone"] = instants > 0 ? "error" : count > 0 ? "warning" : "success";
 	return { text, out: { title, tone, lines } };
 }

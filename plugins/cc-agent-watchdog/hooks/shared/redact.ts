@@ -22,6 +22,16 @@ export function redact(text: string): { text: string; found: boolean } {
 	return { text: out, found: out !== text };
 }
 
+/** The secret strings themselves, as `redact` would find them (for comparing with what the agent sent). */
+export function secretsIn(text: string): string[] {
+	const found: string[] = [];
+	for (const re of SECRET_PATTERNS) for (const m of text.matchAll(new RegExp(re.source, re.flags))) found.push(m[0]);
+	for (const m of text.matchAll(/Bearer\s+([A-Za-z0-9._~+/=-]{12,})/gi)) found.push(m[1] as string);
+	for (const m of text.matchAll(/(?:password|passwd|token|secret|api[_-]?key|authorization)["']?\s*[=:]\s*["']?([^\s"']{4,})/gi)) found.push(m[1] as string);
+	for (const m of text.matchAll(/:\/\/[^\s/:@]+:([^\s/@]+)@/g)) found.push(m[1] as string);
+	return found;
+}
+
 /** Redacted and cut to `max` characters, one line. */
 export function clip(text: string, max: number): string {
 	const one = redact(text).text.replace(/\s+/g, " ").trim();

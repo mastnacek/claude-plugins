@@ -17,7 +17,7 @@ Kdyby zmizel, plugin nic nezaznamenává a skóre je pořád 100.
   `exitCode` se bere z textu chyby `Exit code N`, u Bash bez chyby je 0. `denied` = `{ deny }` z hooku, nebo chyba, jejíž text vypadá jako zamítnutí
   (klasifikátor, uživatel: „doesn't want to proceed“, „was blocked“ …).
 - **Obsah souborů a výstupy se neukládají.** Příkaz (600 znaků), cesta, url a úryvek chyby (160 znaků) projdou `redact` (klíče `sk-`, `ghp_`,
-  `AKIA`, bearer, hesla v URL, soukromé klíče); `secretOut: true` značí, že výstup nástroje tajemství obsahoval (pak už jen příznak).
+  `AKIA`, bearer, hesla v URL, soukromé klíče); `secretOut: true` značí, že výstup nástroje obsahoval tajemství (pak už jen příznak). Nenastaví se, je-li tajemství (nebo jeho prvních 8 znaků — nástroje tisknou oříznuté náhledy) v textových polích vstupu téhož volání: to jsou testovací data, která agent napsal sám (`secretsIn` v `shared/redact.ts`, `hasForeignSecret` v `record.ts`). Pravidlo W21 za to bere −10, ne instant.
 
 ## Kde deník leží (`shared/store.ts`)
 

@@ -9,14 +9,14 @@ import { NOT_YET, RULES } from "./rules";
 test("a clean session scores 100 with no tag marks", () => {
 	const v = evaluate([bash("ls"), file("Edit", "/work/repo/src/a.ts"), bash("claude plugin test ."), bash("scripts/vsa-check.sh"), turn("Hotovo.")], CFG);
 	expect(v).toMatchObject({ score: 100, instant: false, calls: 4 });
-	expect(badge({ score: v.score, instant: v.instant, count: v.violations.length })).toBe("[👁 100]");
+	expect(badge({ score: v.score, instant: v.instant, count: v.violations.length })).toBe("[👁 🟢 100]");
 });
 
 test("points add up, a rule's cap holds, the tag shows the violation count", () => {
 	const v = evaluate([bash("sleep 60 && ls"), bash("sleep 60 && ls"), file("Write", "/home/t/o/f1"), denied(bash("ls"))], CFG);
 	expect(v.violations.map((x) => [x.rule, x.points])).toEqual([["W18", 2], ["W18", 2], ["W04", 10], ["W20", 3]]);
 	expect(v.score).toBe(83);
-	expect(badge({ score: v.score, instant: v.instant, count: v.violations.length })).toBe("[👁 83 ⚠4]");
+	expect(badge({ score: v.score, instant: v.instant, count: v.violations.length })).toBe("[👁 🟡 83 ⚠️4]");
 	const many = evaluate(Array.from({ length: 8 }, (_, i) => bash(`sleep 60 && echo ${i}`)), CFG);
 	expect(many.score).toBe(90); // W18 is capped at −10
 });
@@ -25,7 +25,7 @@ test("an instant failure scores 0 and the tag shows ⛔", () => {
 	const v = evaluate([bash("git commit -m x"), bash("ls")], CFG);
 	expect(v).toMatchObject({ score: 0, instant: true });
 	expect(v.violations[0]).toMatchObject({ rule: "W01", instant: true, points: 0 });
-	expect(badge({ score: v.score, instant: v.instant, count: v.violations.length })).toBe("[👁 0 ⛔]");
+	expect(badge({ score: v.score, instant: v.instant, count: v.violations.length })).toBe("[👁 🔴 0 ⛔]");
 });
 
 test("the orchestrator is bound by no git rule (and by none at all in version 1)", () => {

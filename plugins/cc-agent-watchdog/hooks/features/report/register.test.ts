@@ -83,3 +83,48 @@ test("the orchestrator's scorecard says no rule applies to it", async ($, on) =>
 	const card = await draw(h, text as string);
 	expect(await card.find({ type: "Text", text: /pravidla se na tuto roli nevztahují/ } as never)).toBeDefined();
 });
+
+const SIDECAR = (dir: string, sid8: string) => `${dir}/2026-01-05_coder_${sid8}.uma.jsonl`;
+const umaLine = (ts: number, source: string, ids: string[]) => `${JSON.stringify({ ts, session: "S", kind: "uma-context", source, factIds: ids, scope: "session" })}\n`;
+
+test("with a sidecar of cc-uma-memory each violation gets the facts in context and the summary counts them", async ($, on) => {
+	const dir = "/h/.local/share/uma/agent-watchdog/main";
+	const w = fresh({ env: { HOME: "/h", CC_ROLE: "coder" }, session: "UMACTX01-aaaa" });
+	// A fact delivered long before and one in the far future (after the violation): only the first is "in context".
+	w.seed[SIDECAR(dir, "UMACTX01")] = umaLine(1, "rules", ["01AAAAAAAAAAAAAAAAAAAAAAAA", "01BBBBBBBBBBBBBBBBBBBBBBBB"]) + umaLine(9_999_999_999_999, "recall", ["01CCCCCCCCCCCCCCCCCCCCCCCC"]) + "torn line\n";
+	setup(on, w);
+	const h = $ as unknown as Host;
+	await start(h);
+	await call($, { tool: "Bash", command: "git commit -m 'x'" });
+	const { text } = await run(h, "report");
+	expect(text).not.toContain("\n");
+	const card = await draw(h, text as string);
+	const facts = await card.find({ type: "Text", text: /^ {3}🧠 fakty v kontextu: 01AAAAAA, 01BBBBBB$/ } as never);
+	expect(facts?.props).toMatchObject({ dimColor: true });
+	expect(await card.find({ type: "Text", text: /🧠 sezení mělo 3 fakty UMA v kontextu/ } as never)).toBeDefined();
+});
+
+test("Windows: the sidecar beside the ledger under %APPDATA%\\uma\\agent-watchdog is found", async ($, on) => {
+	const w = fresh({ env: { APPDATA: "C:\\Users\\t\\AppData\\Roaming", USERPROFILE: "C:\\Users\\t", CC_ROLE: "coder" }, session: "UMACTX02-aaaa" });
+	const { files } = setup(on, w);
+	const h = $ as unknown as Host;
+	await start(h);
+	await call($, { tool: "Bash", command: "git commit -m 'x'" });
+	// The mock fs keys paths with the drive letter kept as a folder; the sidecar goes beside the ledger the plugin wrote.
+	const ledger = [...files.keys()].find((k) => k.endsWith("/uma/agent-watchdog/main/2026-01-05_coder_UMACTX02.jsonl")) as string;
+	expect(ledger).toBeDefined();
+	files.set(ledger.replace(/\.jsonl$/, ".uma.jsonl"), umaLine(1, "recall", ["01DDDDDDDDDDDDDDDDDDDDDDDD"]));
+	const card = await draw(h, ((await run(h, "report")).text) as string);
+	expect(await card.find({ type: "Text", text: /🧠 fakty v kontextu: 01DDDDDD/ } as never)).toBeDefined();
+	expect(await card.find({ type: "Text", text: /🧠 sezení mělo 1 fakt UMA v kontextu/ } as never)).toBeDefined();
+});
+
+test("without a sidecar the report is as it was: no UMA lines", async ($, on) => {
+	const w = fresh({ env: { HOME: "/h", CC_ROLE: "coder" }, session: "NOUMA001-aaaa" });
+	setup(on, w);
+	const h = $ as unknown as Host;
+	await start(h);
+	await call($, { tool: "Bash", command: "git commit -m 'x'" });
+	const card = await draw(h, ((await run(h, "report")).text) as string);
+	expect(await card.find({ type: "Text", text: /🧠/ } as never)).toBeUndefined();
+});

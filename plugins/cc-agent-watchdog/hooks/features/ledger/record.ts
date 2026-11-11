@@ -2,7 +2,7 @@
 // No file contents and no tool output are stored: paths, commands, urls, the exit
 // code, a short error excerpt. Secrets are masked everywhere.
 
-import { clip, redact } from "../../shared/redact";
+import { clip, secretsIn } from "../../shared/redact";
 import type { Role, ToolEv, TurnEv } from "../../shared/types";
 
 /** What the engine gave us about the call, loosened to plain data. */
@@ -34,8 +34,18 @@ export function toEvent(tool: string, input: CallInput, result: CallResult, meta
 	if (exitCode !== undefined) ev.exitCode = exitCode;
 	if (reason) ev.deniedReason = clip(reason, 200);
 	if (isError && text) ev.excerpt = clip(text.split("\n").find((l) => l.trim() && !/^Exit code/.test(l)) ?? text, 160);
-	if (text && redact(text).found) ev.secretOut = true;
+	if (text && hasForeignSecret(text, input)) ev.secretOut = true;
 	return ev;
+}
+
+/**
+ * The output holds a secret the agent did not put in itself. A secret whose text (or its first
+ * 8 characters, as a tool prints a cut preview) is in the call's own input is test data the agent
+ * made up, not something the tool dug out.
+ */
+function hasForeignSecret(output: string, input: CallInput): boolean {
+	const own = Object.values(input).filter((v): v is string => typeof v === "string").join("\n");
+	return secretsIn(output).some((s) => !(own.includes(s) || (s.length >= 8 && own.includes(s.slice(0, 8)))));
 }
 
 export function toTurn(answer: string, meta: Pick<Meta, "ts" | "session" | "role" | "cwd">): TurnEv {

@@ -28,8 +28,9 @@ export function evaluate(events: readonly Ev[], cfg: Config, role: Role = roleOf
 	return { role, score: instant ? 0 : Math.max(0, 100 - off), instant, violations, calls: events.filter((e) => e.kind === "tool").length };
 }
 
-/** The tag under the prompt: `[👁 85]`, `[👁 85 ⚠2]`, `[👁 0 ⛔]`. */
+/** The tag under the prompt, with a traffic light: `[👁 🟢 100]`, `[👁 🟡 85 ⚠️2]`, `[👁 🔴 0 ⛔]`. */
 export function badge(v: { score: number; instant: boolean; count: number }): string {
-	if (v.instant) return "[👁 0 ⛔]";
-	return `[👁 ${v.score}${v.count > 0 ? ` ⚠${v.count}` : ""}]`;
+	if (v.instant) return "[👁 🔴 0 ⛔]";
+	if (v.count > 0) return `[👁 🟡 ${v.score} ⚠️${v.count}]`;
+	return `[👁 🟢 ${v.score}]`;
 }

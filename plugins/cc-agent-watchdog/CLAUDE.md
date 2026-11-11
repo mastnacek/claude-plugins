@@ -41,10 +41,10 @@ Watchdog **jen hlásí** („Just report back“): nikdy nezamítá volání ani
 
 - `ledger` — po každém volání nástroje zapíše řádek do deníku sezení (`<kořen>/<hlavní repo>/<datum>_<role>_<id8>.jsonl`, bez obsahů a výstupů, tajemství redigovaná); nikdy neblokuje.
 - `rules` — na konci tahu vyhodnotí deník podle pravidel W01–W29 (verze 1; zbytek viz „Verze 2“ v `features/rules/CLAUDE.md`), hledá ladicí zbytky a uloží skóre.
-- `report` — `/watch report [last|all|<id>]` (scorecard v rámečku), `/watch rules`, štítek `[👁 85]` / `[👁 85 ⚠2]` / `[👁 0 ⛔]` pod promptem.
+- `report` — `/watch report [last|all|<id>]` (scorecard v rámečku), `/watch rules`, štítek se semaforem `[👁 🟢 100]` / `[👁 🟡 85 ⚠️2]` / `[👁 🔴 0 ⛔]` pod promptem; je-li vedle deníku sidecar `….uma.jsonl` z `cc-uma-memory`, přidá ke každému porušení řádek `🧠 fakty v kontextu: …` a do souhrnu počet faktů UMA (sdílený kontrakt souboru, `shared/uma.ts`).
 
 `hooks/shared/` nese hluboké moduly obou čtenářů deníku: `store` (umístění a zápis deníku), `shell` (tokenizér příkazů), `classify` + `checks` + `rules` + `judge`
-(pravidla jako data, predikáty, skóre), `config` (`.claude/watchdog.json`), `redact`, `paths`, `output`. Řez `report` soudí i staré deníky stejným kódem jako `rules`
+(pravidla jako data, predikáty, skóre), `config` (`.claude/watchdog.json`), `redact`, `paths`, `output`, `uma` (čtení sidecaru faktů UMA — jediné, co plugin sdílí s `cc-uma-memory`, a to jako formát souboru, ne kód). Řez `report` soudí i staré deníky stejným kódem jako `rules`
 soudí běžící sezení, proto je logika ve `shared/` a ne v řezu. `shared/fixture.ts` a `shared/world.ts` jsou jen pro testy.
 
 Události `session.start`, `turn.complete` a `session.end` se smějí hooknout jednou, proto je hookuje kořen (`hooks/register.tsx`) a volá funkce řezů.

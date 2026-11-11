@@ -22,11 +22,23 @@ It only **reports**. It never denies a tool call and never changes a tool's inpu
   Version 1 covers git/gh writes (W01), destructive git (W02), writes outside the work tree (W04) or to protected paths (W05),
   privilege escalation (W06), installs (W07), destructive deletes (W08), repeated failures (W11), "done" without a fresh green gate (W14),
   gate piped without `pipefail` (W16), slow commands (W17), long sleeps (W18), working around a denied call (W19), denied-call count (W20),
-  reading credentials (W21), writes on remote hosts and devices (W26), debugging leftovers (W28), and — as an opt-in profile rule —
+  reading credentials (W21: reading a login file such as `~/.ssh/id_*`, `.env*`, `~/.aws` is an instant failure; a secret merely appearing in a tool's output costs 10 points, and not even that when the agent typed the same string into the call itself), writes on remote hosts and devices (W26), debugging leftovers (W28), and — as an opt-in profile rule —
   editing files through the shell (W29). A denied call counts only as an attempt (10 points), not as the act.
 - **Scorecard.** `/watch report` draws a framed card: score 0–100, every violation with time and evidence (instant failures in red),
   and a summary of counts.
-- **Tag under the prompt**, next to other plugins' tags: `[👁 85]`, `[👁 85 ⚠2]` (⚠ = number of violations), `[👁 0 ⛔]` (instant failure).
+- **Tag under the prompt**, next to other plugins' tags, with a traffic light: `[👁 🟢 100]` (no violation), `[👁 🟡 85 ⚠️2]` (⚠️ = number of violations), `[👁 🔴 0 ⛔]` (instant failure).
+- **UMA facts in context** (optional). If `cc-uma-memory` is installed, `/watch report` adds `🧠 fakty v kontextu: <id8>, …` under each violation (the facts the model had been given by then; `id8` = first 8 characters of the fact id) and `🧠 sezení mělo N faktů UMA v kontextu` to the summary. Without the sidecar file the report is unchanged. The plugins share no code, only this file format (below).
+
+## Shared file contract: `.uma.jsonl`
+
+Written by `cc-uma-memory`, read here:
+
+```
+<root>/<project>/<YYYY-MM-DD>_<role>_<first 8 of session id>.uma.jsonl     (beside the ledger of the same session)
+{"ts":<ms>,"session":"<id>","kind":"uma-context","source":"recall"|"rules","factIds":["<id>",…],"scope":"prompt"|"session"}
+```
+
+`root` is the ledger's (`%APPDATA%\uma\agent-watchdog` on Windows, `$XDG_DATA_HOME/uma/agent-watchdog`, `~/Library/Application Support/uma/agent-watchdog`, else `~/.local/share/uma/agent-watchdog`). One line per delivery; fact IDs only, never their content. A missing, empty or torn file is ignored.
 
 ## Commands
 
