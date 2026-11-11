@@ -16,6 +16,8 @@ export type Cmd = {
 	pipeIn: boolean;
 	/** This command's stdout goes to the next one. */
 	pipeOut: boolean;
+	/** What ends this command: "|", ";" (also a newline), "&&", "||", "&", or "" (end of line, a group). */
+	after: string;
 };
 
 const WRAPPERS = new Set(["env", "command", "nohup", "time", "exec", "nice", "builtin", "stdbuf", "ionice"]);
@@ -37,7 +39,7 @@ export function stripHeredocs(src: string): string {
 	return out.join("\n");
 }
 
-const fresh = (pipeIn = false): Cmd => ({ words: [], redirects: [], assigns: [], pipeIn, pipeOut: false });
+const fresh = (pipeIn = false): Cmd => ({ words: [], redirects: [], assigns: [], pipeIn, pipeOut: false, after: "" });
 
 function tokenize(src: string): Cmd[] {
 	const cmds: Cmd[] = [];
@@ -56,11 +58,12 @@ function tokenize(src: string): Cmd[] {
 		word = "";
 		hasWord = false;
 	};
-	const endCmd = (pipe: boolean) => {
+	const endCmd = (pipe: boolean, after = pipe ? "|" : "") => {
 		endWord();
 		redirect = undefined;
 		if (cur.words.length > 0 || cur.redirects.length > 0 || cur.assigns.length > 0) {
 			cur.pipeOut = pipe;
+			cur.after = after;
 			cmds.push(cur);
 			cur = fresh(pipe);
 		} else cur.pipeIn = pipe;
@@ -93,11 +96,11 @@ function tokenize(src: string): Cmd[] {
 		} else if (c === "#" && !hasWord) {
 			while (i < src.length && src[i] !== "\n") i++;
 			i--;
-		} else if (c === "\n" || c === ";") endCmd(false);
+		} else if (c === "\n" || c === ";") endCmd(false, ";");
 		else if (c === "|") {
 			if (next === "|") {
 				i++;
-				endCmd(false);
+				endCmd(false, "||");
 			} else {
 				if (next === "&") i++;
 				endCmd(true);
@@ -105,12 +108,12 @@ function tokenize(src: string): Cmd[] {
 		} else if (c === "&") {
 			if (next === "&") {
 				i++;
-				endCmd(false);
+				endCmd(false, "&&");
 			} else if (next === ">") {
 				endWord();
 				i += src[i + 2] === ">" ? 2 : 1;
 				redirect = ">";
-			} else endCmd(false);
+			} else endCmd(false, "&");
 		} else if (c === "(" || c === ")") {
 			if (c === "(" && word === "$") {
 				word = "";

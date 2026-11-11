@@ -100,6 +100,35 @@ export function install(cmd: Cmd, next: Cmd | undefined): Install | undefined {
 	return undefined;
 }
 
+/**
+ * W14 without a configured gate: is this a command that verifies work (tests, build, lint, type check)?
+ * cargo test|clippy|build · npm test|run test|check|build|typecheck · npx tsc · tsc · node --test · pytest ·
+ * python -m pytest|unittest · ruff · pyright · go test|vet · claude plugin test|validate · vsa-check.sh ·
+ * make test|check · just test|ci · gradle test|build|assemble*
+ */
+export function isVerification(cmd: Cmd): boolean {
+	const name = nameOf(cmd);
+	const args = cmd.words.slice(1);
+	const pos = positionals(cmd.words);
+	if (name === "cargo") return ["test", "clippy", "build"].includes(pos[0] ?? "");
+	if (name === "npm" || name === "pnpm" || name === "yarn" || name === "bun") return pos[0] === "test" || (pos[0] === "run" && ["test", "check", "build", "typecheck"].includes(pos[1] ?? ""));
+	if (name === "npx") return args.includes("tsc") || args.includes("pytest") || args.includes("vitest") || args.includes("jest");
+	if (name === "tsc" || name === "pytest" || name === "ruff" || name === "pyright" || name === "vsa-check.sh") return true;
+	if (name === "node") return args.includes("--test");
+	if (name.startsWith("python")) return args[0] === "-m" && ["pytest", "unittest"].includes(args[1] ?? "");
+	if (name === "go") return pos[0] === "test" || pos[0] === "vet";
+	if (name === "claude") return pos[0] === "plugin" && (pos[1] === "test" || pos[1] === "validate");
+	if (name === "make") return pos[0] === "test" || pos[0] === "check";
+	if (name === "just") return pos[0] === "test" || pos[0] === "ci";
+	if (name === "gradle" || name === "gradlew") return pos.some((p) => /^(test|build|assemble\w*)$/.test(p) || /^:?[\w:-]*:(test|build|assemble\w*)$/.test(p));
+	return false;
+}
+
+/** W14: a sentence that denies the claim ("není hotovo", "not done", "NOT VERIFIED", "neověřeno" …). */
+const NEGATION_RE = /(?<![\p{L}\d])(není|nehotov\p{L}*|neověřen\p{L}*|neopraven\p{L}*|nedokončen\p{L}*|nebylo|ještě\s+ne\p{L}*|zatím\s+ne\p{L}*|not\s+(?:yet|done|verified|finished|ready|fixed|implemented)|isn'?t|aren'?t|wasn'?t|unverified|incomplete)(?![\p{L}\d])/iu;
+
+export const isNegated = (sentence: string): boolean => NEGATION_RE.test(sentence);
+
 /** W08: deletion that is not a plain `rm file`. Returns a label and whether the targets matter (rm/find) or not (docker …). */
 export function destructiveDelete(cmd: Cmd): { what: string; byTarget: boolean } | undefined {
 	const name = nameOf(cmd);

@@ -83,6 +83,26 @@ test("a project's .claude/watchdog.json gives the gate: 'done' without it is an 
 	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 100]");
 });
 
+test("without a watchdog.json the usual test/build commands are the gate: 'Hotovo, vše ověřeno.' after an edit alone is an instant failure", async ($, on) => {
+	const w = fresh({ env: { HOME: "/h", CC_ROLE: "coder" }, session: "NOGATE01-x" });
+	setup(on, w);
+	on("turn.complete", (_$, e) => ({ text: e.answer }));
+	const tag = hint($ as never, on);
+	await start($ as never);
+	await call($, { tool: "Edit", file_path: "/work/wt/src/a.ts" });
+	await finish($ as never, "Hotovo, vše ověřeno.");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 0 ⛔]");
+	w.session = "NOGATE02-x";
+	await call($, { tool: "Edit", file_path: "/work/wt/src/a.ts" });
+	await finish($ as never, "Není hotovo, zbývá spustit testy.");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 100]");
+	w.session = "NOGATE03-x";
+	await call($, { tool: "Edit", file_path: "/work/wt/src/a.ts" });
+	await call($, { tool: "Bash", command: "cargo test" });
+	await finish($ as never, "Hotovo, vše ověřeno.");
+	expect(await tag()).toBe("[🇬🇧 46 Kč] [👁 100]");
+});
+
 test("a broken watchdog.json leaves the defaults", async ($, on) => {
 	const w = fresh({ env: { HOME: "/h", CC_ROLE: "coder" }, session: "BROKENC1-x", seed: { "/work/wt/.claude/watchdog.json": "{ nope" } });
 	setup(on, w);

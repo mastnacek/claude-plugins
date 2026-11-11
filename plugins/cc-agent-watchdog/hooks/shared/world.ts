@@ -52,7 +52,7 @@ export function setup(on: On, w: World) {
 	on("session.cwd", () => ({ value: w.root }));
 	on("session.root", () => ({ value: w.root }));
 	on("session.repo", () => ({ value: w.repo === null ? null : { root: w.repo, remote: null, internal: false, name: null } }));
-	on("process.run", () => ({ value: { exitCode: 0, stdout: w.status, stderr: "" } }));
+	on("process.run", () => ({ value: { exitCode: 0, stdout: w.status, stderr: "" } }) as never);
 	on("session.start", (_$, e) => ({ cwd: e.cwd }));
 	on("command.register", () => ({ value: { command: "watch" } }));
 	on("ui.log", (_$, e) => {

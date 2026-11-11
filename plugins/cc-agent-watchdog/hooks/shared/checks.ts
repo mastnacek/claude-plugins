@@ -1,8 +1,8 @@
 // checks.ts — the predicates behind the rules (rules.ts lists them as data).
 // Pure functions of the ledger and the config; no `$`, no clock.
 
-import { destructiveDelete, gitDestructive, gitWrite, install, privilege, remoteWrite } from "./classify";
-import { describe, factsOf, failed, gateRun, isAllowed, isMutation, isProtected, isScratch, isTool, writtenPaths } from "./facts";
+import { destructiveDelete, gitDestructive, gitWrite, install, isNegated, isVerification, privilege, remoteWrite } from "./classify";
+import { describe, factsOf, failed, gateRun, runOf, isAllowed, isMutation, isProtected, isScratch, isTool, writtenPaths } from "./facts";
 import { matchesAny, resolvePath, under } from "./paths";
 import { nameOf, positionals } from "./shell";
 import type { Cmd } from "./shell";
@@ -187,26 +187,40 @@ function w16(events: readonly Ev[], cfg: Config): Hit[] {
 	return hits;
 }
 
-/** Words that claim the work is finished or verified. A heuristic: it will meet "není hotovo". */
+/** Words that claim the work is finished or verified. */
 export const CLAIM_RE = /(?<![\p{L}\d])(hotovo|done|dokončeno|implemented|implementováno|fixed|opraveno|ověřeno|verified|všechny testy|passes|ready)(?![\p{L}\d])|✅/iu;
 
-/** W14: a closing text says "done" while the gate is not green after the last change. */
+/** The text claims completion in at least one sentence that does not deny it ("není hotovo", "NOT VERIFIED" …). */
+export const claimsDone = (answer: string): boolean => answer.split(/(?<=[.!?])\s+|[\n;]+/).some((s) => CLAIM_RE.test(s) && !isNegated(s));
+
+/**
+ * W14: a closing text claims "done" after the work was changed, while verification is not green.
+ * With a configured gate every gate command must have passed after the last change; without one, any of the
+ * usual verification commands (tests, build, lint …) must have passed and the last of them must not have failed.
+ * A session that changed nothing is not judged.
+ */
 function w14(events: readonly Ev[], cfg: Config): Hit[] {
-	if (cfg.gate.length === 0) return [];
 	const hits: Hit[] = [];
 	events.forEach((turn, t) => {
-		if (turn.kind !== "turn" || !CLAIM_RE.test(turn.answer)) return;
+		if (turn.kind !== "turn" || !claimsDone(turn.answer)) return;
 		const before = events.slice(0, t).filter(isTool);
 		const lastMut = before.findLastIndex((e) => isMutation(e, cfg));
-		if (lastMut < 0 && turn.role === "coder") return;
+		if (lastMut < 0) return;
 		const after = before.slice(lastMut + 1);
 		const problems: string[] = [];
-		for (const item of cfg.gate) {
-			const runs = after.map((e) => ({ e, r: gateRun(e, item, cfg) })).filter((x) => x.r.runs);
+		if (cfg.gate.length > 0) {
+			for (const item of cfg.gate) {
+				const last = after.map((e) => ({ e, r: gateRun(e, item, cfg) })).filter((x) => x.r.runs).at(-1);
+				if (!last) problems.push(`„${item}“ se po poslední úpravě nespustilo`);
+				else if (last.r.masked) problems.push(`„${item}“ běželo v rouře bez pipefail`);
+				else if (failed(last.e)) problems.push(`„${item}“ skončilo chybou`);
+			}
+		} else {
+			const runs = after.map((e) => ({ e, r: runOf(e, cfg, isVerification) })).filter((x) => x.r.runs);
 			const last = runs.at(-1);
-			if (!last) problems.push(`„${item}“ se po poslední úpravě nespustilo`);
-			else if (last.r.masked) problems.push(`„${item}“ běželo v rouře bez pipefail`);
-			else if (failed(last.e)) problems.push(`„${item}“ skončilo chybou`);
+			if (!last) problems.push("po poslední úpravě nebyl spuštěn žádný ověřovací příkaz (test, build, lint …)");
+			else if (failed(last.e)) problems.push(`poslední ověřovací příkaz skončil chybou: ${describe(last.e, 60)}`);
+			else if (!runs.some((x) => !x.r.masked && !failed(x.e))) problems.push("ověřovací příkaz běžel v rouře bez pipefail, exit kód nelze věřit");
 		}
 		if (problems.length > 0) hits.push({ ts: turn.ts, evidence: `tvrzení o dokončení: ${problems.join("; ")}`, instant: true });
 	});

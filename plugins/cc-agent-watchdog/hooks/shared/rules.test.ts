@@ -93,14 +93,58 @@ test("W14 stays quiet: green gate, no claim, no gate configured, coder who chang
 	expect(check("W14", [edit, bash("claude plugin test . && scripts/vsa-check.sh"), turn("Done")])).toEqual([]);
 	expect(check("W14", [edit, bash("set -o pipefail; claude plugin test . | tail -3"), bash("scripts/vsa-check.sh"), turn("Done")])).toEqual([]);
 	expect(check("W14", [edit, turn("Pokračuji, ještě to není dotažené.")])).toEqual([]);
-	expect(check("W14", [edit, turn("Hotovo")], { ...CFG, gate: [] })).toEqual([]);
 	expect(check("W14", [turn("Hotovo, nic jsem neměnil.")])).toEqual([]);
 	expect(check("W14", [file("Write", "/tmp/claude-1000/s/probe.ts"), turn("Hotovo")])).toEqual([]);
 });
 
-test("W14 a tester who claims 'verified' must have run the gate (the test command) too", () => {
-	expect(check("W14", [turn("ověřeno", "tester")]).length).toBe(1);
-	expect(check("W14", [...GREEN, turn("ověřeno", "tester")])).toEqual([]);
+test("W14 a tester who changed files and claims 'verified' must have run the gate too", () => {
+	const note = file("Write", "/work/repo/notes.md", {}, "tester");
+	expect(check("W14", [note, turn("ověřeno", "tester")]).length).toBe(1);
+	expect(check("W14", [note, ...GREEN, turn("ověřeno", "tester")])).toEqual([]);
+});
+
+const NO_GATE: Config = { ...CFG, gate: [] };
+const edit = () => file("Edit", "/work/repo/src/a.ts");
+
+test("W14 without a configured gate: 'Hotovo, vše ověřeno.' after a change with no verification command is an instant failure", () => {
+	const [hit] = check("W14", [edit(), turn("Hotovo, vše ověřeno.")], NO_GATE);
+	expect(hit?.instant).toBe(true);
+	expect(hit?.evidence).toContain("žádný ověřovací příkaz");
+	expect(check("W14", [bash("ls"), bash("git status"), edit(), bash("cat src/a.ts"), turn("done")], NO_GATE).length).toBe(1);
+});
+
+test("W14 default verification commands: each one counts, any other command does not", () => {
+	const verifying = ["cargo test", "cargo clippy --workspace -- -D warnings", "cargo build --release", "npm test", "npm run test", "npm run check", "npm run build", "npm run typecheck", "npx -y -p typescript tsc -p . --noEmit", "tsc --noEmit", "node --test test/", "pytest -q", "python -m pytest", "python3 -m unittest discover", "ruff check .", "pyright", "go test ./...", "go vet ./...", "claude plugin test .", "claude plugin validate .", "scripts/vsa-check.sh", "make test", "make check", "just test", "just ci", "gradle test", "./gradlew assembleDebug", "gradle :app:build"];
+	for (const c of verifying) expect(check("W14", [edit(), bash(c), turn("Hotovo")], NO_GATE), c).toEqual([]);
+	for (const c of ["ls", "cargo run", "cargo fmt", "npm install", "npm run dev", "go run .", "make", "python script.py", "git diff", "echo cargo test"]) expect(check("W14", [edit(), bash(c), turn("Hotovo")], NO_GATE).length, c).toBe(1);
+});
+
+test("W14 without a gate: the last verification must not be red; a verification before the last change does not count", () => {
+	expect(check("W14", [edit(), bash("cargo test"), bash("cargo test", { exitCode: 101, isError: true }), turn("Hotovo")], NO_GATE)[0]?.evidence).toContain("skončil chybou");
+	expect(check("W14", [edit(), bash("cargo test", { exitCode: 101, isError: true }), bash("cargo test"), turn("Hotovo")], NO_GATE)).toEqual([]);
+	expect(check("W14", [edit(), bash("cargo test"), edit(), turn("Hotovo")], NO_GATE).length).toBe(1);
+	expect(check("W14", [edit(), bash("cargo test | tail -3"), turn("Hotovo")], NO_GATE).length).toBe(1);
+	expect(check("W14", [edit(), bash("set -o pipefail; cargo test | tail -3"), turn("Hotovo")], NO_GATE)).toEqual([]);
+	expect(check("W14", [file("Write", "/work/repo/x.ts"), bash("npm test"), turn("✅")], NO_GATE)).toEqual([]);
+	expect(check("W14", [bash("sed -i s/a/b/ src/x.ts"), turn("Hotovo")], NO_GATE).length).toBe(1);
+});
+
+test("W14 without a change in the session nothing is judged", () => {
+	expect(check("W14", [bash("ls"), turn("Hotovo, vše ověřeno.")], NO_GATE)).toEqual([]);
+	expect(check("W14", [file("Write", "/tmp/claude-1000/s/probe.ts"), turn("Hotovo")], NO_GATE)).toEqual([]);
+	expect(check("W14", [file("Edit", "/work/repo/a.ts", { isError: true }), turn("Hotovo")], NO_GATE)).toEqual([]);
+});
+
+test("W14 a negated claim is no claim, in Czech and English, also with a configured gate", () => {
+	const denials = ["Není hotovo, zbývá brána.", "Je to nehotovo.", "Ještě není ověřeno.", "Zatím ne.", "Not done yet.", "This is not yet fixed.", "It isn't finished.", "NOT VERIFIED: živý běh.", "Zůstává neověřeno, jak to běží.", "The fix is unverified.", "Nebylo opraveno nic."];
+	for (const text of denials) {
+		expect(check("W14", [edit(), turn(text)], NO_GATE), text).toEqual([]);
+		expect(check("W14", [edit(), turn(text)]), text).toEqual([]);
+	}
+	// a negation in another sentence does not cancel a claim
+	expect(check("W14", [edit(), turn("Hotovo, vše ověřeno. Není co dodat.")], NO_GATE).length).toBe(1);
+	expect(check("W14", [edit(), turn("Brána je zelená, vše ověřeno; není to složité.")], NO_GATE).length).toBe(1);
+	expect(check("W14", [edit(), turn("Opraveno. NOT VERIFIED: živý běh.")], NO_GATE).length).toBe(1);
 });
 
 test("W16 a gate command piped into tail/head/grep without pipefail", () => {

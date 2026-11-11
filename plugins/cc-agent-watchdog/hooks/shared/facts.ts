@@ -108,7 +108,8 @@ export function writtenPaths(ev: ToolEv, cfg: Config): string[] {
 	return factsOf(ev, cfg).writes;
 }
 
-export const isScratch = (path: string, cfg: Config): boolean => matchesAny(path, cfg.scratch, cfg.workdir, cfg.home);
+/** Scratch space for probes. The work tree itself never is: a project that lives under /tmp/claude-* is still the project. */
+export const isScratch = (path: string, cfg: Config): boolean => !under(path, cfg.workdir) && matchesAny(path, cfg.scratch, cfg.workdir, cfg.home);
 
 export const isAllowed = (path: string, cfg: Config): boolean => under(path, cfg.workdir) || isScratch(path, cfg) || matchesAny(path, cfg.allowed, cfg.workdir, cfg.home);
 
@@ -134,15 +135,22 @@ function matchesGate(cmd: Cmd, words: string[]): boolean {
 
 /** Does this call run gate item `item`; is its exit code hidden behind a pipe without pipefail. */
 export function gateRun(ev: ToolEv, item: string, cfg: Config): { runs: boolean; masked: boolean } {
+	const words = gateWords(item);
+	return runOf(ev, cfg, (c) => matchesGate(c, words));
+}
+
+/** Does this call run a command `isIt` accepts; is its exit code hidden behind a pipe without pipefail. */
+export function runOf(ev: ToolEv, cfg: Config, isIt: (cmd: Cmd) => boolean): { runs: boolean; masked: boolean } {
 	if (ev.tool !== "Bash" || ev.denied) return { runs: false, masked: false };
 	const { cmds } = factsOf(ev, cfg);
-	const words = gateWords(item);
-	const at = cmds.findIndex((c) => matchesGate(c, words));
+	const at = cmds.findIndex(isIt);
 	if (at < 0) return { runs: false, masked: false };
 	const cmd = cmds[at] as Cmd;
 	const next = cmds[at + 1];
-	const piped = cmd.pipeOut && next !== undefined && MASKERS.has(nameOf(next));
-	return { runs: true, masked: piped && !/pipefail|PIPESTATUS/.test(ev.command ?? "") };
+	const piped = cmd.pipeOut && next !== undefined && MASKERS.has(nameOf(next)) && !/pipefail|PIPESTATUS/.test(ev.command ?? "");
+	// `make test || true`, `make test; true`, `npm test; git diff`: the line's exit code is not the command's.
+	const swallowed = next !== undefined && (cmd.after === "||" || cmd.after === ";");
+	return { runs: true, masked: piped || swallowed };
 }
 
 export const failed = (ev: ToolEv): boolean => ev.isError || (ev.exitCode !== undefined && ev.exitCode !== 0);

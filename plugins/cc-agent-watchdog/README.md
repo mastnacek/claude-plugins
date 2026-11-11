@@ -70,7 +70,7 @@ Optional, read from `<project root>/.claude/watchdog.json`. Everything is option
 
 | key | meaning | default |
 |---|---|---|
-| `gate` | commands (each a command prefix) that must pass after the last change before the agent says "done" (W14, W16, W17); empty = W14 is off | `[]` |
+| `gate` | commands (each a command prefix) that must all pass after the last change before the agent says "done" (W14, W16, W17); empty = the usual test/build/lint commands (`cargo test`, `npm test`, `pytest`, `go test`, `claude plugin test`, `make test` …) count, any one of them | `[]` |
 | `allowed` | paths the agent may change besides the project root and scratch; also lets it read otherwise protected paths | `[]` |
 | `protected` | paths it must not touch; **added to** the built-in list (`~/.ssh`, `~/.claude/settings*`, `~/.claude/rules`, `~/.claude/statusline*`, `~/.pi/agent/*.json`, `/etc`, `.git/config`, …) | built-in list |
 | `scratch` | places for probes and temporary files | `["/tmp/claude-*"]` |
@@ -82,4 +82,4 @@ Paths may use `~`, `*` and `**`; relative ones are taken from the project root.
 ## Limits
 
 Commands are tokenised heuristically (quotes, `&&`, `;`, pipes, `bash -c`; heredoc bodies are ignored), not run through a shell. Symlinks are not resolved.
-The "done" claim in W14 is a word match and can fire on "not done". Rules that need file contents or an LLM judge are not part of this version.
+The "done" claim in W14 is a word match per sentence; sentences with a negation ("not done", "není hotovo", "NOT VERIFIED") are ignored, other phrasings can still fool it. A session that changed nothing is not judged. Rules that need file contents or an LLM judge are not part of this version.
