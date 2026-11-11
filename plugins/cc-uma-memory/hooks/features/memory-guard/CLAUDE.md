@@ -40,3 +40,4 @@ Příkaz `/uma` (registrace, nápověda, kreslení víceřádkového výstupu, d
 - Řádek nápovědy a doplňování pro `claude-memory` žijí v `uma-command` — změníš-li argumenty, změň je tam taky.
 - Atomy (`commandOutputs`, `memoryState`, `memoryChanged`) se deklarují v každém souboru, který je čte; klíč a výchozí hodnota se musí shodovat.
 - Nevalidní JSON v cílovém souboru = nic se nezapíše; ve čtených vrstvách se bere jako nedefinováno.
+- **`/clear` = nové sezení s prázdným `$.state` a bez `session.start`** (`session.end` {reason: "clear"} běží ještě ve starém, jeho zápisy se ztratí; render nesmí zapisovat). Start (`start*`) proto po `/clear` pouští kořen líně z první události nového sezení (`prompt.edit`, `prompt.change`, `/uma …`), když je `memoryState` `null` — viz `hooks/register.tsx`. Start řezu musí být opakovatelný; nic, co `/clear` nemá přežít, sem nepatří.

@@ -14,18 +14,24 @@ test("log: junk dropped, capped, summarized like pi", () => {
 		{ ts: "3", relation: "violates", approved: false },
 		{ ts: "4", relation: "violates", approved: true },
 		{ ts: "5", approved: true },
+		{ ts: "6", relation: "touches", approved: true },
+		{ ts: "7", relation: "touches", approved: false },
 	]);
-	expect(s).toEqual({ total: 5, yesRecommended: 2, yesApproved: 1, noRecommended: 2, noBlocked: 1 });
-	expect(statsText(s)).toContain("5 celkem");
+	expect(s).toEqual({ total: 7, approved: 4, blocked: 3, yesRecommended: 2, yesApproved: 1, noRecommended: 2, noBlocked: 1, touch: 2, touchApproved: 1, noAdvice: 1 });
+	expect(statsText(s)).toContain("7 celkem")
+	expect(statsText(s)).toContain("dotýká se: 2 (schválil jsi 1)");
 	expect(statsText(summarize([]))).toContain("Zatím žádná");
 });
 
 test("stats as data: fields for the person, a framed sentence when the log is empty", () => {
 	expect(statsOut(summarize([])).lines?.[0]?.text).toContain("Zatím žádná");
-	const out = statsOut({ total: 5, yesRecommended: 2, yesApproved: 1, noRecommended: 2, noBlocked: 1 });
+	const out = statsOut({ total: 5, approved: 3, blocked: 2, yesRecommended: 2, yesApproved: 1, noRecommended: 2, noBlocked: 1, touch: 1, touchApproved: 1, noAdvice: 0 });
 	expect(out.fields).toEqual([
 		{ label: "rozhodnutí celkem", value: "5" },
 		{ label: "doporučeno Ano", value: "2 (schválil jsi 1)" },
+		{ label: "schváleno / zablokováno", value: "3 / 2" },
 		{ label: "doporučeno Ne", value: "2 (zablokoval jsi 1)" },
+		{ label: "dotýká se", value: "1 (schválil jsi 1)" },
+		{ label: "bez rady", value: "0" },
 	]);
 });

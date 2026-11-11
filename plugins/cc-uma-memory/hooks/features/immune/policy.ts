@@ -21,6 +21,9 @@ export const RULES_ARGV = (type: string): string[] => ["uma", "list", "--json", 
 export const DIALOG_TITLE = "🛡️ UMA imunitní interceptor";
 export const PROCEED = "Ano, pokračovat";
 export const BLOCK = "Ne, zablokovat";
+/** The person said "Ne, zablokovat": the model must not retry the same edit (as write-gate's DENIED_REASON). */
+export const DENIED_BY_USER = "Uživatel úpravu zamítl. Nezkoušej ji znovu bez nového pokynu.";
+
 export const NO_UI_REASON = "Imunitní interceptor se potřeboval zeptat uživatele, ale nelze (bez dialogu). Úprava zablokována.";
 
 // ── assessment (thresholds and metric verbatim from pi) ───────────────────

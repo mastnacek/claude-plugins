@@ -25,7 +25,7 @@ import type { Lang } from "../../shared/translate";
 import { applicableRules, breachOf, outcomeOfScan, patternBlindSpot, ruleYaml, scanArgv, languageOf } from "./contracts";
 import type { ContractBreach, ContractRule } from "./contracts";
 import { LOG_KEY, appended, parseLog, statsOut, statsText, summarize } from "./log";
-import { BLOCK, DIALOG_TITLE, NO_UI_REASON, PAIN_ARGV, PROCEED, RULES_ARGV, RULE_FACT_TYPES, assessEdit, decideAction, extractEdit, matchRule, oneLine, parsePain, parseRules, worthDialog } from "./policy";
+import { BLOCK, DENIED_BY_USER, DIALOG_TITLE, NO_UI_REASON, PAIN_ARGV, PROCEED, RULES_ARGV, RULE_FACT_TYPES, assessEdit, decideAction, extractEdit, matchRule, oneLine, parsePain, parseRules, worthDialog } from "./policy";
 import type { Edit, Mode, PainVerdict, RuleL1 } from "./policy";
 import { DEFAULT_MODEL, RECOMMENDATION_TIMEOUT_MS, buildPrompt, formatRecommendation, parseRecommendation } from "./recommendation";
 import type { Recommendation } from "./recommendation";
@@ -192,7 +192,7 @@ async function inspect($: $, mode: Mode, model: string, lang: Lang, edit: Edit):
 		return { note: `[UMA Immune Advisory Warning]:\n${action.message}\n${NO_UI_REASON}` };
 	}
 	await recordDecision($, cwd, matched, rec, proceed);
-	if (!proceed) return { deny: action.message };
+	if (!proceed) return { deny: `${DENIED_BY_USER}\n${action.message}` };
 	return { note: `[UMA Immune Advisory Warning]:\n${action.message}${rec ? `\n${rec.relation} (${Math.round(rec.confidence * 100)} %): ${rec.reason}` : ""}` };
 }
 

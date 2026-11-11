@@ -42,3 +42,4 @@ Kdyby zmizel, koncepty by se hromadily a šly schválit jen ručním `uma stagin
 - `$.ui.ask`: 2–4 volby, text se píše pod „Type something“; popisky se vrací bez U+FE0F — čti přes `optionOf`.
 - Pi překládal koncept do češtiny (`DisplayTranslation`) a rolovalo se v okně; zde je překlad v náhledu (8 řádků) a úplné anglické tělo v „📜 Celý text“. `/uma staging list|show` se **nepřekládá** (zadání říká jen `/uma review`).
 - Dialog se ptá uvnitř `command.run`; `$.ui.ask` je volání `$`, takže rozpočet hooku při čekání stojí.
+- **`/clear` = nové sezení s prázdným `$.state` a bez `session.start`** (`session.end` {reason: "clear"} běží ještě ve starém, jeho zápisy se ztratí; render nesmí zapisovat). Start (`start*`) proto po `/clear` pouští kořen líně z první události nového sezení (`prompt.edit`, `prompt.change`, `/uma …`), když je `memoryState` `null` — viz `hooks/register.tsx`. Start řezu musí být opakovatelný; nic, co `/clear` nemá přežít, sem nepatří.

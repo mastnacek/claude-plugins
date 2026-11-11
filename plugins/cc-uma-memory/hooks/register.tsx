@@ -6,9 +6,11 @@
 // slice is wired by an explicit call, never a loop over a list.
 
 import type { EngineInterface, Register } from "claude-code";
+import { atom, read } from "claude-code";
 import { registerDebt } from "./features/debt/register";
 import { registerHumility } from "./features/humility/register";
 import { registerImmune } from "./features/immune/register";
+import type { MemoryState } from "./features/memory-guard/settings";
 import { registerMemoryGuard, startMemoryGuard } from "./features/memory-guard/register";
 import { registerMuscleSynthesis } from "./features/muscle-synthesis/register";
 import { registerRecall } from "./features/recall/register";
@@ -27,11 +29,48 @@ async function guarded($: EngineInterface, slice: string, started: Promise<void>
 	}
 }
 
+/** What a session start does; the slices' own state is filled here and nowhere else. */
+async function startAll($: EngineInterface): Promise<void> {
+	await guarded($, "uma-command", startUmaCommand($));
+	await guarded($, "memory-guard", startMemoryGuard($));
+	await guarded($, "staging", startStaging($));
+}
+
+// `memoryState` is null until memory-guard's start computed it, and every start computes it.
+const memoryStateAtom = atom({ plugin: "cc-uma-memory", key: "memoryState" } as const, null as MemoryState | null);
+
+let starting: Promise<void> | undefined;
+
+/** Starts the session if its state is empty (a new session after `/clear`); once, however many events ask. */
+async function ensureStarted($: EngineInterface): Promise<void> {
+	if ((await read($, memoryStateAtom)) !== null) return;
+	starting ??= startAll($).finally(() => {
+		starting = undefined;
+	});
+	await starting;
+}
+
 export const register: Register = (on) => {
 	on("session.start", async ($, e, next) => {
-		await guarded($, "uma-command", startUmaCommand($));
-		await guarded($, "memory-guard", startMemoryGuard($));
-		await guarded($, "staging", startStaging($));
+		await startAll($);
+		return next(e);
+	});
+
+	// `/clear` is a new session with an empty `$.state` and NO `session.start` (`session.end`
+	// {reason: "clear"} runs in the old one, so its writes are lost). Rendering is pure (no `$.state`
+	// writes), so the start is made lazily by the first event of the new session that can write:
+	// the person's first key or paste, an emptied box, or a /uma command. Registered first, so it wraps the
+	// later hooks of the same event and they see the filled state.
+	on("prompt.edit", async ($, e, next) => {
+		await ensureStarted($);
+		return next(e);
+	});
+	on("prompt.change", async ($, e, next) => {
+		await ensureStarted($);
+		return next(e);
+	});
+	on("command.run", { command: "uma" }, async ($, e, next) => {
+		await ensureStarted($);
 		return next(e);
 	});
 

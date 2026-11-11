@@ -48,3 +48,5 @@ Kdyby zmizel, pravidla a bolest souborů by model viděl jen v textu system prom
 - Cache pravidel a cesty k ast-grep je proměnná modulu (reload ji nuluje); `resetImmuneCache()` pro testy.
 - Pořadí v kořeni: `registerImmune` po `registerWriteGate`. NotebookEdit se bere jako `new_source` buňky (smazání buňky se nesoudí).
 - `/uma immune block` z pi zde neexistuje (alias `auto`).
+- **Po „Ne, zablokovat“ model zkoušel úpravu znovu** — důvod `deny` proto začíná `DENIED_BY_USER` („Nezkoušej ji znovu bez nového pokynu“), jako u `write-gate`.
+- `/uma immune stats` počítá všechna rozhodnutí: schváleno/zablokováno celkem i po radách (Ano, Ne, dotýká se, bez rady).
