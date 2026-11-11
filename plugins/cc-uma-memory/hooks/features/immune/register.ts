@@ -20,6 +20,8 @@ import type { EngineInterface, On, PluginState, ShapedValue } from "claude-code"
 import { atom, read, update } from "claude-code";
 import { homeDir } from "../../shared/home";
 import { complete } from "../../shared/openrouter";
+import { translateTexts } from "../../shared/translate";
+import type { Lang } from "../../shared/translate";
 import { applicableRules, breachOf, outcomeOfScan, patternBlindSpot, ruleYaml, scanArgv, languageOf } from "./contracts";
 import type { ContractBreach, ContractRule } from "./contracts";
 import { LOG_KEY, appended, parseLog, statsOut, statsText, summarize } from "./log";
@@ -29,7 +31,7 @@ import { DEFAULT_MODEL, RECOMMENDATION_TIMEOUT_MS, buildPrompt, formatRecommenda
 import type { Recommendation } from "./recommendation";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev" }, { shape: "settings-5" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on", lang: "cs" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev"; lang: "cs" | "en" }, { shape: "settings-6" });
 
 type $ = EngineInterface;
 
@@ -153,9 +155,15 @@ async function recordDecision($: $, cwd: string, matched: RuleL1 | undefined, re
 	}
 }
 
+/** The warning as the person reads it: Czech (display only, the model gets the original) or the original with a note why not. */
+async function shownMessage($: $, message: string, lang: Lang): Promise<string> {
+	const shown = await translateTexts($, [message], lang);
+	return shown.note === undefined ? (shown.texts[0] as string) : `${message}\n${shown.note}`;
+}
+
 type Verdict = { deny: string } | { note?: string };
 
-async function inspect($: $, mode: Mode, model: string, edit: Edit): Promise<Verdict> {
+async function inspect($: $, mode: Mode, model: string, lang: Lang, edit: Edit): Promise<Verdict> {
 	const cwd = await $.session.cwd();
 	const [pain, rules] = await Promise.all([fetchPain($, cwd, edit.path), fetchRules($, cwd)]);
 	const warnings = assessEdit(pain, rules, edit.added);
@@ -164,7 +172,7 @@ async function inspect($: $, mode: Mode, model: string, edit: Edit): Promise<Ver
 
 	if (action.kind === "allow") return {};
 	if (action.kind === "notify") {
-		await $.ui.log(oneLine(action.message));
+		await $.ui.log(oneLine(await shownMessage($, action.message, lang)));
 		return {};
 	}
 	if (action.kind === "block") {
@@ -176,7 +184,7 @@ async function inspect($: $, mode: Mode, model: string, edit: Edit): Promise<Ver
 	if (!worthDialog(pain, matched, breaches)) return { note: `[UMA Immune Advisory Warning]:\n${action.message}` };
 
 	const rec = matched ? await recommend($, matched, edit.added, model) : undefined;
-	const question = [DIALOG_TITLE, action.message, ...(rec ? [formatRecommendation(rec)] : []), "", "Pokračovat s úpravou?"].join("\n");
+	const question = [DIALOG_TITLE, await shownMessage($, action.message, lang), ...(rec ? [formatRecommendation(rec)] : []), "", "Pokračovat s úpravou?"].join("\n");
 	const proceed = await askProceed($, question);
 	if (proceed === undefined) {
 		// No one to ask: a heuristic never vetoes silently. Let it pass, the model and the person are told.
@@ -194,7 +202,7 @@ async function guard($: $, e: Record<string, unknown>, pass: () => Promise<{ con
 	try {
 		const settings = await read($, settingsAtom);
 		const edit = settings.immune === "off" ? undefined : extractEdit(e);
-		if (edit) verdict = await inspect($, settings.immune, settings.immuneModel || DEFAULT_MODEL, edit);
+		if (edit) verdict = await inspect($, settings.immune, settings.immuneModel || DEFAULT_MODEL, settings.lang, edit);
 	} catch {
 		verdict = {};
 	}

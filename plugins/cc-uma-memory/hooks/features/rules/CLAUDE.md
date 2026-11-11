@@ -10,8 +10,9 @@ model by pravidla znal jen z recallu a z nástrojů MCP.
 ## Co dělá
 
 - `prompt.compose` (`register.ts`) — je-li `settings.append` zapnuto, zeptá `uma list --json --type decision` a `… --type pattern` (cwd sezení, timeout 5 s) a k sekcím, které vrátil `next`, připojí jednu sekci `cc-uma-memory:rules` se scope `session`.
+- `prompt.compose` přidá **vždy** i sekci `cc-uma-memory:language` (`LANGUAGE_RULE`, scope `session`, anglicky): `title`, `body` a `tags` u `uma_write` / `uma_supersede` psát anglicky, i když uživatel píše česky; uživatel vidí český překlad (display-only, řez `write-gate`). Nezávisí na `/uma append` — to vypíná jen pravidla z paměti. Žádné automatické zamítnutí podle jazyka.
 - `policy.ts` — čistá logika: `rulesArgv`, `parseRules`, `formatRules` (text doslova jako v pi, anglicky, nejvýš 10 pravidel, první řádek těla).
-- Žádná pravidla → žádná sekce.
+- Žádná pravidla → žádná sekce pravidel (jazyková sekce zůstává).
 
 ## Kontrakt
 
@@ -26,6 +27,9 @@ model by pravidla znal jen z recallu a z nástrojů MCP.
 | přepínač `/uma append` | `uma-command` |
 | vzpomínky k promptu | `recall` |
 | zápis faktů | `write-gate` (a MCP server `uma`) |
+| překlad faktů pro zobrazení | `shared/translate` (používají `write-gate`, `staging`, `uma-command`, `immune`) |
+
+Proč jazyková věta tady a ne v novém řezu: `prompt.compose` bez matcheru smí v pluginu hookovat jen jeden řez a vlastní ho `rules`; jazyk zápisu je kus „pravidel pro model“. Řez by byl pod 50 řádků bez vlastního stavu (Rule of Three, `docs/architektura.md`).
 
 ## Pasti
 

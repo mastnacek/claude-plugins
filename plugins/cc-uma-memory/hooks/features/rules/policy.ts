@@ -44,3 +44,13 @@ export function formatRules(rules: readonly Rule[]): string {
 	}
 	return lines.join("\n");
 }
+
+/**
+ * The system-prompt section that tells the model what language to write facts in. Always sent
+ * (independent of `/uma append`, which switches the rules off): the person reads facts in Czech
+ * through display translation, but UMA stores English.
+ */
+export const LANGUAGE_RULE = [
+	"## UMA fact language",
+	"Write the title, body and tags of every fact you save with uma_write or uma_supersede in English, even when the user writes in Czech or another language. The user sees a Czech translation when they review the proposal; the English text is what is stored.",
+].join("\n");

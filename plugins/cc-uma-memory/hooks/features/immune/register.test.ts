@@ -4,6 +4,7 @@
 import { expect, mock, test } from "claude-code/testing";
 import type { On } from "claude-code";
 import { resetImmuneCache } from "./register";
+import { resetTranslateCache } from "../../shared/translate";
 
 /** The engine hands the plugin `X:\…` paths on Windows; the files are kept under POSIX keys. */
 const norm = (p: string): string => p.replace(/\\/g, "/").replace(/^[A-Za-z]:/, "");
@@ -27,7 +28,7 @@ type Opts = {
 };
 
 function setup(on: On, o: Opts = {}) {
-	const store = new Map<string, unknown>([["settings", { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, ...o.settings }]]);
+	const store = new Map<string, unknown>([["settings", { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, lang: "en", ...o.settings }]]);
 	on("store.get", (_$, e) => ({ value: store.get(e.key) }));
 	on("store.set", (_$, e) => {
 		store.set(e.key, JSON.parse(JSON.stringify(e.value)));
@@ -84,6 +85,11 @@ function setup(on: On, o: Opts = {}) {
 	});
 	on("http.fetch", async (_$, e) => {
 		seen.requests.push({ headers: (e.init?.headers ?? {}) as Record<string, string>, body: JSON.parse(String(e.init?.body)) });
+		// The display translation (lang cs) is a different question from the recommendation: it gets `CS[…]` back.
+		if (seen.requests.at(-1)?.body.messages[0]?.content.startsWith("You are a translation engine")) {
+			const user = seen.requests.at(-1)?.body.messages[1]?.content ?? "";
+			return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ choices: [{ message: { content: `CS[${user}]` } }] }) } };
+		}
 		if (o.llm === "hang") await new Promise(() => undefined);
 		if (o.llm === "500") return { value: { status: 500, ok: false, headers: {}, text: `boom ${SECRET}` } };
 		const content = o.llm === "junk" ? "no json at all" : JSON.stringify({ relation: o.llm ?? "touches", confidence: 0.8, reason: "protože" });
@@ -361,4 +367,26 @@ test("recommendation: no HOME and no USERPROFILE is no key → no request", asyn
 	await start($);
 	await write($, "/w/src/a.ts", TOUCHING);
 	expect(seen.requests).toHaveLength(0);
+});
+
+test("lang cs: the dialog and the warn line show the Czech translation; the model gets the original warning", async ($, on) => {
+	resetImmuneCache();
+	resetTranslateCache();
+	const ask = setup(on, { ...withRules, settings: { immune: "ask", lang: "cs" }, llm: "unrelated", env: { OPENROUTER_API_KEY: SECRET }, answer: "Ano, pokračovat" });
+	await start($);
+	const r = await write($, "/w/src/a.ts", TOUCHING);
+	expect(ask.seen.questions[0]).toContain("CS[[UMA Rule] This edit may touch active rule");
+	expect(r.context?.join("\n")).toContain(`[UMA Rule] This edit may touch active rule ${VSA.id}`);
+	expect(r.context?.join("\n")).not.toContain("CS[");
+	expect(JSON.stringify([ask.seen.questions, ask.seen.logs, r])).not.toContain(SECRET);
+});
+
+test("lang cs, translation fails: the original warning and a note why (warn line)", async ($, on) => {
+	resetImmuneCache();
+	resetTranslateCache();
+	const { seen } = setup(on, { ...withRules, settings: { immune: "warn", lang: "cs" }, env: {} });
+	await start($);
+	await write($, "/w/src/a.ts", TOUCHING);
+	expect(seen.logs[0]).toContain("This edit may touch active rule");
+	expect(seen.logs[0]).toContain("překlad nedostupný (chybí klíč OpenRouteru)");
 });

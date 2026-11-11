@@ -3,6 +3,9 @@
 // proposal model, the preview text, the option labels and the answers' meaning.
 // No engine here.
 
+import { LABEL_TRANSLATED } from "./translate";
+import type { Display } from "./translate";
+
 /** The three fields the reviewer can edit. */
 export type EditField = "title" | "body" | "tags";
 
@@ -141,12 +144,17 @@ export function wrap(text: string, max: number): string[] {
 
 const RULE = "─".repeat(32);
 
-/** The main dialog's question: pi's proposal view as text (header, chips, title, 8 body lines). */
-export function previewOf(v: Proposal): string {
+/**
+ * The main dialog's question: pi's proposal view as text (header, chips, title, 8 body lines).
+ * `shown` is the display translation of title and body (display only: `v` stays the original,
+ * which is what gets saved); a failed translation leaves the original with a note.
+ */
+export function previewOf(v: Proposal, shown?: Display): string {
 	const type = v.type || (v.supersedes === null ? "note" : "(jako původní)");
 	const glyph = TYPE_GLYPHS[type.toLowerCase()] ?? "📄";
 	const scope = v.scope.toLowerCase() === "global" ? `🌐 ${T.scopeGlobal}` : `📁 ${T.scopeProject} (${v.scope})`;
-	const body = wrap(v.body || "(prázdné tělo)", WRAP_COLUMNS);
+	const title = shown?.title ?? v.title;
+	const body = wrap((shown?.body ?? v.body) || "(prázdné tělo)", WRAP_COLUMNS);
 	const lines = [
 		v.supersedes === null ? T.proposalHeader : `${T.supersedeHeader} ${v.supersedes}`,
 		RULE,
@@ -156,7 +164,9 @@ export function previewOf(v: Proposal): string {
 	if (v.since) lines.push(`⏱ ${T.sinceLabel}: ${v.since}`);
 	if (v.staleAfter) lines.push(`⏳ ${T.staleAfterLabel}: ${v.staleAfter}`);
 	if (v.template) lines.push(`⌘ ${T.templateLabel}: ${v.template}`);
-	lines.push("", `📌 ${T.titleLabel}`, `  ${v.title || "(bez názvu)"}`, "", `📄 ${T.bodyLabel}`);
+	const mark = shown?.translated ? LABEL_TRANSLATED : shown?.note;
+	lines.push("", `📌 ${T.titleLabel}`, `  ${title || "(bez názvu)"}`, "", `📄 ${T.bodyLabel}`);
+	if (mark) lines.push(`    ${mark}`);
 	for (const l of body.slice(0, PREVIEW_LINES)) lines.push(`    ${l}`);
 	if (body.length > PREVIEW_LINES) lines.push(`    … (${T.moreLines.replace("{n}", String(body.length - PREVIEW_LINES))})`);
 	return lines.join("\n");
@@ -169,9 +179,9 @@ export function fieldQuestion(v: Proposal, field: EditField): string {
 	return `✏️ ${prompt}\n${RULE}\n${current || "(prázdné)"}\n${RULE}\nNová hodnota: napiš ji pod „Type something“.`;
 }
 
-/** The full-text dialog's question: the whole body. */
-export function fullTextQuestion(v: Proposal): string {
-	return `📜 ${T.bodyLabel}: ${v.title}\n${RULE}\n${v.body || "(prázdné tělo)"}\n${RULE}`;
+/** The full-text dialog's question: the whole body as it is stored (the English original, never the translation). */
+export function fullTextQuestion(v: Proposal, translated = false): string {
+	return `📜 ${T.bodyLabel}${translated ? " (originál, tak se uloží)" : ""}: ${v.title}\n${RULE}\n${v.body || "(prázdné tělo)"}\n${RULE}`;
 }
 
 /** Applies text typed under "Type something" to a field; empty title/body is ignored. */

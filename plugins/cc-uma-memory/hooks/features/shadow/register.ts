@@ -17,7 +17,7 @@ import { MAX_CORRECTION_CHARS, afterBash, dependencyContext, distillArgv, isUser
 import type { Failure, Trigger } from "./policy";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev" }, { shape: "settings-5" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on", lang: "cs" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev"; lang: "cs" | "en" }, { shape: "settings-6" });
 const shadowStateAtom = atom({ plugin: "cc-uma-memory", key: "shadowState" } as const, { failure: null, lastCorrection: "" } as { failure: Failure | null; lastCorrection: string });
 
 type $ = EngineInterface;

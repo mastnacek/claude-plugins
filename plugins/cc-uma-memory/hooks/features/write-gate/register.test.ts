@@ -11,7 +11,7 @@ const SUPERSEDE = "mcp__plugin_cc-uma-memory_uma__uma_supersede";
 
 /** The dialog answers `answer` (or fails like a -p run), records what it showed; anything that reaches the bottom "runs". */
 function setup(on: On, mode: "ask" | "off", answer: string | string[] | "no-ui", stat: (path: string) => unknown = () => { throw new Error("ENOENT"); }) {
-	mock.store(on, { settings: { recall: true, writeGate: mode } });
+	mock.store(on, { settings: { recall: true, writeGate: mode, lang: "en" } });
 	on("session.start", (_$, e) => ({ cwd: e.cwd }));
 	on("command.register", () => ({ value: { command: "uma" } }));
 	on("session.cwd", () => ({ value: "/w" }));

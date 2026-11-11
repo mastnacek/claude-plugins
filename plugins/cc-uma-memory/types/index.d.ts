@@ -30,8 +30,8 @@ declare module "claude-code" {
 			memoryState: { enabled: boolean; source: "globální" | "projekt" | "lokální" | "výchozí" } | null;
 			/** True once /uma claude-memory changed autoMemoryEnabled in this session (it takes effect next session). */
 			memoryChanged: boolean;
-			/** Persisted switches (`$.store`, across sessions): recall into prompts, the write approval mode, UMA rules in the system prompt, the immune interceptor's mode and the OpenRouter model of its recommendation ("" = default), the humility gate on/off. Written only by uma-command. */
-			settings: Shaped<{ recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev" }>;
+			/** Persisted switches (`$.store`, across sessions): recall into prompts, the write approval mode, UMA rules in the system prompt, the immune interceptor's mode and the OpenRouter model of its recommendation ("" = default), the humility gate on/off, the display language of facts (`cs` = facts shown translated to Czech, `en` = as stored; stored facts are English either way). Written only by uma-command. */
+			settings: Shaped<{ recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev"; lang: "cs" | "en" }>;
 			/** Recall's memory of this session: ids already inserted (anti-echo) and whether the last run failed (log once per series). */
 			recallSession: { session: string; ids: string[]; failing: boolean };
 			/** The debt ledger as the last `uma debt check` saw it: open blocking debts (the label under the prompt), reminders spent in this run, whether the next main turn is our own continuation, whether the last check failed. Written only by debt. */

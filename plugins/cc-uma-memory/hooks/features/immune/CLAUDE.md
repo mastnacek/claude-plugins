@@ -16,13 +16,14 @@ Kdyby zmizel, pravidla a bolest souborů by model viděl jen v textu system prom
   3. `decideAction` podle `settings.immune`:
      **off** nic · **warn** (výchozí) jeden řádek `$.ui.log`, modelu nic · **ask** dialog `$.ui.ask` (`🛡️ UMA imunitní interceptor`, `Ano, pokračovat` / `Ne, zablokovat`); Ne = `{ deny }` s varováním · **auto** ověřený `deny` kontrakt zablokuje hned (řádek logu + důvod modelu), zbytek se ptá.
   4. Dialog jen když jde o pravidlo, kontrakt nebo bolest ≥ 50; jinak varování dostane model jako `context` k výsledku nástroje (v pi `tool_result`). Po „Ano“ dostane model varování a doporučení také.
+- **Překlad jen pro zobrazení:** varování (`action.message`, cituje název pravidla) se při `settings.lang` = `cs` ukáže přeložené — v dialogu i v řádku `warn` (`shared/translate`, cache sezení; selhání = originál a „⚠ překlad nedostupný (důvod)“). Modelu jde vždy originál (`deny`, `context`). Doporučení Jeva je už česky.
 - Doporučení (`recommendation.ts` čistá část, otázka přes `shared/openrouter`): má-li úprava shodu s pravidlem, zeptá se OpenRouter (výchozí `google/gemini-3.5-flash-lite`, jiný model `settings.immuneModel`) VIOLATE / TOUCH / UNRELATED a přidá řádek `🧠 Jev: …` do dialogu. Timeout 8 s, chyba, nečitelná odpověď, chybějící klíč → dialog bez něj. Nikdy samo neschválí ani nezablokuje.
 - Rozhodnutí (`log.ts`): po odpovědi v dialogu záznam `{ts, ruleId, relation, confidence, approved}` do `$.store` (klíč `immuneLog`, nejvýš 500, ne do faktů) a plasticita pravidla jako v pi: Ne → `uma plasticity reinforce <id>`, Ano proti verdiktu „violates“ → `frustrate`; dotek a nesouvisí nic nemění.
 - `command.run {uma}` — jen `immune stats` (shrnutí z logu). Přepínače `immune` a `immune-model` zapisuje `uma-command`.
 
 ## Kontrakt
 
-- **Čte:** `settings` (`immune`, `immuneModel`).
+- **Čte:** `settings` (`immune`, `immuneModel`, `lang`).
 - **Píše:** `$.store` klíč `immuneLog` (jediný zapisovatel); do `$.state` jen `commandOutputs` (data `/uma immune stats` z `statsOut`, kreslí `uma-command`).
 - **Procesy:** `uma risk pain`, `uma list --json --type …`, `uma plasticity …`, `ast-grep scan` (z `PATH`, jinak kopie z `~/.pi/agent/npm/node_modules/@ast-grep/…`, i `cli-win32-x64-msvc/ast-grep.exe`; domov je `HOME`, jinak `USERPROFILE`).
 - **Síť:** jen `shared/openrouter` (`$.http.fetch`); klíč `OPENROUTER_API_KEY` nebo `~/.pi/agent/auth.json`, nikdy se nelogují ani nevypisují.

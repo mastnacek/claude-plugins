@@ -14,11 +14,14 @@ import type { EngineInterface, On, PluginState, ShapedValue } from "claude-code"
 import { atom, read, update } from "claude-code";
 import { BACK, BACK_FULL, DONE, HEADER, APPROVE, REJECT, fieldQuestion, fullTextQuestion, optionOf, withField, PICK_BODY, PICK_FULL, PICK_TITLE } from "../../shared/proposal";
 import type { EditField, Proposal } from "../../shared/proposal";
+import { displayOf } from "../../shared/translate";
+import type { Display } from "../../shared/translate";
 import { EDIT_DRAFT, EDIT_PICKS, SKIP_DRAFT, USAGE, approveArgv, discardArgv, isDraftId, listArgv, listResult, noDrafts, parseDrafts, proposalOf, questionOf, reviewSummary, sentence, showResult } from "./policy";
 import type { Draft, Result } from "./policy";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Outputs, { shape: "output-2" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on", lang: "cs" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev"; lang: "cs" | "en" }, { shape: "settings-6" });
 const stagingStateAtom = atom({ plugin: "cc-uma-memory", key: "stagingState" } as const, { pending: 0 } as { pending: number });
 
 type $ = EngineInterface;
@@ -73,10 +76,10 @@ async function ask($: $, question: string, options: string[]): Promise<string | 
 }
 
 /** The edit menu → one field (or the full text) → back; returns the proposal as changed. Dismissed = no change. */
-async function editMenu($: $, v: Proposal, question: string): Promise<Proposal> {
+async function editMenu($: $, v: Proposal, question: string, translated: boolean): Promise<Proposal> {
 	const pick = await ask($, `✏️ Co upravit?\n\n${question}`, [...EDIT_PICKS]);
 	if (pick === PICK_FULL) {
-		await ask($, fullTextQuestion(v), [BACK_FULL, DONE]);
+		await ask($, fullTextQuestion(v, translated), [BACK_FULL, DONE]);
 		return v;
 	}
 	const field: EditField | undefined = pick === PICK_TITLE ? "title" : pick === PICK_BODY ? "body" : undefined;
@@ -90,13 +93,17 @@ type Tally = { approved: number; discarded: number; skipped: number; failed: num
 /** What the person decided about one draft; "stop" ends the whole review. */
 async function reviewOne($: $, d: Draft, index: number, total: number, projectName: string, tally: Tally): Promise<"next" | "stop"> {
 	let v = proposalOf(d, projectName);
+	const lang = (await read($, settingsAtom)).lang;
+	let shown: Display | undefined;
 	for (;;) {
-		const question = questionOf(d, v, index, total);
+		// Display only: Czech translation in the preview; `v` and the approve call carry the stored original.
+		shown = await displayOf($, shown, v.title, v.body, lang);
+		const question = questionOf(d, v, index, total, shown);
 		const answer = await ask($, question, [APPROVE, EDIT_DRAFT, SKIP_DRAFT, REJECT]);
 		// Dismissed, no one to ask, or text typed under "Other": the review stops, nothing is decided for the rest.
 		if (answer === undefined || (answer !== APPROVE && answer !== EDIT_DRAFT && answer !== SKIP_DRAFT && answer !== REJECT)) return "stop";
 		if (answer === EDIT_DRAFT) {
-			v = await editMenu($, v, question);
+			v = await editMenu($, v, question, shown.translated);
 			continue;
 		}
 		if (answer === SKIP_DRAFT) {

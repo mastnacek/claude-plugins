@@ -38,12 +38,18 @@ function setup(on: On, answers: Record<string, Run>, settings = { recall: true, 
 
 type Host = { prompt: { compose: (a: never) => Promise<{ sections: ReadonlyArray<{ id: string; text: string; scope: string }> }> }; session: { start: (a: never) => Promise<unknown> } };
 const started = new WeakSet<object>();
-async function compose($: Host) {
+async function composeAll($: Host) {
 	if (!started.has($)) {
 		started.add($);
 		await $.session.start({ cwd: "/work/app", surface: "terminal", isInteractive: true } as never);
 	}
 	return $.prompt.compose({ model: "m", promptModel: "m", surfaces: [], tools: [], outputStyle: null, traits: [] } as never);
+}
+
+/** The sections without the language rule (it has its own test below). */
+async function compose($: Host) {
+	const composed = await composeAll($);
+	return { ...composed, sections: composed.sections.filter((s) => s.id !== "cc-uma-memory:language") };
 }
 
 test("active decisions and patterns become one session section after the engine's, text as in pi", async ($, on) => {
@@ -110,4 +116,13 @@ test("unreadable JSON → no section", async ($, on) => {
 	const seen = setup(on, { decision: { exitCode: 0, stdout: "nope", stderr: "" } });
 	expect((await compose($)).sections.map((s) => s.id)).toEqual(["intro"]);
 	expect(seen.logs[0]).toContain("nečitelnou");
+});
+
+test("the English-facts rule is always in the session prompt, also with /uma append off and no rules", async ($, on) => {
+	setup(on, {}, { recall: true, writeGate: "ask", append: false });
+	const { sections } = await composeAll($);
+	expect(sections.map((s) => s.id)).toEqual(["intro", "cc-uma-memory:language"]);
+	expect(sections[1]!.scope).toBe("session");
+	expect(sections[1]!.text).toContain("in English, even when the user writes in Czech");
+	expect(sections[1]!.text).toContain("uma_write or uma_supersede");
 });

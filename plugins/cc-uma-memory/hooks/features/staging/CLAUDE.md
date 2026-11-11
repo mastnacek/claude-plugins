@@ -10,7 +10,7 @@ Kdyby zmizel, koncepty by se hromadily a šly schválit jen ručním `uma stagin
 ## Co dělá
 
 - `/uma review` — načte `uma staging list --json` a každý koncept ukáže **stejným dialogem po krocích jako write-gate** (`$.ui.ask`, hlavička „🧠 Paměť UMA“, náhled `previewOf` z `shared/proposal`, první řádek „📝 UMA • Koncept i z N • spouštěč … • jistota …“): ✅ Schválit a uložit do paměti · ✏️ Upravit (název, obsah, celý text) · ⏭ Přeskočit (nechat na později) · ❌ Zamítnout a zahodit.
-  - Schválit = `uma staging approve <id>` (`--title=…` / `--body=…` jen u změněných polí, `=` kvůli hodnotě začínající pomlčkou); zamítnout = `uma staging discard <id>`. Chyba motoru → řádek logu, koncept zůstává, počítá se jako „selhalo“.
+  - **Překlad jen pro zobrazení** stejně jako ve `write-gate` (`settings.lang`, `shared/translate`): náhled ukáže přeložený název a obsah, „📜 Celý text“ a úprava originál; `uma staging approve` dostane vždy anglický originál (nebo to, co uživatel napsal), ne překlad. Schválit = `uma staging approve <id>` (`--title=…` / `--body=…` jen u změněných polí, `=` kvůli hodnotě začínající pomlčkou); zamítnout = `uma staging discard <id>`. Chyba motoru → řádek logu, koncept zůstává, počítá se jako „selhalo“.
   - Zavřený dialog, `-p` (nemá kdo odpovědět) i text napsaný pod „Other“ **přeruší** kontrolu; nic dalšího se nerozhodne.
   - Výsledek: jeden řádek „Kontrola konceptů dokončena: N schváleno, N zahozeno, N ponecháno.“
 - `/uma staging list` (výpis konceptů), `show <id>` (celý koncept), `discard <id>`; jiný argument = použití. Výstup jde jako data (`listResult`, `showResult`, `sentence`: položky s typem, rozsahem, ID, tagy, jistotou) do `commandOutputs` (kreslí `uma-command`), modelu jen první řádek; souhrn `/uma review` je věta v rámečku `success` / `warning` (přerušeno nebo selhání), chyby `error`. ID se kontroluje (ULID), aby se do argv nedostal přepínač.
@@ -20,6 +20,7 @@ Kdyby zmizel, koncepty by se hromadily a šly schválit jen ručním `uma stagin
 ## Kontrakt
 
 - **Píše:** `stagingState` — `{ pending }` (jediný zapisovatel), `commandOutputs` (nejvýš 20 záznamů, sdílený s ostatními řezy).
+- **Čte:** `settings` (`lang`).
 - **Čtou ho:** `memory-guard` (`pending` → štítek).
 - **Procesy:** `uma staging list|approve|discard` (`--json` u list; cwd sezení, 10 s).
 - **Sdílené:** `shared/proposal` (model návrhu, texty, `previewOf`, `withField`, `optionOf`) — stejný kód jako dialog `write-gate`.
@@ -39,5 +40,5 @@ Kdyby zmizel, koncepty by se hromadily a šly schválit jen ručním `uma stagin
 - Štítek čte složku z cwd, ne z kořene gitu: v podsložce repa ukáže 0, i když koncepty čekají. `/uma review` a `/uma staging list` (motor) jsou přesné.
 - Štítek se zpozdí: koncept, který stínový pracovník vytváří až po tahu, se objeví po dalším tahu / příkazu.
 - `$.ui.ask`: 2–4 volby, text se píše pod „Type something“; popisky se vrací bez U+FE0F — čti přes `optionOf`.
-- Pi překládal koncept do češtiny (`DisplayTranslation`) a rolovalo se v okně; to zde není (text se ukáže tak, jak je uložen; úplné tělo je v „📜 Celý text“).
+- Pi překládal koncept do češtiny (`DisplayTranslation`) a rolovalo se v okně; zde je překlad v náhledu (8 řádků) a úplné anglické tělo v „📜 Celý text“. `/uma staging list|show` se **nepřekládá** (zadání říká jen `/uma review`).
 - Dialog se ptá uvnitř `command.run`; `$.ui.ask` je volání `$`, takže rozpočet hooku při čekání stojí.

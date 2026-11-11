@@ -38,6 +38,7 @@ způsob, jak hypotézu vyslovit; zdržoval by v `-p` a rozhodoval by člověk m�
 |---|---|
 | přepínač `/uma humility` | `uma-command` |
 | samotný verdikt (Familiarity Index, Jev) | MCP server `uma` (Rust jádro) |
+| překlad hlášek pro zobrazení | nic: brána pokory nemá dialog a nic nepřekládá — text zamítnutí čte jen model (anglicky) a necituje fakt; dialog s citovaným pravidlem má `immune` |
 | imunitní kontrola úprav podle pravidel a bolesti | `immune` |
 | zákaz zápisu do úložiště UMA | `write-gate` |
 

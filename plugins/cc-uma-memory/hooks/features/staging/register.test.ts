@@ -9,7 +9,7 @@ type Opts = { drafts?: unknown[]; answers?: Array<string | "dismiss">; waiting?:
 
 function setup(on: On, o: Opts = {}) {
 	const live = [...(o.drafts ?? [draft("01AAAAAAAAAAAAAAAAAAAAAAAA", "První"), draft("01BBBBBBBBBBBBBBBBBBBBBBBB", "Druhý")])];
-	mock.store(on);
+	mock.store(on, { settings: { lang: "en" } });
 	mock.env(on, { HOME: "/h" });
 	on("session.start", (_$, e) => ({ cwd: e.cwd }));
 	on("session.cwd", () => ({ value: "/w" }));
