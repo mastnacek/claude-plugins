@@ -39,6 +39,16 @@ neřekne, jak to postavit správně:
 - **Mění-li se tvar hodnoty v `$.state`, změň `shape` atomu** (`"config-1"` →
   `"config-2"`) ve všech souborech, které atom deklarují: po reloadu zůstává
   stará hodnota a nový kód by ji četl jako novou.
+- **Windows: chybí `HOME`, cesty mají `\`.** Proces Claude Code tam má jen
+  `USERPROFILE`: domov je `HOME ?? USERPROFILE` (oříznuté, prázdné = nenastavené),
+  pro `~/.claude` nejdřív `CLAUDE_CONFIG_DIR`. `$.env.get` bere jen řetězcový
+  literál; vzor je `shared/home.ts` (každý plugin má vlastní kopii). Cesty
+  z událostí (`file_path`, `cwd`) mohou mít `\` a písmeno disku: před dělením
+  nebo porovnáním je normalizuj (`\` → `/`, písmeno disku malé; vzor
+  `cc-reverse-spec/hooks/features/guard/decide.ts`). V testech engine převádí
+  POSIX cesty na `X:\…` (`/home/t/x` → `D:\home\t\x`), takže mocky `fs.*`
+  musí klíče normalizovat: `p.replace(/\\/g, "/").replace(/^[A-Za-z]:/, "")`,
+  a tvrzení o cestách psát pro oba oddělovače.
 - **`tsc` hlásí `Cannot find module 'claude-code'`** → chybí
   `.claude-plugin/types/` (je v `.gitignore`, vzniká při načtení enginem).
   Načti plugin jednou: `claude --plugin-dir plugins/<plugin>`.

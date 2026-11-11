@@ -11,6 +11,10 @@ ty uživatel nevidí a nemají vlastní terminál.
 | **programátor** | vpravo nahoře | `scripts/agent.sh coder` (Sonnet) | píše kód podle zadání; zprávu commitu jen navrhne |
 | **tester** | vpravo dole | `scripts/agent.sh tester --plugin-dir <plugin>` (Haiku) | ověřuje funkce pluginu naživo podle scénářů; kód nemění |
 
+**Windows:** shell panelu je PowerShell a `bash` v něm spustí WSL, ne Git
+Bash. Agenta proto spouštěj přes Git Bash:
+`herdr pane run <pane> "& 'C:\Program Files\Git\bin\bash.exe' scripts/agent.sh coder"`.
+
 `scripts/agent.sh` spustí `claude` s aliasem modelu (`sonnet`, `haiku` = nejnovější
 model rodiny) a s rolí v `CC_ROLE`. **Commit a push dělá jen orchestrátor**:
 projektový hook `.claude/hooks/orchestrator-only-git.sh` (v `.claude/settings.json`)
