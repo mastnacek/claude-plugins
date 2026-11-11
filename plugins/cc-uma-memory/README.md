@@ -70,7 +70,7 @@ The read-only tools never need a prompt. To stop Claude Code asking for them, ad
 
 **Project or global?** The MCP server runs in the folder where the Claude Code session started. Started inside a git repository, new facts go to that project's `.uma/`; started elsewhere (e.g. your home folder), they go to the global store unless the call names a `scope`.
 
-Writes are approved by the write gate (see above). Claude Code's own MCP permission prompt may ask once more; add `mcp__plugin_cc-uma-memory_uma__uma_write` and `mcp__plugin_cc-uma-memory_uma__uma_supersede` to `permissions.allow` if you want only the plugin's dialog. Storage: global `~/.local/share/uma/global`, per project `<git root>/.uma`. New tools are added in the Rust core, not in this plugin.
+Writes are approved by the write gate (see above). Claude Code's own MCP permission prompt may ask once more; add `mcp__plugin_cc-uma-memory_uma__uma_write` and `mcp__plugin_cc-uma-memory_uma__uma_supersede` to `permissions.allow` if you want only the plugin's dialog. Storage: global `~/.local/share/uma/global` (Windows `%APPDATA%\uma\global`, macOS `~/Library/Application Support/uma/global`), per project `<git root>/.uma`. New tools are added in the Rust core, not in this plugin.
 
 ## Commands
 
