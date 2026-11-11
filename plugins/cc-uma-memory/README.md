@@ -35,7 +35,7 @@ cp target/release/uma ~/.local/bin/   # any directory on PATH
 - **Proposes routines** (muscle synthesis) — when the same sequence of three shell commands runs twice, a draft of a `skill` routine is staged (`uma staging create`, never `uma muscle new`). `/uma shadow off` stops it too.
 - **Review drafts with `/uma review`** — each waiting draft is shown in the same step dialog as a memory write (preview, then *Approve* / *Edit* / *Skip* / *Reject*). Approve runs `uma staging approve` (with your edited title and body), Reject runs `uma staging discard`. The engine's `approve` takes only a title and a body, so tags and scope cannot be changed here (there is no "switch scope"). While drafts wait, the tag below the prompt shows ` 📝N`. A shell `uma staging approve|discard` from the model still asks for your approval.
 - **Turn off Claude Code's own automatic memory** (not UMA) so UMA is the only memory — globally or per project.
-- **Tag at the end of the hint line under the prompt** — `[UMA]` when Claude's auto memory is off, `[UMA ⚠ CC]` when it is on; ` ↻` is added once you changed it in this session (applies from the next one).
+- **Tag at the end of the hint line under the prompt** — `[💾 UMA]` when Claude's auto memory is off, `[💾 UMA ⚠ CC]` when it is on; ` ↻` is added once you changed it in this session (applies from the next one).
 
 ## MCP tools
 

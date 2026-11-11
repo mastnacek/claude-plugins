@@ -128,13 +128,13 @@ test("label: ⚖N under the prompt while blocking debts are open, refreshed afte
 	const mount = () => $.ui.mount({ plugin: "cc-uma-memory", surface: "terminal", component: "PromptHint", props: { isDraft: false, isWorking: false, hint: "?", tail: "" } });
 	await $.session.start({ cwd: "/work/app", surface: "terminal", isInteractive: true });
 	await mount();
-	expect(tail).toBe("[UMA ⚠ CC]");
+	expect(tail).toBe("[💾 UMA ⚠ CC]");
 	await turn($);
 	await mount();
-	expect(tail).toBe("[UMA ⚠ CC ⚖2]");
+	expect(tail).toBe("[💾 UMA ⚠ CC ⚖2]");
 	await turn($);
 	await mount();
-	expect(tail).toBe("[UMA ⚠ CC]");
+	expect(tail).toBe("[💾 UMA ⚠ CC]");
 });
 
 test("label: /uma debt clear refreshes it at once, without waiting for the next turn", async ($, on) => {
@@ -152,8 +152,8 @@ test("label: /uma debt clear refreshes it at once, without waiting for the next 
 	await $.session.start({ cwd: "/work/app", surface: "terminal", isInteractive: true });
 	await turn($);
 	await mount();
-	expect(tail).toBe("[UMA ⚠ CC ⚖2]");
+	expect(tail).toBe("[💾 UMA ⚠ CC ⚖2]");
 	await $.command.run({ command: "uma", args: "debt clear", origin: { kind: "composer" }, presentation: { isFullscreen: false, columns: 80 } });
 	await mount();
-	expect(tail).toBe("[UMA ⚠ CC]");
+	expect(tail).toBe("[💾 UMA ⚠ CC]");
 });
