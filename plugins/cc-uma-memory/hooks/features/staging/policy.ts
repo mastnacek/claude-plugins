@@ -2,8 +2,17 @@
 // draft into the proposal the shared dialog shows, and the texts of `/uma staging …`.
 // Running the processes and asking the person is the caller's job.
 
+import type { PluginState, ShapedValue } from "claude-code";
 import { PICK_BODY, PICK_FULL, PICK_TITLE, previewOf, wrap, WRAP_COLUMNS } from "../../shared/proposal";
 import type { Proposal } from "../../shared/proposal";
+
+type Out = ShapedValue<PluginState["cc-uma-memory"]["commandOutputs"]>[string];
+
+/** What a subcommand answers: the line the model reads and, when there is more to show, the data uma-command draws. */
+export type Result = { text: string; out?: Out };
+
+/** One sentence, framed: the tone is the colour of the frame. */
+export const sentence = (title: string, text: string, tone: Out["tone"] = "normal"): Result => ({ text, out: { title, tone, lines: [tone === "normal" ? { text } : { text, tone }] } });
 
 /** A draft as `uma staging list --json` hands it over (the fields staging reads). */
 export type Draft = {
@@ -106,24 +115,31 @@ export function reviewSummary(done: { approved: number; discarded: number; skipp
 }
 
 export const NO_DRAFTS = "Žádné koncepty ke kontrole v .uma/.staging/";
+export const noDrafts = (): Result => sentence("koncepty · žádné", NO_DRAFTS);
 
-/** `/uma staging list` as text: a summary line for the model, then one line per draft for the person. */
-export function renderList(drafts: Draft[]): string {
-	if (drafts.length === 0) return NO_DRAFTS;
-	const lines = drafts.map((d, i) => `${i + 1}. [${d.type || "?"}] ${d.title} (${percent(d.confidence)}, ${d.trigger || "?"})  ${d.id}`);
-	return [`Koncepty: ${drafts.length} čeká na /uma review (výpis ukázán uživateli)`, ...lines].join("\n");
+/** `/uma staging list`: a summary line for the model, one numbered entry per draft for the person. */
+export function listResult(drafts: Draft[]): Result {
+	if (drafts.length === 0) return noDrafts();
+	const items = drafts.map((d) => {
+		const item: NonNullable<Out["items"]>[number] = { title: d.title, id: d.id, score: percent(d.confidence), lines: [`spouštěč: ${d.trigger || "?"}`] };
+		if (d.type) item.type = d.type;
+		if (d.scope) item.scope = d.scope;
+		if (d.tags.length > 0) item.tags = d.tags;
+		return item;
+	});
+	return { text: `Koncepty: ${drafts.length} čeká na /uma review (výpis ukázán uživateli)`, out: { title: `koncepty · ${drafts.length} čeká na /uma review`, tone: "normal", items } };
 }
 
-/** `/uma staging show <id>` as text: a summary line, then the draft's fields and its whole body. */
-export function renderShow(d: Draft): string {
-	const lines = [
-		`Koncept ${d.id}: ${d.title} (výpis ukázán uživateli)`,
-		`typ: ${d.type || "?"} · rozsah: ${d.scope || "?"} · spouštěč: ${d.trigger || "?"} · jistota: ${percent(d.confidence)}`,
-		`tagy: ${d.tags.length > 0 ? d.tags.map((t) => `#${t}`).join(" ") : "(žádné)"}`,
-	];
+/** `/uma staging show <id>`: a summary line, then the draft's fields and its whole body. */
+export function showResult(d: Draft): Result {
+	const lines = [`spouštěč: ${d.trigger || "?"}`];
 	if (d.template) lines.push(`šablona (nespouští se): ${d.template}`);
 	lines.push("", ...wrap(d.body || "(prázdné tělo)", WRAP_COLUMNS));
-	return lines.join("\n");
+	const item: NonNullable<Out["items"]>[number] = { title: d.title, id: d.id, score: percent(d.confidence), lines };
+	if (d.type) item.type = d.type;
+	if (d.scope) item.scope = d.scope;
+	if (d.tags.length > 0) item.tags = d.tags;
+	return { text: `Koncept ${d.id}: ${d.title} (výpis ukázán uživateli)`, out: { title: `koncept · ${d.type || "?"}`, tone: "normal", items: [item] } };
 }
 
 export const USAGE = "Použití: /uma staging list | show <id> | discard <id>";

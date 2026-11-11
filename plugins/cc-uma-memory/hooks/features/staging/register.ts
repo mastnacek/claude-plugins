@@ -10,18 +10,19 @@
 // Bash `uma staging approve|discard` stays behind write-gate's dialog: only the person's
 // own `/uma review` approves without asking again, because that dialog IS the asking.
 
-import type { EngineInterface, On } from "claude-code";
+import type { EngineInterface, On, PluginState, ShapedValue } from "claude-code";
 import { atom, read, update } from "claude-code";
 import { BACK, BACK_FULL, DONE, HEADER, APPROVE, REJECT, fieldQuestion, fullTextQuestion, optionOf, withField, PICK_BODY, PICK_FULL, PICK_TITLE } from "../../shared/proposal";
 import type { EditField, Proposal } from "../../shared/proposal";
-import { EDIT_DRAFT, EDIT_PICKS, NO_DRAFTS, SKIP_DRAFT, USAGE, approveArgv, discardArgv, isDraftId, listArgv, parseDrafts, proposalOf, questionOf, renderList, renderShow, reviewSummary } from "./policy";
-import type { Draft } from "./policy";
+import { EDIT_DRAFT, EDIT_PICKS, SKIP_DRAFT, USAGE, approveArgv, discardArgv, isDraftId, listArgv, listResult, noDrafts, parseDrafts, proposalOf, questionOf, reviewSummary, sentence, showResult } from "./policy";
+import type { Draft, Result } from "./policy";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Record<string, string>);
+const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Outputs, { shape: "output-2" });
 const stagingStateAtom = atom({ plugin: "cc-uma-memory", key: "stagingState" } as const, { pending: 0 } as { pending: number });
 
 type $ = EngineInterface;
+type Outputs = ShapedValue<PluginState["cc-uma-memory"]["commandOutputs"]>;
 
 const COMMAND = "uma";
 const MAX_OUTPUTS = 20;
@@ -114,10 +115,10 @@ async function reviewOne($: $, d: Draft, index: number, total: number, projectNa
 	}
 }
 
-async function review($: $): Promise<string> {
+async function review($: $): Promise<Result> {
 	const drafts = await load($);
-	if (typeof drafts === "string") return `Koncepty se nepodařilo načíst: ${drafts}`;
-	if (drafts.length === 0) return NO_DRAFTS;
+	if (typeof drafts === "string") return sentence("chyba", `Koncepty se nepodařilo načíst: ${drafts}`, "error");
+	if (drafts.length === 0) return noDrafts();
 	const cwd = await $.session.cwd();
 	const projectName = cwd.split(/[\\/]/).filter(Boolean).pop() || "project";
 	const tally: Tally = { approved: 0, discarded: 0, skipped: 0, failed: 0 };
@@ -129,32 +130,34 @@ async function review($: $): Promise<string> {
 			break;
 		}
 	}
-	return reviewSummary(tally, stopped);
+	return sentence("kontrola konceptů", reviewSummary(tally, stopped), stopped || tally.failed > 0 ? "warning" : "success");
 }
 
-async function stagingCommand($: $, words: string[]): Promise<string> {
+async function stagingCommand($: $, words: string[]): Promise<Result> {
 	const [action, id, ...extra] = words;
+	const usage = sentence("použití", USAGE, "warning");
+	const unreadable = (reason: string) => sentence("chyba", `Koncepty se nepodařilo načíst: ${reason}`, "error");
 	if (action === undefined || action === "list") {
-		if (id !== undefined) return USAGE;
+		if (id !== undefined) return usage;
 		const drafts = await load($);
-		return typeof drafts === "string" ? `Koncepty se nepodařilo načíst: ${drafts}` : renderList(drafts);
+		return typeof drafts === "string" ? unreadable(drafts) : listResult(drafts);
 	}
-	if ((action !== "show" && action !== "discard") || !isDraftId(id) || extra.length > 0) return USAGE;
+	if ((action !== "show" && action !== "discard") || !isDraftId(id) || extra.length > 0) return usage;
 	if (action === "discard") {
 		const done = await uma($, discardArgv(id));
-		return done.ok ? done.stdout.trim().split("\n")[0] || `Koncept ${id} zahozen.` : `Koncept ${id} se nepodařilo zahodit: ${done.reason}`;
+		return done.ok ? sentence("koncept zahozen", done.stdout.trim().split("\n")[0] || `Koncept ${id} zahozen.`, "success") : sentence("chyba", `Koncept ${id} se nepodařilo zahodit: ${done.reason}`, "error");
 	}
 	const drafts = await load($);
-	if (typeof drafts === "string") return `Koncepty se nepodařilo načíst: ${drafts}`;
+	if (typeof drafts === "string") return unreadable(drafts);
 	const found = drafts.find((d) => d.id.toLowerCase() === id.toLowerCase());
-	return found ? renderShow(found) : `Koncept ${id} nenalezen. Zkus /uma staging list.`;
+	return found ? showResult(found) : sentence("koncept nenalezen", `Koncept ${id} nenalezen. Zkus /uma staging list.`, "warning");
 }
 
-function capOutputs(record: Record<string, string>): Record<string, string> {
+function capOutputs(record: Outputs): Outputs {
 	const keys = Object.keys(record);
 	if (keys.length <= MAX_OUTPUTS) return record;
-	const next: Record<string, string> = {};
-	for (const key of keys.slice(keys.length - MAX_OUTPUTS)) next[key] = record[key] as string;
+	const next: Outputs = {};
+	for (const key of keys.slice(keys.length - MAX_OUTPUTS)) next[key] = record[key] as Outputs[string];
 	return next;
 }
 
@@ -162,11 +165,10 @@ export function registerStaging(on: On): void {
 	on("command.run", { command: COMMAND }, async ($, e, next) => {
 		const [sub, ...rest] = e.args.trim().split(/\s+/).filter(Boolean);
 		if (sub !== "review" && sub !== "staging") return next(e);
-		const output = (sub === "review" ? (rest.length > 0 ? "Použití: /uma review" : await review($)) : await stagingCommand($, rest)).trimEnd();
+		const { text, out } = sub === "review" ? (rest.length > 0 ? sentence("použití", "Použití: /uma review", "warning") : await review($)) : await stagingCommand($, rest);
 		await refresh($);
-		const [summary = "", ...more] = output.split("\n");
-		if (more.length > 0) await update($, commandOutputsAtom, (o) => capOutputs({ ...o, [summary]: output }));
-		return { text: summary };
+		if (out) await update($, commandOutputsAtom, (o) => capOutputs({ ...o, [text]: out }));
+		return { text };
 	});
 
 	// Drafts appear while a turn runs (shadow, muscle synthesis): the label catches up when it ends.

@@ -7,14 +7,14 @@ const argv = (sub: Parameters<typeof planQuery>[0], args: string[]) => {
 };
 
 test("each subcommand builds its argv", () => {
-	expect(argv("search", ["jak", "řešit", "VSA"])).toEqual(["uma", "search", "--", "jak řešit VSA"]);
-	expect(argv("list", [])).toEqual(["uma", "list"]);
-	expect(argv("list", ["global"])).toEqual(["uma", "list", "--scope", "global"]);
-	expect(argv("read", ["01ABC"])).toEqual(["uma", "read", "--", "01ABC"]);
-	expect(argv("timeline", [])).toEqual(["uma", "timeline"]);
-	expect(argv("timeline", ["--all"])).toEqual(["uma", "timeline", "--all"]);
-	expect(argv("timeline", ["--id", "01ABC", "--all"])).toEqual(["uma", "timeline", "--id", "01ABC", "--all"]);
-	expect(argv("doctor", [])).toEqual(["uma", "doctor"]);
+	expect(argv("search", ["jak", "řešit", "VSA"])).toEqual(["uma", "search", "--json", "--", "jak řešit VSA"]);
+	expect(argv("list", [])).toEqual(["uma", "list", "--json"]);
+	expect(argv("list", ["global"])).toEqual(["uma", "list", "--json", "--scope", "global"]);
+	expect(argv("read", ["01ABC"])).toEqual(["uma", "read", "--json", "--", "01ABC"]);
+	expect(argv("timeline", [])).toEqual(["uma", "timeline", "--json"]);
+	expect(argv("timeline", ["--all"])).toEqual(["uma", "timeline", "--json", "--all"]);
+	expect(argv("timeline", ["--id", "01ABC", "--all"])).toEqual(["uma", "timeline", "--json", "--id", "01ABC", "--all"]);
+	expect(argv("doctor", [])).toEqual(["uma", "doctor", "--json"]);
 	expect(argv("reindex", [])).toEqual(["uma", "search", "", "--reindex"]);
 	expect(argv("export", ["--out", "/tmp/o"])).toEqual(["uma", "export", "--okf", "--out", "/tmp/o"]);
 });
@@ -36,14 +36,17 @@ test("doctor takes no flags: --confirm would archive facts", () => {
 	expect(argv("doctor", ["--confirm"])).toContain("Použití");
 });
 
-test("a listing is a summary line followed by the full output; one-sentence commands stay one line", () => {
+test("a listing answers a model line and data for the person; one-sentence commands are one framed line", () => {
 	const list = planQuery("list", []);
-	expect("render" in list && list.render("a\nb\n")).toBe("Fakta: 2 řádků výpisu (ukázán uživateli)\na\nb");
-	expect("render" in list && list.render("")).toBe("Fakta: nic nenalezeno");
+	const facts = JSON.stringify([{ id: "01A", title: "A", fact_type: "Task", scope: "project:x", tags: [] }, { id: "01B", title: "B", fact_type: "Decision", scope: "global", tags: [] }]);
+	const listed = "render" in list ? list.render(facts) : undefined;
+	expect(listed?.text).toBe("Fakta: 2 fakty (výpis ukázán uživateli)");
+	expect(listed?.out?.items).toHaveLength(2);
+	expect("render" in list && list.render("[]").text).toBe("Fakta: nic nenalezeno");
 	const reindex = planQuery("reindex", []);
-	expect("render" in reindex && reindex.render("lots\nof\noutput")).toBe("Index UMA byl přebudován.");
+	expect("render" in reindex && reindex.render("lots\nof\noutput")).toEqual({ text: "Index UMA byl přebudován.", out: { title: "reindex", tone: "success", lines: [{ text: "Index UMA byl přebudován.", tone: "success" }] } });
 	const exp = planQuery("export", ["--out", "o"]);
-	expect("render" in exp && exp.render("x")).toContain("zapsán do o");
+	expect("render" in exp && exp.render("x").text).toContain("zapsán do o");
 });
 
 test("helpers", () => {
@@ -64,5 +67,7 @@ test("debt: list reads the whole ledger as json, clear is a bare `uma debt clear
 
 test("debt: unreadable list output is reported, not thrown", () => {
 	const plan = planQuery("debt", ["list"]);
-	expect("render" in plan && plan.render("garbage")).toBe("uma debt list vrátila nečitelnou odpověď");
+	const out = "render" in plan ? plan.render("garbage") : undefined;
+	expect(out?.text).toBe("uma debt list vrátila nečitelnou odpověď");
+	expect(out?.out?.tone).toBe("error");
 });

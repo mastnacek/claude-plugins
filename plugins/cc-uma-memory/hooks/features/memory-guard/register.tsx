@@ -10,20 +10,28 @@
 // model's requests, so the model gets only the output's first line; the full
 // text goes to $.state (`commandOutputs`), which uma-command draws.
 
-import type { EngineInterface, On } from "claude-code";
+import type { EngineInterface, On, PluginState, ShapedValue } from "claude-code";
 import { atom, read, update } from "claude-code";
 import { addToTail, buildBadge } from "./badge";
 import { effectiveState, setAutoMemory } from "./settings";
 import type { Layers, MemoryState } from "./settings";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Record<string, string>);
+const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Outputs, { shape: "output-2" });
 const memoryStateAtom = atom({ plugin: "cc-uma-memory", key: "memoryState" } as const, null as MemoryState | null);
 const debtStateAtom = atom({ plugin: "cc-uma-memory", key: "debtState" } as const, { blocking: 0, reminders: 0, continuing: false, failing: false } as { blocking: number; reminders: number; continuing: boolean; failing: boolean });
 const stagingStateAtom = atom({ plugin: "cc-uma-memory", key: "stagingState" } as const, { pending: 0 } as { pending: number });
 const memoryChangedAtom = atom({ plugin: "cc-uma-memory", key: "memoryChanged" } as const, false);
 
 type $ = EngineInterface;
+type Outputs = ShapedValue<PluginState["cc-uma-memory"]["commandOutputs"]>;
+type Out = Outputs[string];
+
+/** The model's line and, when there is more to show, the data uma-command draws. */
+type Result = { text: string; out?: Out };
+
+/** Lines of one framed output; the first is also the model's. */
+const framed = (title: string, lines: string[], tone: Out["tone"]): Result => ({ text: lines[0] ?? "", out: { title, tone, lines: lines.map((text) => (tone === "normal" ? { text } : { text, tone })) } });
 
 const COMMAND = "uma";
 const MAX_OUTPUTS = 20;
@@ -67,7 +75,7 @@ function verdict(state: MemoryState): string {
 		: `Platí: paměť Claude vypnuta (${state.source}) — jediná paměť je UMA; od příštího sezení.`;
 }
 
-async function runMemory($: $, words: string[]): Promise<string> {
+async function runMemory($: $, words: string[]): Promise<Result> {
 	const isGlobal = words.includes("--global");
 	const rest = words.filter((w) => w !== "--global");
 	const p = await paths($);
@@ -75,19 +83,27 @@ async function runMemory($: $, words: string[]): Promise<string> {
 
 	if (target === undefined) {
 		const state = effectiveState(await readLayers($, p));
-		return [
-			`Automatická paměť Claude: ${state.enabled ? "zapnuta" : "vypnuta"} (${state.source})`,
-			`globální:  ${p.global ?? "(HOME není nastaveno)"}`,
-			`projekt:   ${p.project}`,
-			`lokální:   ${p.local}`,
-		].join("\n");
+		const summary = `${state.enabled ? "zapnuta" : "vypnuta"} (${state.source})`;
+		return {
+			text: `Automatická paměť Claude: ${summary}`,
+			out: {
+				title: "automatická paměť Claude",
+				tone: "normal",
+				fields: [
+					{ label: "stav", value: summary, tone: state.enabled ? "warning" : "success" },
+					{ label: "globální", value: p.global ?? "(HOME není nastaveno)" },
+					{ label: "projekt", value: p.project },
+					{ label: "lokální", value: p.local },
+				],
+			},
+		};
 	}
-	if ((target !== "on" && target !== "off") || rest.length > 1) return `Neznámý argument. Zkus /uma claude-memory [on|off] [--global].`;
+	if ((target !== "on" && target !== "off") || rest.length > 1) return framed("použití", ["Neznámý argument. Zkus /uma claude-memory [on|off] [--global]."], "warning");
 
 	const path = isGlobal ? p.global : p.local;
-	if (!path) return "Nelze zapsat: HOME není nastaveno.";
+	if (!path) return framed("chyba", ["Nelze zapsat: HOME není nastaveno."], "error");
 	const result = setAutoMemory(await readFile($, path), target === "on");
-	if (!result.ok) return `Nic nezapsáno — ${path}: ${result.error}.`;
+	if (!result.ok) return framed("chyba", [`Nic nezapsáno — ${path}: ${result.error}.`], "error");
 	await $.fs.write(path, result.text);
 	await update($, memoryChangedAtom, () => true);
 	const wanted = target === "on";
@@ -95,19 +111,18 @@ async function runMemory($: $, words: string[]): Promise<string> {
 	const word = (enabled: boolean) => (enabled ? "zapnuto" : "vypnuto");
 	if (state.enabled !== wanted) {
 		const winner = { lokální: p.local, projekt: p.project, globální: p.global ?? "", výchozí: "" }[state.source];
-		return [`Zapsáno ${word(wanted)} do ${path}, ale platí ${word(state.enabled)} — přebíjí to ${state.source} (${winner})`, verdict(state)].join("\n");
+		return framed("paměť Claude · přebito", [`Zapsáno ${word(wanted)} do ${path}, ale platí ${word(state.enabled)} — přebíjí to ${state.source} (${winner})`, verdict(state)], "warning");
 	}
-	return [`Automatická paměť Claude: ${wanted ? "zapnuta" : "vypnuta"} → ${path}`, verdict(state)].join("\n");
+	return framed(`paměť Claude · ${wanted ? "zapnuta" : "vypnuta"}`, [`Automatická paměť Claude: ${wanted ? "zapnuta" : "vypnuta"} → ${path}`, verdict(state)], "success");
 }
 
 export function registerMemoryGuard(on: On): void {
 	on("command.run", { command: COMMAND }, async ($, e, next) => {
 		const [sub, ...rest] = e.args.trim().split(/\s+/).filter(Boolean);
 		if (sub !== "claude-memory") return next(e);
-		const output = (await runMemory($, rest)).trimEnd();
-		const [summary = "", ...more] = output.split("\n");
-		if (more.length > 0) await update($, commandOutputsAtom, (o) => capOutputs({ ...o, [summary]: output }));
-		return { text: summary };
+		const { text, out } = await runMemory($, rest);
+		if (out) await update($, commandOutputsAtom, (o) => capOutputs({ ...o, [text]: out }));
+		return { text };
 	});
 
 	on("ui.render", { component: "PromptHint" }, async ($, e, next) => {
@@ -118,11 +133,11 @@ export function registerMemoryGuard(on: On): void {
 	});
 }
 
-function capOutputs(record: Record<string, string>): Record<string, string> {
+function capOutputs(record: Outputs): Outputs {
 	const keys = Object.keys(record);
 	if (keys.length <= MAX_OUTPUTS) return record;
-	const next: Record<string, string> = {};
-	for (const key of keys.slice(keys.length - MAX_OUTPUTS)) next[key] = record[key] as string;
+	const next: Outputs = {};
+	for (const key of keys.slice(keys.length - MAX_OUTPUTS)) next[key] = record[key] as Out;
 	return next;
 }
 

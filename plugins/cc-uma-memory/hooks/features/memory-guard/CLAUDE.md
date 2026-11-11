@@ -20,7 +20,7 @@ Příkaz `/uma` (registrace, nápověda, kreslení víceřádkového výstupu, d
 ## Kontrakt
 
 - **Čte:** `commandOutputs`, `memoryState`, `memoryChanged`, `debtState` (jen `blocking`), `stagingState` (jen `pending`).
-- **Píše:** `commandOutputs` (nejvýš 20 záznamů; kreslí je `uma-command`), `memoryState` (při startu a po každé změně příkazem), `memoryChanged` (po první změně v sezení).
+- **Píše:** `commandOutputs` (data `{ title, tone, fields?, lines? }`, tvar v `types/index.d.ts`; nejvýš 20 záznamů; kreslí je `uma-command`, neimportuje se), `memoryState` (při startu a po každé změně příkazem), `memoryChanged` (po první změně v sezení).
 - **Soubory:** jen přes `$.fs`: `~/.claude/settings.json`, `<cwd>/.claude/settings.json` (jen čte), `<cwd>/.claude/settings.local.json`.
 
 ## Nepatří sem
@@ -36,7 +36,7 @@ Příkaz `/uma` (registrace, nápověda, kreslení víceřádkového výstupu, d
 ## Pasti
 
 - Systémový prompt se staví při startu, proto změna platí od příštího sezení; štítek to říká ` ↻` (`memoryChanged`).
-- Text pluginového příkazu jde do požadavků modelu, proto dostane jen první řádek; dva výstupy se stejnou první řádkou se v `commandOutputs` přepíšou.
+- Text pluginového příkazu jde do požadavků modelu, proto dostane jen první řádek; dva výstupy se stejnou první řádkou se v `commandOutputs` přepíšou. Stav je pole `stav` s `warning` (zapnutá paměť Claude zapisuje mimo UMA), změna je rámeček `success`, přebití jinou vrstvou `warning`, chyba `error`.
 - Řádek nápovědy a doplňování pro `claude-memory` žijí v `uma-command` — změníš-li argumenty, změň je tam taky.
 - Atomy (`commandOutputs`, `memoryState`, `memoryChanged`) se deklarují v každém souboru, který je čte; klíč a výchozí hodnota se musí shodovat.
 - Nevalidní JSON v cílovém souboru = nic se nezapíše; ve čtených vrstvách se bere jako nedefinováno.

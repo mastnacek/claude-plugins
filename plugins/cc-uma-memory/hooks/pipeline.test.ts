@@ -74,3 +74,33 @@ test("a write overridden by another layer says so in the first line", async ($, 
 	expect(text).toContain("platí zapnuto");
 	expect(text).toContain("/work/.claude/settings.local.json");
 });
+
+test("/uma claude-memory is drawn: a status frame with the three paths, a success frame after a change", async ($, on) => {
+	mock.store(on);
+	mock.env(on, { HOME: "/home/t" });
+	const files = new Map<string, string>();
+	on("fs.exists", (_$, e) => ({ value: files.has(e.path) }));
+	on("fs.read", (_$, e) => ({ value: files.get(e.path) ?? "" }));
+	on("fs.write", (_$, e) => {
+		files.set(e.path, e.text);
+		return { value: undefined };
+	});
+	on("session.cwd", () => ({ value: "/work" }));
+	on("session.start", (_$, e) => ({ cwd: e.cwd }));
+	on("command.register", () => ({ value: { command: "uma" } }));
+	on("ui.log", () => ({ value: undefined }));
+	on("ui.status", () => ({ value: undefined }));
+	await $.session.start({ cwd: "/work", surface: "terminal", isInteractive: true });
+	const draw = async (args: string) => {
+		const { text } = (await $.command.run({ command: "uma", args, origin: { kind: "composer" }, presentation: { isFullscreen: false, columns: 80 } })) as { text: string };
+		return $.ui.mount({ plugin: "cc-uma-memory", surface: "terminal", component: "CommandOutput", props: { command: "uma", isErrored: false, text } } as never);
+	};
+	const status = await draw("claude-memory");
+	expect((await status.find({ type: "Box" }))?.props).toMatchObject({ borderStyle: "round", borderColor: "claude" });
+	expect(await status.find({ type: "Text", text: /🧠 UMA · automatická paměť Claude/ })).toBeDefined();
+	expect(await status.find({ type: "Text", text: "/work/.claude/settings.local.json" })).toBeDefined();
+	const changed = await draw("claude-memory off");
+	expect((await changed.find({ type: "Box" }))?.props.borderColor).toBe("success");
+	const bad = await draw("claude-memory maybe");
+	expect((await bad.find({ type: "Box" }))?.props.borderColor).toBe("warning");
+});

@@ -3,10 +3,29 @@
 // holds the module to this list.
 
 declare module "claude-code" {
+	/** One /uma output as data. */
+	type UmaOutput = {
+		/** After `🧠 UMA · ` in the header. */
+		title: string;
+		/** The frame: normal = the plugin's colour, else error / warning / success. */
+		tone: "normal" | "error" | "warning" | "success";
+		/** Label → value rows (settings, doctor checks, help commands); a `tone` marks the label with a status icon; `hint` is a dim line under it. */
+		fields?: Array<{ label: string; value: string; tone?: "error" | "warning" | "success" | "dim"; hint?: string }>;
+		/** Numbered entries (facts, drafts, debts); `type` is the coloured label, `score` is shown after ⚖, `lines` are the dim detail lines. */
+		items?: Array<{ title: string; type?: string; scope?: string; id?: string; tags?: string[]; score?: string; badge?: { text: string; tone?: "error" | "warning" | "success" | "dim" }; lines?: string[] }>;
+		/** Free lines (a sentence, a body, a note). */
+		lines?: Array<{ text: string; tone?: "error" | "warning" | "success" | "dim" }>;
+	};
+
 	interface PluginState {
 		"cc-uma-memory": {
-			/** A /uma output's first line (what the model reads) → the whole output, drawn in its row. */
-			commandOutputs: Record<string, string>;
+			/**
+			 * A /uma output's first line (what the model reads) → the whole output as data, which `uma-command` draws in its row
+			 * (round frame, header `🧠 UMA · title`, colours by meaning). Written by uma-command, memory-guard, staging and immune;
+			 * order of drawing: `fields`, `items`, `lines`. A `tone` of a field, item, badge or line is the colour from the data
+			 * (a state, a severity); without it the drawer decides from the text itself (`classify`). An older stored shape reads as {}.
+			 */
+			commandOutputs: Shaped<Record<string, UmaOutput>>;
 			/** Effective autoMemoryEnabled and the layer that decides it; null until computed at start. */
 			memoryState: { enabled: boolean; source: "globální" | "projekt" | "lokální" | "výchozí" } | null;
 			/** True once /uma claude-memory changed autoMemoryEnabled in this session (it takes effect next session). */

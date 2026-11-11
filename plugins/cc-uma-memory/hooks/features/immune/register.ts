@@ -16,12 +16,12 @@
 // may be hooked once per plugin and write-gate owns it; a matched hook may be
 // had by every slice.
 
-import type { EngineInterface, On } from "claude-code";
-import { atom, read } from "claude-code";
+import type { EngineInterface, On, PluginState, ShapedValue } from "claude-code";
+import { atom, read, update } from "claude-code";
 import { complete } from "../../shared/openrouter";
 import { applicableRules, breachOf, outcomeOfScan, patternBlindSpot, ruleYaml, scanArgv, languageOf } from "./contracts";
 import type { ContractBreach, ContractRule } from "./contracts";
-import { LOG_KEY, appended, parseLog, statsText, summarize } from "./log";
+import { LOG_KEY, appended, parseLog, statsOut, statsText, summarize } from "./log";
 import { BLOCK, DIALOG_TITLE, NO_UI_REASON, PAIN_ARGV, PROCEED, RULES_ARGV, RULE_FACT_TYPES, assessEdit, decideAction, extractEdit, matchRule, oneLine, parsePain, parseRules, worthDialog } from "./policy";
 import type { Edit, Mode, PainVerdict, RuleL1 } from "./policy";
 import { DEFAULT_MODEL, RECOMMENDATION_TIMEOUT_MS, buildPrompt, formatRecommendation, parseRecommendation } from "./recommendation";
@@ -33,6 +33,8 @@ const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const,
 type $ = EngineInterface;
 
 /** Per check: a warning that costs 5 seconds is worse than none. */
+const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as ShapedValue<PluginState["cc-uma-memory"]["commandOutputs"]>, { shape: "output-2" });
+const MAX_OUTPUTS = 20;
 const CHECK_TIMEOUT_MS = 5000;
 const SCAN_TIMEOUT_MS = 10_000;
 const PLASTICITY_TIMEOUT_MS = 3000;
@@ -208,6 +210,10 @@ export function registerImmune(on: On): void {
 	// `/uma immune stats`; the switches (`immune`, `immune-model`) are uma-command's.
 	on("command.run", { command: "uma" }, async ($, e, next) => {
 		if (!/^\s*immune\s+stats\s*$/.test(e.args)) return next(e);
-		return { text: statsText(summarize(parseLog(await $.store.get(LOG_KEY)))) };
+		const summary = summarize(parseLog(await $.store.get(LOG_KEY)));
+		const text = statsText(summary);
+		const out = statsOut(summary);
+		await update($, commandOutputsAtom, (o) => ({ ...Object.fromEntries(Object.entries(o).slice(-(MAX_OUTPUTS - 1))), [text]: out }));
+		return { text };
 	});
 }

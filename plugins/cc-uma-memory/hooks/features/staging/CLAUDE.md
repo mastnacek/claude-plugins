@@ -13,9 +13,9 @@ Kdyby zmizel, koncepty by se hromadily a šly schválit jen ručním `uma stagin
   - Schválit = `uma staging approve <id>` (`--title=…` / `--body=…` jen u změněných polí, `=` kvůli hodnotě začínající pomlčkou); zamítnout = `uma staging discard <id>`. Chyba motoru → řádek logu, koncept zůstává, počítá se jako „selhalo“.
   - Zavřený dialog, `-p` (nemá kdo odpovědět) i text napsaný pod „Other“ **přeruší** kontrolu; nic dalšího se nerozhodne.
   - Výsledek: jeden řádek „Kontrola konceptů dokončena: N schváleno, N zahozeno, N ponecháno.“
-- `/uma staging list` (výpis konceptů), `show <id>` (celý koncept), `discard <id>`; jiný argument = použití. Víceřádkový výstup jde do `commandOutputs` (kreslí `uma-command`), modelu jen první řádek. ID se kontroluje (ULID), aby se do argv nedostal přepínač.
+- `/uma staging list` (výpis konceptů), `show <id>` (celý koncept), `discard <id>`; jiný argument = použití. Výstup jde jako data (`listResult`, `showResult`, `sentence`: položky s typem, rozsahem, ID, tagy, jistotou) do `commandOutputs` (kreslí `uma-command`), modelu jen první řádek; souhrn `/uma review` je věta v rámečku `success` / `warning` (přerušeno nebo selhání), chyby `error`. ID se kontroluje (ULID), aby se do argv nedostal přepínač.
 - Štítek ` 📝N` pod promptem, když N > 0: počet `*.json` v `<cwd>/.uma/.staging/` (`$.fs.list`, bez procesu) se čte při startu sezení, po každém `/uma review` a `/uma staging …` a na konci každého odpovězeného tahu hlavního agenta (`turn.complete {reason: "answer"}`). Štítek kreslí `memory-guard`.
-- `policy.ts` — čistá logika: argv volání, čtení výpisu, `proposalOf`, `questionOf`, texty příkazů.
+- `policy.ts` — čistá logika: argv volání, čtení výpisu, `proposalOf`, `questionOf`, data výstupů příkazů (`Result` = řádek pro model + `Out`).
 
 ## Kontrakt
 

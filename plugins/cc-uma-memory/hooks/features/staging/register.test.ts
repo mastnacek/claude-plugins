@@ -104,6 +104,22 @@ test("/uma staging list | show | discard, and bad arguments run nothing", async 
 	expect(mutating(seen.argv)).toHaveLength(before);
 });
 
+test("/uma staging list is drawn: round frame, header, typed label, id, tags and the confidence; discard succeeds in green", async ($, on) => {
+	setup(on);
+	await $.session.start({ cwd: "/w", surface: "terminal", isInteractive: true } as never);
+	const listed = (await run($, "staging list")).text as string;
+	const mounted = await $.ui.mount({ plugin: "cc-uma-memory", surface: "terminal", component: "CommandOutput", props: { command: "uma", isErrored: false, text: listed } } as never);
+	expect((await mounted.find({ type: "Box" }))?.props).toMatchObject({ borderStyle: "round", borderColor: "claude" });
+	expect((await mounted.find({ type: "Text", text: /🧠 UMA · koncepty · 2 čeká na \/uma review/ }))?.props.bold).toBe(true);
+	expect((await mounted.findAll({ type: "Text", text: /^📋 preference$/ })).at(-1)?.props.color).toBe("suggestion");
+	expect(await mounted.find({ type: "Text", text: "🆔 01AAAAAAAAAAAAAAAAAAAAAAAA" })).toBeDefined();
+	expect(await mounted.find({ type: "Text", text: /🏷️ +t$/ })).toBeDefined();
+	const done = (await run($, "staging discard 01AAAAAAAAAAAAAAAAAAAAAAAA")).text as string;
+	const row = await $.ui.mount({ plugin: "cc-uma-memory", surface: "terminal", component: "CommandOutput", props: { command: "uma", isErrored: false, text: done } } as never);
+	expect((await row.find({ type: "Box" }))?.props.borderColor).toBe("success");
+	expect((await row.findAll({ type: "Text", text: /^✅ Discarded draft/ })).at(-1)?.props.color).toBe("success");
+});
+
 test("the label: ' 📝N' under the prompt while N drafts wait, gone at zero", async ($, on) => {
 	const seen = setup(on, { waiting: 2 });
 	let tail: string | undefined;

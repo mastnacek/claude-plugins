@@ -23,7 +23,7 @@ Kdyby zmizel, pravidla a bolest souborů by model viděl jen v textu system prom
 ## Kontrakt
 
 - **Čte:** `settings` (`immune`, `immuneModel`).
-- **Píše:** jen `$.store` klíč `immuneLog` (jediný zapisovatel); do `$.state` nic.
+- **Píše:** `$.store` klíč `immuneLog` (jediný zapisovatel); do `$.state` jen `commandOutputs` (data `/uma immune stats` z `statsOut`, kreslí `uma-command`).
 - **Procesy:** `uma risk pain`, `uma list --json --type …`, `uma plasticity …`, `ast-grep scan` (z `PATH`, jinak kopie z `~/.pi/agent/npm/node_modules/@ast-grep/…`).
 - **Síť:** jen `shared/openrouter` (`$.http.fetch`); klíč `OPENROUTER_API_KEY` nebo `~/.pi/agent/auth.json`, nikdy se nelogují ani nevypisují.
 

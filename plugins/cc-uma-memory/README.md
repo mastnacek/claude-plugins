@@ -86,7 +86,7 @@ Writes are approved by the write gate (see above). Claude Code's own MCP permiss
 - `/uma review` — go through the staged drafts one by one (approve / edit / skip / reject).
 - `/uma staging list`, `show <id>`, `discard <id>` — look at the drafts or throw one away.
 - `/uma immune-model [<openrouter-id>|default]` — show or set the OpenRouter model of the dialog's recommendation (default `google/gemini-3.5-flash-lite`).
-- `/uma search <query>`, `/uma list [global|<project>]`, `/uma read <id>`, `/uma timeline [--id <ULID>] [--all]`, `/uma doctor` — look into the memory. The full listing is shown to you; the model gets only a one-line summary. They read only.
+- `/uma search <query>`, `/uma list [global|<project>]`, `/uma read <id>`, `/uma timeline [--id <ULID>] [--all]`, `/uma doctor` — look into the memory. The full listing is shown to you; the model gets only a one-line summary. They read only. Results are drawn in a rounded frame (bold `🧠 UMA` header, coloured fact-type labels, dim IDs/paths/tags, ✅/⚠️/❌ by meaning); errors get a red frame. The model never sees the drawing.
 - `/uma reindex` — rebuild the search index (`uma search "" --reindex`).
 - `/uma export --out <folder>` — write the facts as an OKF bundle (one Markdown document per fact) into the folder; memory is not changed.
 - `/uma debt [list|clear]` — `list` (default) shows every debt of this working tree, open and settled, to you (the model gets a one-line summary); `clear` deletes them all. `clear` is your action: it runs `uma debt clear` directly, and a shell `uma debt clear` from the model asks for your approval (`add`, `settle`, `list`, `check` do not).

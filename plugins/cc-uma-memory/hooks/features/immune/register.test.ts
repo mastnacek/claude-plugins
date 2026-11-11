@@ -336,5 +336,10 @@ test("/uma immune: report, switch, persisted; stats read the decision log", asyn
 	expect((await run($, "immune stats")).text).toContain("Zatím žádná");
 	await write($, "/w/src/a.ts", TOUCHING);
 	expect((await run($, "immune stats")).text).toContain("1 celkem · doporučeno Ano: 1 (schválil jsi 1)");
+	// The person sees the same numbers as framed rows (drawn by uma-command from commandOutputs).
+	const stats = (await run($, "immune stats")).text as string;
+	const mounted = await $.ui.mount({ plugin: "cc-uma-memory", surface: "terminal", component: "CommandOutput", props: { command: "uma", isErrored: false, text: stats } } as never);
+	expect((await mounted.find({ type: "Box" }))?.props).toMatchObject({ borderStyle: "round", borderColor: "claude" });
+	expect(await mounted.find({ type: "Text", text: /doporučeno Ano/ })).toBeDefined();
 	expect((await run($, "immune-model nonsense")).text).toContain("Neplatné ID modelu");
 });

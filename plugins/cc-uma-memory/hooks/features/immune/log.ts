@@ -3,7 +3,10 @@
 // (key "immuneLog"), never in memory facts. Evidence for tuning the mode:
 // "do I just approve whatever is recommended?"
 
+import type { PluginState, ShapedValue } from "claude-code";
 import type { Relation } from "./recommendation";
+
+type Out = ShapedValue<PluginState["cc-uma-memory"]["commandOutputs"]>[string];
 
 export type Decision = { ts: string; ruleId?: string; relation?: Relation; confidence?: number; approved: boolean };
 
@@ -42,4 +45,19 @@ export function summarize(log: Decision[]): Summary {
 export function statsText(s: Summary): string {
 	if (s.total === 0) return "🛡️ Zatím žádná zaznamenaná rozhodnutí — log se plní, jak odpovídáš na souhlasové dialogy.";
 	return `🛡️ Rozhodnutí interceptoru: ${s.total} celkem · doporučeno Ano: ${s.yesRecommended} (schválil jsi ${s.yesApproved}) · doporučeno Ne: ${s.noRecommended} (zablokoval jsi ${s.noBlocked}) — pokud doporučení vždy přijímáš, /uma immune warn odstraní dialogy.`;
+}
+
+/** The same statistics as data for the person (uma-command draws it); the model keeps `statsText`. */
+export function statsOut(s: Summary): Out {
+	if (s.total === 0) return { title: "imunita · statistika", tone: "normal", lines: [{ text: "Zatím žádná zaznamenaná rozhodnutí — log se plní, jak odpovídáš na souhlasové dialogy." }] };
+	return {
+		title: `imunita · statistika · ${s.total} rozhodnutí`,
+		tone: "normal",
+		fields: [
+			{ label: "rozhodnutí celkem", value: String(s.total) },
+			{ label: "doporučeno Ano", value: `${s.yesRecommended} (schválil jsi ${s.yesApproved})` },
+			{ label: "doporučeno Ne", value: `${s.noRecommended} (zablokoval jsi ${s.noBlocked})` },
+		],
+		lines: [{ text: "Pokud doporučení vždy přijímáš, /uma immune warn odstraní dialogy.", tone: "dim" }],
+	};
 }
