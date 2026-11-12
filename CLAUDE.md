@@ -48,8 +48,10 @@ pi rozšíření podle `docs/port-z-pi.md`.
 
 Sezení, se kterým mluví uživatel, je jediné, kdo commituje a pushuje.
 Agenti (programátor, tester) změny nechávají v pracovním stromu a zprávu
-commitu jen navrhují; projektový hook jim `git commit`/`git push` zamítne
+commitu jen navrhují; projektový hook jim `git commit`/`git push` i úklid
+(`git worktree remove`, `git branch -d`) zamítne
 (`.claude/hooks/orchestrator-only-git.sh`, role z `scripts/agent.sh`).
+Úklid sloučených worktree a větví povoluje uživatelské nastavení.
 
 ## Brána
 
