@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.14.2
 
 ### Fixed
 - Recall: after a compaction the already-inserted facts are forgotten, so they can be inserted again (the context that held them is gone).
-- Recall: a prompt with Czech diacritics is searched with `--judge jev-relevance --semantic-fallback`, because the order against the translation plugin is not guaranteed.
+- Recall: a prompt with Czech diacritics is searched with `--judge jev-relevance --semantic-fallback`, as a safeguard for a prompt that skipped translation (with the plugins installed, translation runs first and recall gets English); the timeout for it is 8 s.
 
 ### Added
 - `UMA_RECALL_DEBUG=1` logs the first 60 characters recall is asked with.
