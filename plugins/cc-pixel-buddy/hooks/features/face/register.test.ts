@@ -43,6 +43,36 @@ test("the strip yields to a survey, and draws nothing before the first mood", as
 	await ui.unmount();
 });
 
+test("the strip shows from the start with the default mood, framed to the band's width", async ($, on) => {
+	setup(on, fresh());
+	await start($);
+	const ui = await mount($, "AbovePrompt", band({ bodyColumns: 60 }));
+	expect((await ui.find({ type: "Box" } as never))?.props).toMatchObject({ borderStyle: "round", width: 60 });
+	expect(await ui.find({ type: "Text", text: /^\[•_•\] 🙂 v klidu$/ } as never)).toBeDefined();
+	await ui.unmount();
+});
+
+test("a band under 3 rows gets one bare row, no frame", async ($, on) => {
+	setup(on, fresh());
+	await start($);
+	for (const maxRows of [1, 2]) {
+		const ui = await mount($, "AbovePrompt", band({ maxRows }));
+		expect(await ui.find({ type: "Box" } as never)).toBeUndefined();
+		expect(await ui.find({ type: "Text", text: /^\[•_•\] 🙂 v klidu$/ } as never)).toBeDefined();
+		await ui.unmount();
+	}
+});
+
+test("a narrow panel drops the big head and truncates its rows", async ($, on) => {
+	setup(on, fresh());
+	await start($);
+	const ui = await mount($, "Pane", { ...PANE, bodyColumns: 16 }, "buddy");
+	expect((await ui.find({ type: "Box" } as never))?.props).toMatchObject({ width: 16 });
+	expect(await ui.find({ type: "Text", text: big("neutral")[0] } as never)).toBeUndefined();
+	expect((await ui.find({ type: "Text", text: /tahy 0/ } as never))?.props).toMatchObject({ wrap: "truncate-end" });
+	await ui.unmount();
+});
+
 test("the panel: big head, mood, today's numbers, the hint", async ($, on) => {
 	setup(on, fresh());
 	await start($);

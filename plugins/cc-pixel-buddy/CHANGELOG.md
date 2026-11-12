@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- The strip above the prompt was invisible when the band had fewer than 3 rows (only `↓ n more` showed): it now draws
+  one bare row there. Its frame is as wide as the band instead of shrinking to the text.
+- The `/buddy open` panel fits its width: rows are truncated and the big head is left out when the panel is narrow.
+
 ## 0.1.0
 
 ### Added

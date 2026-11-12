@@ -15,6 +15,9 @@ const mutedAtom = atom({ plugin: "cc-pixel-buddy", key: "muted" } as const, fals
 
 export const PANE = "buddy";
 
+/** The big head (13 columns) plus the panel's own frame and padding (4); narrower, it is left out. */
+const BIG_FITS = 17;
+
 const COLOR: Record<Tone, string | undefined> = { normal: "claude", success: "success", warning: "warning", error: "error", dim: undefined };
 
 /** Today's numbers as rows of the panel (command draws the same in its card). */
@@ -35,12 +38,18 @@ export function registerFace(on: On): void {
 		const hint = (await read($, mutedAtom)) ? null : await read($, hintAtom);
 		const stats = await read($, statsAtom);
 		const { Box, Text } = $.ui.resolve(e);
+		const line = (
+			<Text wrap="truncate-end">
+				<Text bold color={COLOR[mood.tone]}>{`${mini(mood.face)} ${mood.emoji} ${mood.label}`}</Text>
+				{hint ? <Text color={hint.tone}>{` · ${hint.text}`}</Text> : <Text dimColor>{` · dnes ${stats.turns} tahů`}</Text>}
+			</Text>
+		);
+		// A tree taller than `maxRows` scrolls in a window one row short of it, so a
+		// 3-row frame in a 2-row band shows nothing but "↓ n more": one bare row then.
+		if (e.props.maxRows < 3) return line;
 		return (
-			<Box borderStyle="round" borderColor={COLOR[mood.tone]} paddingX={1}>
-				<Text wrap="truncate-end">
-					<Text bold color={COLOR[mood.tone]}>{`${mini(mood.face)} ${mood.emoji} ${mood.label}`}</Text>
-					{hint ? <Text color={hint.tone}>{` · ${hint.text}`}</Text> : <Text dimColor>{` · dnes ${stats.turns} tahů`}</Text>}
-				</Text>
+			<Box borderStyle="round" borderColor={COLOR[mood.tone]} paddingX={1} width={e.props.bodyColumns}>
+				{line}
 			</Box>
 		);
 	});
@@ -52,21 +61,23 @@ export function registerFace(on: On): void {
 		const stats = await read($, statsAtom);
 		const { Box, Text } = $.ui.resolve(e);
 		return (
-			<Box borderStyle="round" borderColor={COLOR[mood.tone]} flexDirection="column" paddingX={1}>
-				<Text bold>🖥 Buddy</Text>
+			<Box borderStyle="round" borderColor={COLOR[mood.tone]} flexDirection="column" paddingX={1} width={e.props.bodyColumns}>
+				<Text bold wrap="truncate-end">🖥 Buddy</Text>
+				{e.props.bodyColumns >= BIG_FITS ? (
+					<Box flexDirection="column" marginTop={1}>
+						{big(mood.face).map((row, i) => (
+							<Text key={`h${i}`} color={COLOR[mood.tone]}>{row}</Text>
+						))}
+					</Box>
+				) : null}
+				<Text bold wrap="truncate-end">{`${mood.emoji} ${mood.label}`}</Text>
 				<Box flexDirection="column" marginTop={1}>
-					{big(mood.face).map((row, i) => (
-						<Text key={`h${i}`} color={COLOR[mood.tone]}>{row}</Text>
-					))}
-				</Box>
-				<Text bold>{`${mood.emoji} ${mood.label}`}</Text>
-				<Box flexDirection="column" marginTop={1}>
-					<Text dimColor>{`📅 dnes ${stats.day}`}</Text>
+					<Text dimColor wrap="truncate-end">{`📅 dnes ${stats.day}`}</Text>
 					{statRows(stats).map((row, i) => (
-						<Text key={`s${i}`}>{row}</Text>
+						<Text key={`s${i}`} wrap="truncate-end">{row}</Text>
 					))}
 				</Box>
-				{hint ? <Text color={hint.tone}>{`💬 ${hint.text}`}</Text> : null}
+				{hint ? <Text color={hint.tone} wrap="truncate-end">{`💬 ${hint.text}`}</Text> : null}
 			</Box>
 		);
 	});
