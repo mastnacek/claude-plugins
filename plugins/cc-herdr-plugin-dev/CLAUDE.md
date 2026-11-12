@@ -36,4 +36,24 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 
 ## Řezy
 
-<!-- Jeden řádek na řez: název — co dělá jednou větou. -->
+Plugin pomáhá psát herdr pluginy (`herdr-plugin.toml`, herdr 0.9.5). Skill `herdr-plugin-dev` s offline dokumentací
+je **data** v `skills/herdr-plugin-dev/` (engine ho najde sám, v `plugin.json` není); řezy mu dodávají nástroje a brány.
+**Brány platí jen uvnitř herdr projektu** (předek souboru, nebo cwd sezení, obsahuje `herdr-plugin.toml`); jinde plugin
+nic nezamítá a nic nepřidává do kontextu.
+
+- `scaffold` — nástroj `herdr_scaffold_plugin`: kostra pluginu v Rustu / TypeScriptu / Bashi (nepřepíše existující manifest).
+- `manifest` — nástroj `herdr_validate_manifest`: kontrola `herdr-plugin.toml` podle pravidel herdru.
+- `command` — `/herdr-plugin scaffold | validate | docs` s doplňováním a výstupem v rámečku.
+- `docs-gate` — Edit/Write zdrojáku v herdr projektu se zamítne, dokud sezení nečetlo skill / `references/`; sekce v system promptu.
+- `line-limit` — zdrojový soubor v herdr projektu nad 400 řádků je chyba (od 300 varování).
+
+`hooks/shared/` nese hluboké moduly: `toml` + `manifest` (čtečka a pravidla manifestu), `scaffold` (soubory kostry),
+`actions` (zápis kostry a čtení manifestu přes `$.fs` — používá je nástroj i příkaz), `project` (poznání herdr projektu a zdrojáků).
+`world.ts` je jen pro testy. `session.start` hookuje kořen a volá `startXxx($)` řezů.
+
+## Pasti
+
+- **Typy pro `tsc`** (`.claude-plugin/types/`) vznikají jen při interaktivním načtení pluginu enginem
+  (`claude --plugin-dir .` v terminálu); `claude -p` je nevytvoří. Bez nich `tsc` hlásí `Cannot find module 'claude-code'`.
+- **Brána `docs-gate` se hookuje první** (kořen), aby zamítnutá úprava nedošla k `line-limit`.
+- **Zdroják vs. dokument:** brány hlídají jen přípony zdrojáků (`.rs`, `.ts`, `.sh`, …); `.md`, `.toml`, `.json` a `node_modules`/`target`/`dist` jsou mimo.
