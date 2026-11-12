@@ -8,7 +8,7 @@ skrytý kontext. Kdyby zmizel, paměť zůstane dostupná jen přes nástroje MC
 
 ## Co dělá
 
-- `prompt.submit` (`register.ts`) — není-li prompt příkaz (`/…`, `e.command`, `e.isMeta`), pochází-li od uživatele a je-li `settings.recall` zapnuto, spustí `uma recall check --judge jev --max 3 --json [--exclude ID]… -- <prompt>` přes `$.process.run` (cwd sezení, timeout 3 s) a vrátí `next({ ...e, context: [...e.context, text] })`.
+- `prompt.submit` (`register.ts`) — není-li prompt příkaz (`/…`, `e.command`, `e.isMeta`), pochází-li od uživatele a je-li `settings.recall` zapnuto, spustí `uma recall check --judge jev [--semantic-fallback] --max 3 --json [--exclude ID]… -- <prompt>` přes `$.process.run` (cwd sezení, timeout 3 s; s diakritikou 8 s — sémantické hledání trvá 1,7–3,6 s) a vrátí `next({ ...e, context: [...e.context, text] })`.
 - `policy.ts` — čistá logika: `recallArgv`, `parseVerdict`, `buildRecallContext` (hlavička + `- [typ] titulek (scope): úryvek`, bez značek `[match]`), `factCount` (český plurál).
 - Po vložení zapíše `recordContext` (`shared/audit`) událost `{kind:"uma-context", source:"recall", factIds, scope:"prompt"}` do sidecaru `….uma.jsonl` (sdílený kontrakt souboru s `cc-agent-watchdog`, viz `shared/audit.ts` a README). Jen ID, žádný obsah; chyba zápisu prompt neovlivní.
 - Vložení ukáže jeden řádek `$.ui.log` (`🧠 recall: 2 fakta`); bez nálezu je ticho.
@@ -25,7 +25,7 @@ skrytý kontext. Kdyby zmizel, paměť zůstane dostupná jen přes nástroje MC
 |---|---|
 | zapnutí a vypnutí (`/uma recall`) | `uma-command` |
 | zápis do paměti, schvalování | `write-gate` (a MCP server `uma`) |
-| bilingvní dotaz z překladu promptu | zahozeno — pluginy spolu nemluví |
+| bilingvní dotaz (`--alt-prompt`) z překladu promptu | zahozeno — pluginy spolu nemluví; místo něj `--semantic-fallback` pro prompt s diakritikou |
 | zesílení faktu po vložení (`plasticity reinforce` z pi) | zahozeno — recall je jen čtení |
 
 ## Pasti
@@ -33,5 +33,7 @@ skrytý kontext. Kdyby zmizel, paměť zůstane dostupná jen přes nástroje MC
 - **Recall je poradní.** Chyba, timeout, chybějící binárka, nečitelná odpověď → prompt projde beze změny; hlásí se jednou za sérii chyb (`failing`), ne při každém promptu.
 - cwd musí být cwd sezení: engine podle git rootu omezuje recall na projekt; z cizího adresáře by se vzpomínky jiných projektů dostaly do tohoto.
 - `--` před promptem je nutné: prompt začínající pomlčkou by engine bral za přepínač. Prompt se ořezává na 2000 znaků.
-- Atom `recallSession` drží ID podle `$.session.id()`: nové sezení začíná s prázdným seznamem. Po `/compact` se ID drží dál, i když původní kontext zmizel (fakt se v tom sezení znovu nevloží) — případný reset by patřil na událost kompakce.
+- Atom `recallSession` drží ID podle `$.session.id()`: nové sezení začíná s prázdným seznamem. Hook `session.compact` po úspěšné kompakci hlavního vlákna (`await next(e)` vrátí `messages`; ne `precompute`, ne subagent s `agentId`, ne `skip`) vyprázdní `ids` — kontext je pryč, fakt se může vložit znovu (jako `session_compact` v pi).
+- **Pořadí vůči `cc-prompt-translate` — ověřeno naživo 2026-11-11.** S **nainstalovanými** pluginy běží překlad dřív a recall dostává **anglický překlad**: český prompt „Ukládají se fakta UMA anglicky…“ vložil fakt, který česky (`--judge jev`) nenajde. Vývojová kopie z `--plugin-dir` ale stojí v řetězu nad nainstalovanými a dostane český originál — test pořadí dělej jen s nainstalovanými pluginy. Typy pořadí dvou pluginů uvnitř vrstvy `user` nespecifikují (jen vrstvy `prepend`, `user`, `append`, `builtin`, `core`); `enabledPlugins` i registr instalace mají překlad před `cc-uma-memory`. Za běhu text dotazu ukáže `UMA_RECALL_DEBUG=1` (env): `$.ui.log` s prvními 60 znaky.
+- Pojistka pro prompt, který překladem neprošel (překlad vypnutý, selhal, vývojová kopie): s českou diakritikou (`áčďéěíňóřšťúůýž`) jde jako `--judge jev-relevance --semantic-fallback` (pi to dělá, když překlad chybí); anglický beze změny (`--judge jev`).
 - Příkazy a prompty bez uživatelského původu (notifikace, peer, plugin) se přeskakují; test bez `origin` se bere jako uživatel.
