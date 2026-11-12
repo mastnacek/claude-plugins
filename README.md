@@ -10,6 +10,7 @@ Claude Code plugins by mastnacek, in one marketplace.
 /plugin install cc-reverse-spec@mastnacek
 /plugin install cc-agent-watchdog@mastnacek
 /plugin install cc-pixel-buddy@mastnacek
+/plugin install cc-herdr-plugin-dev@mastnacek
 ```
 
 | Plugin | What it does |
@@ -20,6 +21,7 @@ Claude Code plugins by mastnacek, in one marketplace.
 | [cc-reverse-spec](plugins/cc-reverse-spec) | Reverse-engineers a verifiable spec (rules, tests, traceability) from an existing codebase so it can be rebuilt with proven parity. |
 | [cc-agent-watchdog](plugins/cc-agent-watchdog) | Watchdog pro agenty: deník volání nástrojů, pravidla a skóre programátora a testera |
 | [cc-pixel-buddy](plugins/cc-pixel-buddy) | Pixelová počítačová hlavička vedle chatu: nálada podle práce, užitečné hlášky a statistiky dne |
+| [cc-herdr-plugin-dev](plugins/cc-herdr-plugin-dev) | Psaní herdr pluginů: skill s dokumentací, kostra, validace manifestu a brány před úpravou |
 
 Each plugin lives in `plugins/<name>/` with its own README, tests and version.
 

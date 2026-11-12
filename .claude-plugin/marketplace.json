@@ -34,6 +34,11 @@
       "name": "cc-pixel-buddy",
       "source": "./plugins/cc-pixel-buddy",
       "description": "Pixelová počítačová hlavička vedle chatu: nálada podle práce, užitečné hlášky a statistiky dne"
+    },
+    {
+      "name": "cc-herdr-plugin-dev",
+      "source": "./plugins/cc-herdr-plugin-dev",
+      "description": "Psaní herdr pluginů: skill s dokumentací, kostra, validace manifestu a brány před úpravou"
     }
   ]
 }
