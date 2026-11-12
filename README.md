@@ -9,6 +9,7 @@ Claude Code plugins by mastnacek, in one marketplace.
 /plugin install cc-theme-switcher@mastnacek
 /plugin install cc-reverse-spec@mastnacek
 /plugin install cc-agent-watchdog@mastnacek
+/plugin install cc-pixel-buddy@mastnacek
 ```
 
 | Plugin | What it does |
@@ -18,6 +19,7 @@ Claude Code plugins by mastnacek, in one marketplace.
 | [cc-theme-switcher](plugins/cc-theme-switcher) | Rotates the Claude Code theme by the sun: dawn, day, dusk and night palettes. |
 | [cc-reverse-spec](plugins/cc-reverse-spec) | Reverse-engineers a verifiable spec (rules, tests, traceability) from an existing codebase so it can be rebuilt with proven parity. |
 | [cc-agent-watchdog](plugins/cc-agent-watchdog) | Watchdog pro agenty: deník volání nástrojů, pravidla a skóre programátora a testera |
+| [cc-pixel-buddy](plugins/cc-pixel-buddy) | Pixelová počítačová hlavička vedle chatu: nálada podle práce, užitečné hlášky a statistiky dne |
 
 Each plugin lives in `plugins/<name>/` with its own README, tests and version.
 
