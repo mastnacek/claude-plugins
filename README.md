@@ -8,6 +8,7 @@ Claude Code plugins by mastnacek, in one marketplace.
 /plugin install cc-uma-memory@mastnacek
 /plugin install cc-theme-switcher@mastnacek
 /plugin install cc-reverse-spec@mastnacek
+/plugin install cc-spai-tasks@mastnacek
 ```
 
 | Plugin | What it does |
@@ -16,6 +17,7 @@ Claude Code plugins by mastnacek, in one marketplace.
 | [cc-uma-memory](plugins/cc-uma-memory) | UMA (Universal Memory Architecture) for Claude Code, memory shared with pi. Connects the `uma` MCP server (memory tools, writes approved in Claude Code) and turns Claude Code's own auto memory off (`/uma claude-memory`), showing its state under the prompt. |
 | [cc-theme-switcher](plugins/cc-theme-switcher) | Rotates the Claude Code theme by the sun: dawn, day, dusk and night palettes. |
 | [cc-reverse-spec](plugins/cc-reverse-spec) | Reverse-engineers a verifiable spec (rules, tests, traceability) from an existing codebase so it can be rebuilt with proven parity. |
+| [cc-spai-tasks](plugins/cc-spai-tasks) | SPAI úkoly, nápady a poznámky v docs/spai/ projektu, sdílené s pi |
 
 Each plugin lives in `plugins/<name>/` with its own README, tests and version.
 

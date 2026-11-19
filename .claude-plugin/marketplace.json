@@ -24,6 +24,11 @@
       "name": "cc-reverse-spec",
       "source": "./plugins/cc-reverse-spec",
       "description": "Reverse-engineers a verifiable spec (rules, tests, traceability) from an existing codebase so it can be rebuilt with proven parity."
+    },
+    {
+      "name": "cc-spai-tasks",
+      "source": "./plugins/cc-spai-tasks",
+      "description": "SPAI úkoly, nápady a poznámky v docs/spai/ projektu, sdílené s pi"
     }
   ]
 }
