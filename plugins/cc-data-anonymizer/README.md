@@ -19,6 +19,10 @@ Maskuje citlivá data (jména Notes, e-maily, hesla, tokeny) v promptech, @ soub
 
 Needs the `anon` binary: `ANON_BIN`, then `PATH`, then `D:/01_programovani/_tools/anon.exe`.
 
+## Vault guard
+
+Agents cannot read or change the anon home (`vault.bin`, `vault.key`, `map.db`, `rules.toml`), run `anon unmask|map|vault|tui|rules|import|export`, `--with-values` or `--reveal`, point `ANON_HOME` at the real home or call DPAPI. The denial says so and that you can do it yourself with `!` in the prompt. `anon scan|mask`, `--help`, `--version` and `ANON_HOME=<other folder>` stay allowed.
+
 ## Commands
 
 No commands. Settings:

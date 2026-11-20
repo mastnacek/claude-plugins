@@ -40,6 +40,7 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 - `tool-mask` — maskuje výsledky Read, Grep, Bash, Edit, Write a MCP; vstupy Edit, Write, Bash odmaskuje (`anon unmask`).
 - `findings-band` — barevný panel souhlasu (nálezy po souborech, tlačítka Povolit / Zamítnout; záloha `$.ui.ask`) a pás nad promptem s varováním `redact`.
 - `mask-note` — malý rámeček pod řádkem nástroje a pod zprávou uživatele: „zamaskováno N hodnot (druhy), styl X“ a hodnoty podle volby `reveal` (jen obrazovka, nikdy model).
+- `vault-guard` — fail-closed stráž: agentům zakáže soubory v domově anon (vault, klíč, mapa, pravidla) a příkazy `anon`, které odhalují originály nebo mění trezor, i DPAPI; zamítnutí říká, že to uživatel udělá sám (`!`).
 - `reply-unmask` — volitelně (`unmaskReply`, vypnuto) odkryje odpověď asistenta na obrazovce.
 
 Sdílené: `shared/anon.ts` (jediné místo, které spouští `anon`; binárka z `ANON_BIN`, `PATH`, `D:/01_programovani/_tools/anon.exe`) a `shared/consent.ts`. Volby: `consent` (`ask|never`; agenti s `CC_ROLE` a běhy `-p` se neptají nikdy), `reveal` (`partial|full|none`). Čtení `~/.claude/projects/**` a dalších složek stavu agentů se nemaskuje (`shared/paths.ts`). Selhání `anon` = zamítnutí, nikdy průchod originálu.
