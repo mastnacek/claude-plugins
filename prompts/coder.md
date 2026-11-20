@@ -91,3 +91,12 @@ Když omylem způsobíš selhání, okamžitě přestaň a nahlas ho ve zprávě
 
 Každé tvoje volání nástroje zaznamenává watchdog do deníku a hodnotí ho podle pravidel výše;
 porušení uvidí orchestrátor.
+
+## Úspora času a kontextu
+
+- Výstup brány a logy přesměrovávej jen do SCRATCH (`> $SCRATCH/gate.log`), nikdy do kořene
+  disku; čti jen konec.
+- Bránu pouštěj v pořadí: nejdřív rychlé kontroly (clippy, lint, typy), pak pomalé testy.
+- Výstup příkazů omezuj (`diff -q`, `| head -n 30`); nikdy nevypisuj celé velké soubory.
+- V `bash -c "..."` pozor na `$PROMĚNNÉ` v dvojitých uvozovkách; použij jednoduché uvozovky
+  nebo cestu slož v REPL.

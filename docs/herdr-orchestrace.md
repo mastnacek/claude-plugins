@@ -1,159 +1,112 @@
-# Orchestrace agentů v herdr
+# Orchestrace agentů v herdr — kanonický postup
 
-Platí, kdykoli sezení běží v herdr (`herdr pane current` odpoví JSONem).
-Uživatel mluví jen s tebou; ty jsi **orchestrátor** a práci rozdáváš dvěma
-plnohodnotným agentům v jejich vlastních panelech — ne subagentům (`Agent`),
-ty uživatel nevidí a nemají vlastní terminál.
+**Jediné místo pro postup orchestrace** pro všechna repa (claude, spai, anon, …). Repa mají
+jen krátký `docs/herdr-orchestrace.md` s odkazem sem a se svými specifiky (brána, testovací
+data). Platí, kdykoli sezení běží v herdr (`HERDR_ENV=1`). Uživatel mluví jen s tebou; ty jsi
+**orchestrátor** a práci rozdáváš agentům v jejich vlastních panelech, ne subagentům (`Agent`).
 
 | role | panel | spuštění | dělá |
 |---|---|---|---|
-| **orchestrátor** | tvůj | — | rozpad práce na zadání, kontrola výsledku proti zadání a bráně, **jediný commit a push**, komunikace s uživatelem |
-| **programátor** | vpravo nahoře | `scripts/agent.sh coder` (Sonnet) | píše kód podle zadání; zprávu commitu jen navrhne |
-| **tester** | vpravo dole | `scripts/agent.sh tester --plugin-dir <plugin>` (Haiku) | ověřuje funkce pluginu naživo podle scénářů; kód nemění |
+| **orchestrátor** | vlevo, celá výška | — | rozpad práce na zadání (SPAI), kontrola výsledku a brány, **jediný commit, sloučení a push**, komunikace s uživatelem |
+| **programátor** | vpravo nahoře | `scripts/agent.sh coder` (Sonnet, `CODE_MODE=1` volitelně) | píše kód ve svém worktree; zprávu commitu jen navrhne |
+| **tester** | vpravo pod programátorem | `scripts/agent.sh tester` (Haiku) | ověřuje podle scénáře nad testovacími daty; kód nemění |
+| **pozorovatel** | vpravo dole, malý | `agy` jen ke čtení (§ Pozorovatel) | čte přepisy, hodnotí postup, hlásí postřehy |
 
-**Windows:** shell panelu je PowerShell a `bash` v něm spustí WSL, ne Git
-Bash. Agenta proto spouštěj přes Git Bash:
-`herdr pane run <pane> "& 'C:\Program Files\Git\bin\bash.exe' scripts/agent.sh coder"`.
+Najednou nejvýš jeden programátor, jeden tester a jeden revizor.
 
-`scripts/agent.sh` spustí `claude` s aliasem modelu (`sonnet`, `haiku` = nejnovější
-model rodiny) a s rolí v `CC_ROLE`. **Commit a push dělá jen orchestrátor**:
-projektový hook `.claude/hooks/orchestrator-only-git.sh` (v `.claude/settings.json`)
-agentovi s rolí `git commit` i `git push` zamítne. Agenty proto spouštěj vždy
-přes `scripts/agent.sh`, nikdy holým `claude`. Hook platí jen v sezeních
-s kořenem v tomto repozitáři — tester ve scratchpadu repozitář neměnit.
+## Spouštění agentů
 
-Existující panel s agentem dané role použij znovu; nový otevři jen, když chybí.
-**Každá nová práce začíná v čistém sezení**: v panelu `/exit` a znovu
-`scripts/agent.sh <role>` — agent nenese kontext ani předpoklady z minulého úkolu.
-
-## Eskalace na Fable — rozhoduje uživatel
-
-`claude --model fable` je nejschopnější a nejdražší model (limit předplatného
-čerpá zhruba 2× rychleji než Opus a 4× rychleji než Sonnet). Na běžné
-programování ani testy se nepoužívá. Hodí se jen tam, kde chyba stojí hodně:
-
-- **návrh** rozhraní, které se později těžko mění (sdílené jádro, MCP);
-- **revize** bezpečnostně kritického kódu (brány, tajemství, zápis do paměti);
-- **zaseknutý problém**, který programátor nevyřešil ani na druhý pokus.
-
-**Fable nikdy nespouštěj sám.** Navrhni ho uživateli: co přesně má udělat,
-proč na to nestačí Sonnet a jak velká úloha to je. Spusť ho až po výslovném
-souhlasu, ve vlastním panelu jen na tu jednu úlohu, a pak panel zavři.
+- **Windows:** shell panelu je PowerShell a holý `bash` spustí WSL. Agenta spouštěj přes Git Bash
+  a předej mu scratchpad:
+  `herdr pane run <pane> "$env:AGENT_SCRATCH='<scratchpad>'; & 'C:\Program Files\Git\bin\bash.exe' scripts/agent.sh coder"`.
+- `scripts/agent.sh` dá agentovi `CC_ROLE`, model a pravidla role z **`D:/01_programovani/claude/prompts/<role>.md`**
+  (jedna sada pro všechna repa) + `prompts/<role>.local.md` repa, je-li. Agenty spouštěj vždy
+  přes něj, nikdy holým `claude`. Git zápis agentům zakazuje hook / watchdog repa.
+- **Každá nová práce začíná v čistém sezení:** `/exit` a znovu `agent.sh`.
+- **Z Git Bash posílej lomítkové příkazy s `MSYS_NO_PATHCONV=1`** — jinak `"/exit"` dorazí jako
+  `C:/Program Files/Git/exit` a agent běží dál. Před `pane run` ověř, že v panelu je shell
+  (`herdr pane process-info`).
+- Nová složka vyvolá dialog důvěry: `send-keys Down`, pak `Enter` (opakovat i pro `--add-dir`).
+- ID panelu ber z JSON odpovědi `pane split` (`.result.pane.pane_id`), nikdy z odhadu.
 
 ## Panely
-
-Rozložení: **orchestrátor vlevo na celou výšku, vpravo programátor nahoře
-a tester pod ním.** Každý panel nese jméno své role.
 
 ```
 ┌──────────────────────┬──────────────────────┐
 │                      │ programátor (Sonnet) │
 │ orchestrátor (Opus)  ├──────────────────────┤
-│                      │ tester (Haiku)       │
+│   celá výška         │ tester / pozorovatel │
 └──────────────────────┴──────────────────────┘
 ```
 
-```sh
-herdr pane current                                   # tvoje pane_id (např. wD:p1)
-herdr pane list                                      # existující panely a jejich jména
-herdr pane split --pane <moje> --direction right --cwd <složka>          # programátor
-herdr pane split --pane <programátor> --direction down --cwd <test-složka>  # tester pod ním
-herdr pane rename <moje> "orchestrátor (Opus)"
-herdr pane rename <programátor> "programátor (Sonnet)"
-herdr pane rename <tester> "tester (Haiku)"
-herdr pane send-text <pane> "scripts/agent.sh coder"; herdr pane send-keys <pane> Enter
-herdr pane wait-output <pane> --match "shortcuts" --timeout 40000  # agent je připravený
-herdr pane close <pane>                              # po /exit
-```
+- Nové panely vždy `--no-focus` a rozdělením panelu vpravo, nikdy tvého (zůstáváš na celou výšku).
+- `herdr pane move` uvnitř jedné karty nefunguje; jde to přes dočasnou kartu
+  (`move --new-tab`, pak `move --tab <karta> --split down --target-pane <cíl> --ratio 0.75`)
+  a dočasnou kartu zavři.
+- Šířku panelů neměň. Zavírej jen panely, které jsi otevřel.
 
-- Tester vzniká **rozdělením panelu programátora** (`--direction down`).
-  `herdr pane move` uvnitř jedné karty panel nepřesune (`changed: false`) —
-  špatně umístěný panel ukonči, zavři a vytvoř znovu.
-- Šířku panelů neměň: celé okno může být úzké (uživatel ho mívá i na malém
-  displeji) a rozšíření jednoho panelu ubere uživateli jeho.
+## Worktree
 
-- **Programátor** běží ve složce, kterou mění (repozitář pluginu nebo jádra).
-- **Tester** běží ve vlastní testovací složce ve scratchpadu s pluginem
-  načteným z vývojové kopie: `<repo>/scripts/agent.sh tester --plugin-dir <cesta k pluginu>`.
-  Je-li stejný plugin nainstalovaný z marketplace, nejdřív
-  `claude plugin disable <plugin>@mastnacek`, jinak běží dvakrát.
-- Nová složka vyvolá dialog důvěry: `send-keys Down`, pak `Enter`. V úzkém
-  panelu se text dialogu zalomí — hledej ho přes `--source recent-unwrapped`.
-
-## Zadání jako od člověka
-
-Zadání se píše do vstupního pole agenta, ne přes API:
-
-```sh
-herdr pane send-text <pane> "<zadání>"; sleep 1; herdr pane send-keys <pane> Enter
-herdr agent wait <pane> --timeout 600000             # idle / done / blocked
-herdr pane read <pane> --source recent | grep -v '^\s*$' | tail -40
-```
-
-- `sleep 1` před `Enter`: u textu začínajícího `/` jinak Enter vybere
-  položku z doplňování místo odeslání.
-- `blocked` = agent čeká na dialog (oprávnění, AskUserQuestion): přečti
-  panel a odpověz klávesami (`Down`, `Enter`), nebo se zeptej uživatele.
-- Šedý text ve vstupním poli je návrh Claude Code, ne zadání; psaní ho přepíše.
-- Zadání posílej jako odkaz na záznam SPAI (§ Zadání = záznam SPAI).
-- Závěrečnou zprávu agenta čti z jeho přepisu, ne z úzkého panelu:
-  nejnovější `~/.claude/projects/<cesta-cwd>/*.jsonl` (bez vlastního sezení),
-  `jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text'`.
+- Programátor pracuje ve vlastním worktree: `git worktree add -b agent/<úkol> ../<repo>-<úkol>`
+  (v Git Bash cesta `D:/…`, ne `/d/…`).
+- Po sloučení `git worktree remove --force` + `git worktree prune` + `git branch -d`; na Windows
+  bývá složka chvíli zamčená běžícím procesem — smaž ji, až agent skončí.
+- Sdílený `CARGO_TARGET_DIR` klame bránu (přeskočí překlad jiného stromu): ve worktree vlastní target.
 
 ## Zadání = záznam SPAI
 
-Každé zadání agentovi (programátor, tester, revizor) je **záznam SPAI** v backlogu hlavního repa
-(ne worktree), ne soubor ve scratchpadu — zůstane v historii, sidebar ho ukáže, stav je vidět.
+Každé zadání agentovi je **záznam SPAI** v backlogu hlavního repa (ne worktree).
 
-1. **Zápis:** `spai add "<řádek>
-<tělo>" --project <hlavní repo> --source orchestrator --json`.
-   Řádek `. <cíl jednou větou> :agent:coder:` (`:tester:`, `:review:`), anglicky; tělo =
-   hlavička konstant a body zadání níž. Duplicitu (kód 3) posuď: navazuje-li na starší
-   zadání, `--force` a odkaz `SPAI-NNN` v těle.
+1. **Zápis:** `spai add "<řádek>\n<tělo>" --project <hlavní repo> --source orchestrator`.
+   Řádek `. <cíl jednou větou> :agent:coder:` (`:tester:`, `:review:`), anglicky. Tělo:
+   hlavička konstant (`WORKDIR`, `SCRATCH`, `ALLOWED_PATHS`, `GATE`, `HARD_CONSTRAINTS`,
+   `REMOTE_ALLOW`), cíl, rozsah a co je mimo, testy, kritérium hotovo, návrh commitu.
+   Navazující úkoly řetěz přes `--after <ID>`; plán celé práce zapiš najednou.
 2. **Odeslání:** `spai set <ID> working`, pak agentovi jen
-   „Read SPAI-012 @<projekt> (`spai show SPAI-012 --project <hlavní repo> --json`) and carry it out fully now.“.
+   „Read SPAI-012 @<projekt> (`spai show SPAI-012 --project <hlavní repo> --json`) and carry it out fully now.“
+   Jen „Do SPAI-012: spai show …“ nestačí — Haiku si záznam jen přečte.
 3. **Konec:** po sloučení `spai set <ID> done --evidence "<commit>, <brána>"`; zahozené
-   `cancelled`. Výtku k vrácené práci a předání zapiš `spai log <ID> "<text>"`.
-4. Agent záznamy nemění (`spai add/set/delete` jen orchestrátor). Scratchpad zůstává pro
-   sondy, logy, testovací kopie a patche.
+   `cancelled`. Výtky a předání `spai log <ID> "<text>"`.
+4. Agent záznamy nemění. Scratchpad je pro sondy, logy, testovací kopie a patche.
 
-## Zadání programátorovi
+## Čekání a kontrola
 
-Stálá pravidla rolí (pravidla, Definition of Done, „How you're graded“, instant failure)
-jsou v `prompts/coder.md` a `prompts/tester.md`; `scripts/agent.sh` je přidá k system
-promptu (`--append-system-prompt-file`). Zadání proto začíná **hlavičkou konstant**
-z těch souborů (`LANG`, `WORKDIR`, `SCRATCH`, `ALLOWED_PATHS`, `GATE`, `HARD_CONSTRAINTS`…;
-tester `TEST_METHOD`, `SCENARIO`, `TEST_ENV`) a pravidla už neopakuje.
-
-Každé zadání obsahuje:
-
-1. **cíl** jednou větou a odkaz na dokumenty, které má přečíst
-   (`CLAUDE.md`, `docs/…`, `CLAUDE.md` řezu);
-2. **rozsah**: které soubory nebo řez, a co je mimo;
-3. **kritérium hotovo**: konkrétní a ověřitelné, včetně brány
-   (validate, test, vsa-check, tsc) se zeleným výstupem;
-4. **návrh zprávy commitu** v závěrečné zprávě; commit a push udělá
-   orchestrátor po kontrole (hook to agentovi jinak ani nedovolí).
-
-Výsledek ověř sám: diff (`git diff`), brána, shoda se zadáním. Vadný
-výsledek vrať s konkrétní výtkou, neopravuj ho potichu.
+- **Čekání: vždy `D:/01_programovani/claude/scripts/agent-wait.sh <panel>` na pozadí** hned po
+  odeslání zadání (herdr u agentů z `agent.sh` často hlásí `unknown`; skript čte i obsah panelu).
+- `blocked` = agent čeká na dialog: přečti panel a **ukaž ho uživateli**, neodpovídej za něj.
+- Pokud `--wait` vyprší, prompt neposílej znovu naslepo — nejdřív `agent get` a `agent read`.
+- Závěrečnou zprávu čti z přepisu: nejnovější `~/.claude/projects/<cesta-cwd>/*.jsonl`.
+- **Výsledek ověř sám:** `git status` a `git diff --stat` ve worktree (soubory jen z
+  `ALLOWED_PATHS`), celou bránu pusť sám, tvrzení zprávy ověř v datech. Vadný výsledek vrať
+  s konkrétní výtkou (`spai log`), neopravuj ho potichu.
+- Po sloučení release build a instalace, uklidit worktree, větev a panel.
 
 ## Zadání testerovi
 
-Scénář = kroky, které má provést jako uživatel, a očekávaný výsledek
-každého kroku. Tester odpoví tabulkou krok → výsledek → OK/chyba.
-Ověř tvrzení testera v datech (log, soubory, přepis sezení v
-`~/.claude/projects/`), ne jen v jeho shrnutí.
+Scénář = kroky jako od uživatele a očekávaný výsledek každého; tester odpoví tabulkou
+krok → výsledek → OK/chyba. Testuje nad **kopií** dat ve scratchpadu, nikdy nad skutečnými.
+Příkazy pluginu (`/…`) a dialogy v jeho okně obsluhuješ ty; rozhraní čteš z panelu.
 
-- **Příkazy pluginu (`/…`) píšeš do testerova pole ty**, jako uživatel —
-  agent si je sám zadat nemůže.
-- **Rozhraní (stavový řádek, rámečky, dialogy) tester nevidí**: čti ho
-  z jeho panelu (`herdr pane read`). Agenta se ptej na to, co vidí jen on
-  (obsah svého system promptu, výsledky nástrojů).
-- Změna, která platí od příštího sezení: tester `/exit` a spustit znovu.
-- Test, který sahá na globální nastavení (`~/.claude/settings.json`), začíná
-  zálohou do scratchpadu a končí jejím vrácením.
+## Pozorovatel (pair programmer)
 
-## Konec
+`agy` (Gemini) v malém panelu čte přepis orchestrátora i programátora a hodnotí postup.
 
-Po práci agenty ukonči (`/exit`), zavři panely a smaž testovací složky.
+- Spuštění jen ke čtení: `agy --dangerously-skip-permissions --mode plan --settings <soubor s
+  {"permissions":{"deny":["command(*)"]},"allowNonWorkspaceAccess":true}> --add-dir <přepisy>
+  --add-dir <repo> --add-dir <scratchpad>`; role v souboru ve scratchpadu.
+- Sám od sebe nepokračuje: po každém sloučeném úkolu mu pošli „Continue monitoring …“.
+- **Je to kolega, ne autorita:** každý postřeh ověř v přepisu a podle konvencí; uživateli řekni,
+  co platí, co jen zčásti a co ne. Agy posílá přepisy Googlu — upozorni na to uživatele.
+
+## Poznatky o postupu práce
+
+**Jediné místo:** záznamy SPAI v backlogu tohoto repa (`D:/01_programovani/claude/docs/spai/`),
+poznámka `- <poznatek> :workflow:` se zdrojem (agy, uživatel, orchestrátor) a důkazem v těle.
+Schválený poznatek se zapracuje sem nebo do `prompts/<role>.md` a záznam dostane
+`done --evidence "<commit>"`. Nikdy ne do souborů pluginu nebo projektu, kterého se netýká.
+
+## Eskalace na Fable — rozhoduje uživatel
+
+`claude --model fable` jen na návrh těžko měnitelného rozhraní, revizi bezpečnostně kritického
+kódu nebo problém, který programátor nevyřešil ani na druhý pokus. **Nikdy ho nespouštěj sám:**
+navrhni co, proč a jak velké; spusť až po výslovném souhlasu, ve vlastním panelu.
