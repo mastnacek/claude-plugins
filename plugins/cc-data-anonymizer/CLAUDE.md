@@ -36,4 +36,8 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 
 ## Řezy
 
-<!-- Jeden řádek na řez: název — co dělá jednou větou. -->
+- `prompt-mask` — maskuje prompt a `@` soubory (`anon mask`), při prvním souboru ukáže `anon scan` a čeká na povolení.
+- `tool-mask` — maskuje výsledky Read, Grep, Bash, Edit, Write a MCP; vstupy Edit, Write, Bash odmaskuje (`anon unmask`).
+- `reply-unmask` — volitelně (`unmaskReply`, vypnuto) odkryje odpověď asistenta na obrazovce.
+
+Sdílené: `shared/anon.ts` (jediné místo, které spouští `anon`; binárka z `ANON_BIN`, `PATH`, `D:/01_programovani/_tools/anon.exe`) a `shared/consent.ts`. Selhání `anon` = zamítnutí, nikdy průchod originálu.
