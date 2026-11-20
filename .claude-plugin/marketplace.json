@@ -44,6 +44,11 @@
       "name": "cc-spai-tasks",
       "source": "./plugins/cc-spai-tasks",
       "description": "SPAI úkoly, nápady a poznámky v docs/spai/ projektu, sdílené s pi"
+    },
+    {
+      "name": "cc-data-anonymizer",
+      "source": "./plugins/cc-data-anonymizer",
+      "description": "Maskuje citlivá data (jména Notes, e-maily, hesla, tokeny) v promptech, @ souborech a výsledcích nástrojů přes CLI anon"
     }
   ]
 }

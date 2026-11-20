@@ -1,0 +1,20 @@
+{
+  "name": "cc-data-anonymizer",
+  "version": "0.1.0",
+  "description": "Maskuje citlivá data (jména Notes, e-maily, hesla, tokeny) v promptech, @ souborech a výsledcích nástrojů přes CLI anon",
+  "author": {
+    "name": "mastnacek"
+  },
+  "homepage": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-data-anonymizer",
+  "repository": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-data-anonymizer",
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "unmaskReply": {
+      "type": "boolean",
+      "title": "Unmask replies on screen",
+      "description": "Show the assistant's replies with the original values (the model still sees fakes).",
+      "default": false
+    }
+  }
+}
