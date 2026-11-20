@@ -112,8 +112,8 @@ Každé zadání agentovi (programátor, tester, revizor) je **záznam SPAI** v 
    zadání, `--force` a odkaz `SPAI-NNN` v těle.
 2. **Odeslání:** `spai set <ID> working`, pak agentovi jen
    „Do SPAI-012 @<projekt>: `spai show SPAI-012 --project <hlavní repo> --json`“.
-3. **Konec:** po sloučení `spai set <ID> done`; zahozené `cancelled`. Vrácená práce = nový
-   záznam s výtkou a odkazem na původní ID.
+3. **Konec:** po sloučení `spai set <ID> done --evidence "<commit>, <brána>"`; zahozené
+   `cancelled`. Výtku k vrácené práci a předání zapiš `spai log <ID> "<text>"`.
 4. Agent záznamy nemění (`spai add/set/delete` jen orchestrátor). Scratchpad zůstává pro
    sondy, logy, testovací kopie a patche.
 
