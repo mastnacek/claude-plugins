@@ -65,6 +65,13 @@ if [[ "$agent" == agy ]]; then
   herdr pane wait-output "$kolega" --match "for shortcuts" --timeout 60000 >/dev/null || true
   herdr pane send-keys "$kolega" esc >/dev/null
 else
+  # Startovní dialogy vlastního panelu (důvěra složce, --add-dir) odklikne skript sám.
+  for _ in 1 2 3 4 5 6; do
+    sleep 4
+    screen="$(herdr pane read "$kolega" --source visible --lines 30 2>/dev/null || true)"
+    grep -q -E "Yes, add it|trust this folder|Yes, I trust" <<<"$screen" || break
+    herdr pane send-keys "$kolega" Down >/dev/null; herdr pane send-keys "$kolega" Enter >/dev/null
+  done
   herdr agent wait "$kolega" --until idle --until done --timeout 60000 >/dev/null || true
 fi
 
