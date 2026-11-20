@@ -30,6 +30,6 @@ stiskem povolit nebo zamítnout. (Název složky zůstal z doby, kdy to byl pás
 
 ## Pasti
 
-- Panel nese jen druh, pozici a délku; hodnoty `anon scan --json` nikdy nevrací a řez je nesmí hledat jinde.
+- Panel nese druh, pozici, délku a `shown` (hodnota zkrácená podle `reveal`, jen na obrazovku); surovou hodnotu řez nikdy nedostane — zkracuje `shared/anon.ts` hned při čtení `anon scan --json --with-values`.
 - Panel otevřený z hooku `tool.call` se umístí až od 144 sloupců; proto při nevykreslení panelu volání nástroje dostane krátký `$.ui.ask` („Citlivé hodnoty jsou vypsané výše. Povolit?“) a seznam nálezů se kreslí nad ním (`findings` + hook na `AskUserQuestion`). Karta pod řádkem nástroje (`cards`) se nekreslí, dokud `tool.call` čeká — řádek `ToolUse` vzniká až po rozhodnutí; ukáže se tedy s výsledkem. Pro `@` zmínky (bez karty) je záloha dialog s prostým seznamem; `findings` se tehdy nenastaví.
 - Zavření panelu osobou (`ui.close`, origin `person`) test nespustí (test `$` nemá `ui.close`); v TUI neověřeno.

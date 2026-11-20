@@ -36,6 +36,6 @@ export function kindColor(kind: string): "error" | "warning" | "suggestion" | "p
 /** The same list as plain text, for the question of the dialog. */
 export function plainList(groups: readonly FileFindings[]): string {
 	return groups
-		.map(({ path, lines }) => [path, ...lines.map((l) => `  ${l.line}:${l.column}  ${l.kind}  ${l.rule}  ${l.chars} znaků`)].join("\n"))
+		.map(({ path, lines }) => [path, ...lines.map((l) => `  ${l.line}:${l.column}  ${l.kind}  ${l.rule}  ${l.chars} znaků${l.shown === undefined ? "" : `  ${l.shown}`}`)].join("\n"))
 		.join("\n");
 }
