@@ -5,12 +5,14 @@
 // the original through.
 
 import type { EngineInterface } from "claude-code";
+import type { Finding } from "./findings";
 
 type $ = EngineInterface;
 
 export class AnonError extends Error {}
 
-export type ScanResult = { isFound: boolean; summary: string };
+type ScanFinding = { kind: string; rule: string; chars: number; places: { path: string; line: number; column: number }[] };
+export type ScanResult = { isFound: boolean; findings: Finding[] };
 
 const FALLBACK = "D:/01_programovani/_tools/anon.exe";
 const SEPARATOR = "\n\x1e<anon-separator>\x1e\n";
@@ -74,12 +76,23 @@ export function unmask($: $, text: string): Promise<string> {
 	return transform($, "unmask", text);
 }
 
-/** `anon scan <path>`: exit 0 nothing found, 3 found; the summary lines hold no values. */
+/** `anon scan <path> --json`: exit 0 nothing found, 3 found; findings hold places, never values. */
 export async function scan($: $, path: string): Promise<ScanResult> {
-	const run = await exec($, ["scan", path]);
-	if (run.exitCode === 0) return { isFound: false, summary: "" };
-	if (run.exitCode === 3) return { isFound: true, summary: run.stdout.trim() };
-	throw new AnonError(`anon scan failed (exit ${run.exitCode}): ${firstLine(run.stderr || run.stdout)}`);
+	const run = await exec($, ["scan", path, "--json"]);
+	if (run.exitCode === 0) return { isFound: false, findings: [] };
+	if (run.exitCode !== 3) {
+		throw new AnonError(`anon scan failed (exit ${run.exitCode}): ${firstLine(run.stderr || run.stdout)}`);
+	}
+	let parsed: { findings?: ScanFinding[] };
+	try {
+		parsed = JSON.parse(run.stdout);
+	} catch {
+		throw new AnonError("anon scan returned unreadable output");
+	}
+	const findings = (parsed.findings ?? []).flatMap((f) =>
+		f.places.map((p) => ({ path: p.path, line: p.line, column: p.column, kind: f.kind, rule: f.rule, chars: f.chars })),
+	);
+	return { isFound: true, findings };
 }
 
 /** Masks (or unmasks) every string inside `value` with one anon call; the shape is kept. */
