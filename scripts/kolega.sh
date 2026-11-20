@@ -28,7 +28,7 @@ ws="${HERDR_WORKSPACE_ID:?běží jen v herdr}"
 scratch="${AGENT_SCRATCH:-${TMP:-/tmp}}"; scratch="${scratch//\\//}"
 settings="$scratch/kolega-settings.json"
 plugin_id="kolega.observer"
-plugin_bin="${KOLEGA_PLUGIN_BIN:-D:/01_programovani/herdr-kolega/plugins/herdr-kolega/target/release/herdr-kolega.exe}"
+plugin_bin="${KOLEGA_PLUGIN_BIN:-D:/01_programovani/herdr/plugins/herdr-kolega/target/release/herdr-kolega.exe}"
 
 tab="${HERDR_TAB_ID:-}"
 export PYTHONUTF8=1
