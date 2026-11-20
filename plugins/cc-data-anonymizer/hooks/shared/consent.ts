@@ -8,7 +8,7 @@ import type { EngineInterface } from "claude-code";
 import { atom, update } from "claude-code";
 import { scan } from "./anon";
 import { groupByFile, plainList } from "./findings";
-import type { FileFindings } from "../../types";
+import type { FileFindings, ToolCard } from "../../types";
 
 type $ = EngineInterface;
 
@@ -20,6 +20,14 @@ const DENY = "Zamítnout";
 const allowed = new Set<string>();
 // Declared in each file that touches it: the engine's scan reads the ref where it is used.
 const findings = atom({ plugin: "cc-data-anonymizer", key: "findings" } as const, null);
+const cards = atom({ plugin: "cc-data-anonymizer", key: "cards" } as const, null);
+
+/** A tool call's consent: its id (the card is drawn under that row) and the style shown in the status line. */
+export type ToolRef = { toolUseId: string; style: string };
+
+function setCard($: $, id: string, card: ToolCard) {
+	return update($, cards, (all) => ({ ...all, [id]: card }));
+}
 
 // The open pane's answer; the pane's buttons and its close settle it.
 let pending: ((allow: boolean) => void) | undefined;
@@ -59,7 +67,7 @@ async function askInPane($: $, groups: FileFindings[]): Promise<boolean | undefi
 	}
 }
 
-async function ask($: $, key: string, path: string): Promise<boolean> {
+async function ask($: $, key: string, path: string, tool?: ToolRef): Promise<boolean> {
 	if (allowed.has(key)) return true;
 	const found = await scan($, path);
 	if (!found.isFound) {
@@ -67,22 +75,26 @@ async function ask($: $, key: string, path: string): Promise<boolean> {
 		return true;
 	}
 	const groups = groupByFile(found.findings, await $.session.cwd());
+	// A tool call: the findings are a card under its row (any terminal width); the pane is a bonus where it is placed.
+	if (tool !== undefined) await setCard($, tool.toolUseId, { groups, decision: null });
 	const paneAnswer = await askInPane($, groups);
+	const question =
+		tool === undefined
+			? `Citlivé hodnoty v souborech:\n${plainList(groups)}\nAgent uvidí jen falešné náhrady. Povolit?`
+			: "Citlivé hodnoty jsou vypsané výše. Povolit?";
 	const isAllowed =
-		paneAnswer ??
-		(await $.ui
-			.ask(`Citlivé hodnoty v souborech:\n${plainList(groups)}\nAgent uvidí jen falešné náhrady. Povolit?`, [ALLOW, DENY])
-			.catch(() => DENY)) === ALLOW;
+		paneAnswer ?? (await $.ui.ask(question, [ALLOW, DENY]).catch(() => DENY)) === ALLOW;
+	if (tool !== undefined) await setCard($, tool.toolUseId, { groups, decision: { isAllowed, style: tool.style } });
 	if (isAllowed) allowed.add(key);
 	return isAllowed;
 }
 
 /** True when the agent may get this file (masked). Throws AnonError when anon fails. */
-export async function isFileAllowed($: $, path: string): Promise<boolean> {
+export async function isFileAllowed($: $, path: string, tool?: ToolRef): Promise<boolean> {
 	const key = normalize(path);
 	if (allowed.has(key)) return true;
 	if (!(await $.fs.stat(path).catch(() => undefined))) return true; // nothing to read, the tool reports it
-	const turn = queue.then(() => ask($, key, path));
+	const turn = queue.then(() => ask($, key, path, tool));
 	queue = turn.catch(() => undefined);
 	return turn;
 }

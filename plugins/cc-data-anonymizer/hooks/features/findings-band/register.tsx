@@ -5,6 +5,7 @@ import { kindColor } from "../../shared/findings";
 
 // Declared in each file that touches it: the engine's scan reads the ref where it is used.
 const findings = atom({ plugin: "cc-data-anonymizer", key: "findings" } as const, null);
+const cards = atom({ plugin: "cc-data-anonymizer", key: "cards" } as const, null);
 const warning = atom({ plugin: "cc-data-anonymizer", key: "redactWarning" } as const, null);
 
 // The consent pane lists what `anon scan` found: each file once, then its lines
@@ -23,6 +24,47 @@ export const registerFindingsBand = ((on) => {
 		return (
 			<Box borderStyle="round" borderColor="warning" paddingX={1}>
 				<Text color="warning">🔒 anon · {warn}</Text>
+			</Box>
+		);
+	});
+
+	// The findings as a card under the tool's row: works at any terminal width.
+	on("ui.render", { component: "ToolUse" }, async ($, e, next) => {
+		const card = (await read($, cards))?.[e.props.tool_use_id];
+		const row = await next(e);
+		if (card === undefined) return row;
+		const { Box, Text } = $.ui.resolve(e);
+		const decision = card.decision;
+		return (
+			<Box flexDirection="column" borderStyle="round" borderColor="warning" paddingX={1}>
+				{row}
+				<Text bold>🔒 anon: citlivé hodnoty</Text>
+				{card.groups.map((g) => (
+					<Box key={g.path} flexDirection="column">
+						<Text bold>{g.path}</Text>
+						{g.lines.map((l) => (
+							<Text key={`${l.line}:${l.column}`}>
+								{"  "}
+								<Text dimColor>
+									{l.line}:{l.column}
+								</Text>
+								{"  "}
+								<Text color={kindColor(l.kind)} bold={kindColor(l.kind) === "error"}>
+									{l.kind}
+								</Text>
+								{"  "}
+								<Text dimColor>{l.rule}</Text>
+								{"  "}
+								{l.chars} znaků
+							</Text>
+						))}
+					</Box>
+				))}
+				{decision !== null && (
+					<Text color={decision.isAllowed ? "success" : "error"} bold>
+						{decision.isAllowed ? `✔ povoleno (zamaskováno, styl ${decision.style})` : "✘ zamítnuto"}
+					</Text>
+				)}
 			</Box>
 		);
 	});

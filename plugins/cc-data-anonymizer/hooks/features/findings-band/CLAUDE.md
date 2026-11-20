@@ -9,12 +9,13 @@ stiskem povolit nebo zamítnout. (Název složky zůstal z doby, kdy to byl pás
 ## Co dělá
 
 - `ui.render` na `Pane` (`requestId` = `CONSENT_PANE`) — titulek „anon: citlivé hodnoty“, každý soubor jednou (krátká cesta, tučně), pod ním řádky `řádek:sloupec` (dim), druh barevně (heslo/tajemství červeně, jméno žlutě, e-mail modře, ostatní azurově), pravidlo dim, počet znaků. Dvě tlačítka: **Povolit (Enter)** (`autoFocus`, `primary`) a **Zamítnout (Esc)**. Tlačítka volají `settleConsent`.
+- `ui.render` na `ToolUse` — barevná karta pod řádkem nástroje (`tool_use_id` z atomu `cards`, `await next(e)` drží řádek): stejný seznam nálezů jako panel, po rozhodnutí stavový řádek (povoleno + styl / zamítnuto). Funguje při jakékoli šířce terminálu.
 - `ui.close` na `CONSENT_PANE` — zavření panelu (Esc, značka zavření) je `settleConsent(false)`, tedy zamítnutí.
 - `ui.render` na `AbovePrompt` — už jen varování `redactWarning` (vstup nástroje s nevratným `REDACTED`, píše `tool-mask`); `turn.start` ho maže. Nálezy pás nekreslí.
 
 ## Kontrakt
 
-- **`$.state`:** čte `redactWarning` (píše `tool-mask`, maže tady) a `findings` (píše `shared/consent` před otevřením panelu, po odpovědi maže).
+- **`$.state`:** čte `cards` (píše `shared/consent` u volání nástroje), `redactWarning` (píše `tool-mask`, maže tady) a `findings` (píše `shared/consent` před otevřením panelu, po odpovědi maže).
 - **Shared:** `consent` (`CONSENT_PANE`, `settleConsent`), `findings` (`kindColor`; seskupení dělá `consent`).
 - Atom `findings` je deklarovaný v každém souboru, který ho čte nebo píše (skenování enginu čte odkaz tam, kde se používá).
 
@@ -29,5 +30,5 @@ stiskem povolit nebo zamítnout. (Název složky zůstal z doby, kdy to byl pás
 ## Pasti
 
 - Panel nese jen druh, pozici a délku; hodnoty `anon scan --json` nikdy nevrací a řez je nesmí hledat jinde.
-- Bez povrchu, který panel umí (headless, jen mobil) nebo když se panel nevykreslí (`isPlaced: false`, úzký terminál), ptá se `consent` dialogem `$.ui.ask` s prostým seznamem; `findings` se tehdy nenastaví.
+- Panel otevřený z hooku `tool.call` se umístí až od 144 sloupců; proto volání nástroje dostane kartu a při nevykreslení panelu krátký `$.ui.ask` („Citlivé hodnoty jsou vypsané výše. Povolit?“, bez seznamu). Pro `@` zmínky (bez karty) je záloha dialog s prostým seznamem; `findings` se tehdy nenastaví.
 - Zavření panelu osobou (`ui.close`, origin `person`) test nespustí (test `$` nemá `ui.close`); v TUI neověřeno.

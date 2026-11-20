@@ -15,7 +15,7 @@ export const registerToolMask = ((on, options) => {
 	const style = styleOf(options);
 	on("tool.call", { tool: TOOLS }, async ($, e, next) => {
 		try {
-			if (e.tool === "Read" && !(await isFileAllowed($, e.file_path))) {
+			if (e.tool === "Read" && !(await isFileAllowed($, e.file_path, { toolUseId: e.tool_use_id, style: style ?? "default" }))) {
 				return { deny: `${e.file_path} was not allowed by the user.` };
 			}
 

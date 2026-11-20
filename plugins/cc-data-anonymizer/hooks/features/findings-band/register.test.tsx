@@ -31,7 +31,7 @@ const anonDouble = (on: On) => {
 		const reply = (stdout: string, exitCode = 0) => ({
 			value: { exitCode, stdout, stderr: "", isStdoutTruncated: false, isStderrTruncated: false },
 		});
-		return e.argv[1] === "scan" ? reply(JSON.stringify({ ok: true, findings: [FINDING] }), 3) : reply("{}");
+		return e.argv[1] === "scan" ? reply(JSON.stringify({ ok: true, findings: [FINDING] }), 3) : reply(JSON.stringify({ ok: true, text: e.init?.stdin ?? "" }));
 	});
 };
 
@@ -123,4 +123,86 @@ test("no warning, no band", async ($, on) => {
 	const ui = await $.ui.mount({ ...BAND });
 	expect((await ui.find({ type: "Text" }))?.text).toBe("engine");
 	await ui.unmount();
+});
+
+const TOOL_USE = {
+	plugin: "cc-data-anonymizer",
+	component: "ToolUse",
+	requestId: "toolu_1",
+	props: { tool_use_id: "toolu_1", tool: "Read", input: {}, isRunning: false, isErrored: false },
+	surface: "terminal",
+} as const;
+
+const card = (decision: unknown) => ({
+	groups: [{ path: "src/a.txt", lines: [{ line: 3, column: 1, kind: "password", rule: "vault", chars: 8 }] }],
+	decision,
+});
+
+test("a card under the right tool row groups the findings, colored, no value", async ($, on) => {
+	on("state.get", () => stored({ toolu_1: card(null) }));
+	on("ui.render", ($, e) => {
+		const { Text } = $.ui.resolve(e);
+		return <Text>row</Text>;
+	});
+	const ui = await $.ui.mount({ ...TOOL_USE });
+	expect((await ui.find({ type: "Text", text: /^row$/ }))?.text).toBe("row");
+	expect((await ui.find({ type: "Text", text: /src\/a\.txt/ }))?.text).toBe("src/a.txt");
+	expect((await ui.find({ type: "Text", text: /^password$/ }))?.props?.color).toBe("error");
+	await ui.unmount();
+});
+
+test("a card after the decision ends with a colored status line", async ($, on) => {
+	on("state.get", () => stored({ toolu_1: card({ isAllowed: true, style: "tag" }) }));
+	const ui = await $.ui.mount({ ...TOOL_USE });
+	const status = await ui.find({ type: "Text", text: /povoleno/ });
+	expect(status?.text).toContain("styl tag");
+	expect(status?.props?.color).toBe("success");
+	await ui.unmount();
+});
+
+test("another tool row gets no card", async ($, on) => {
+	on("state.get", () => stored({ toolu_2: card(null) }));
+	on("ui.render", ($, e) => {
+		const { Text } = $.ui.resolve(e);
+		return <Text>row</Text>;
+	});
+	const ui = await $.ui.mount({ ...TOOL_USE });
+	expect(await ui.find({ type: "Text", text: /src\/a\.txt/ })).toBeUndefined();
+	await ui.unmount();
+});
+
+test("a Read in a narrow terminal asks a short question without the list", async ($, on) => {
+	anonDouble(on);
+	on("session.surfaces", () => ({ value: ["terminal"] }));
+	on("ui.open", () => ({ value: { isPlaced: false } }));
+	on("ui.close", () => ({ value: undefined }));
+	let asked = "";
+	on("tool.call", { tool: "AskUserQuestion" }, (_$, e) => {
+		asked = JSON.stringify(e);
+		return { deny: "dismissed" };
+	});
+	on("tool.call", { tool: "Read" }, () => ({ result: { content: "x" } }));
+	const out = await $.tool.call({ tool: "Read", file_path: "/p/s.txt" });
+	expect(asked).toContain("vypsané výše");
+	expect(asked).not.toContain("vault");
+	expect(out.deny ?? out.text).toContain("not allowed");
+});
+
+test("a Read where the pane is placed still uses the pane", async ($, on) => {
+	anonDouble(on);
+	on("session.surfaces", () => ({ value: ["terminal"] }));
+	let opened!: () => void;
+	const isOpen = new Promise<void>((resolve) => (opened = resolve));
+	on("ui.open", () => {
+		opened();
+		return { value: { isPlaced: true } };
+	});
+	on("ui.close", () => ({ value: undefined }));
+	on("tool.call", { tool: "Read" }, () => ({ result: { content: "x" } }));
+	const result = $.tool.call({ tool: "Read", file_path: "/p/s.txt" });
+	await isOpen;
+	const ui = await $.ui.mount({ ...PANE });
+	await ui.press({ key: "allow" });
+	await ui.unmount();
+	expect((await result).deny).toBeUndefined();
 });
