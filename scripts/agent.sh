@@ -50,4 +50,9 @@ rules="$(mktemp "${TMPDIR:-/tmp}/agent-$role-XXXXXX.md")"
 
 [[ -n "${CODE_MODE:-}" ]] && export CLAUDE_CODE_EXPERIMENTAL_CODE_MODE=1
 
+# Nástroje z D:/01_programovani/_tools mají přednost (Windows blokuje nové programy v
+# ~/.cargo/bin); platí i v panelu spuštěném před nastavením PATH uživatele.
+export PATH="/d/01_programovani/_tools:$PATH"
+export SPAI_BIN="${SPAI_BIN:-D:/01_programovani/_tools/spai.exe}"
+
 CC_ROLE="$role" exec claude --model "$model" "${extra[@]}" "$@"
