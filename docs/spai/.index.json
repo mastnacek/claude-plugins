@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "lastUpdated": "2026-11-20 15:56:10",
+  "lastUpdated": "2026-11-20 15:56:17",
   "lastId": "SPAI-010",
   "records": [
     {
       "id": "SPAI-002",
       "title": "Run fast checks (clippy, lint, types) before slow tests in the gate",
       "type": "Note",
-      "status": "note",
-      "symbol": "-",
+      "status": "done",
+      "symbol": "x",
       "timestamp": "2026-11-20 15:39:41",
       "tags": [
         "workflow"
@@ -21,8 +21,8 @@
       "id": "SPAI-003",
       "title": "Agents keep command output small and gate logs in SCRATCH",
       "type": "Note",
-      "status": "note",
-      "symbol": "-",
+      "status": "done",
+      "symbol": "x",
       "timestamp": "2026-11-20 15:39:46",
       "tags": [
         "workflow"
@@ -35,8 +35,8 @@
       "id": "SPAI-004",
       "title": "Orchestrator checks git status and diff --stat before committing an agent's worktree",
       "type": "Note",
-      "status": "note",
-      "symbol": "-",
+      "status": "done",
+      "symbol": "x",
       "timestamp": "2026-11-20 15:40:23",
       "tags": [
         "workflow"
@@ -49,8 +49,8 @@
       "id": "SPAI-005",
       "title": "Send slash commands from Git Bash with MSYS_NO_PATHCONV=1",
       "type": "Note",
-      "status": "note",
-      "symbol": "-",
+      "status": "done",
+      "symbol": "x",
       "timestamp": "2026-11-20 15:40:25",
       "tags": [
         "workflow"
@@ -63,8 +63,8 @@
       "id": "SPAI-006",
       "title": "Brief message must say 'carry it out fully now', not just 'Do SPAI-NNN'",
       "type": "Note",
-      "status": "note",
-      "symbol": "-",
+      "status": "done",
+      "symbol": "x",
       "timestamp": "2026-11-20 15:41:23",
       "tags": [
         "workflow"
@@ -77,8 +77,8 @@
       "id": "SPAI-007",
       "title": "Treat the agy observer as a peer and verify its claims before acting",
       "type": "Note",
-      "status": "note",
-      "symbol": "-",
+      "status": "done",
+      "symbol": "x",
       "timestamp": "2026-11-20 15:42:25",
       "tags": [
         "workflow"
