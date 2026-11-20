@@ -95,11 +95,27 @@ herdr pane read <pane> --source recent | grep -v '^\s*$' | tail -40
 - `blocked` = agent čeká na dialog (oprávnění, AskUserQuestion): přečti
   panel a odpověz klávesami (`Down`, `Enter`), nebo se zeptej uživatele.
 - Šedý text ve vstupním poli je návrh Claude Code, ne zadání; psaní ho přepíše.
-- Dlouhé zadání nejdřív zapiš do souboru ve scratchpadu a agentovi pošli
-  jen „Přečti a proveď zadání v <cesta>“.
+- Zadání posílej jako odkaz na záznam SPAI (§ Zadání = záznam SPAI).
 - Závěrečnou zprávu agenta čti z jeho přepisu, ne z úzkého panelu:
   nejnovější `~/.claude/projects/<cesta-cwd>/*.jsonl` (bez vlastního sezení),
   `jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text'`.
+
+## Zadání = záznam SPAI
+
+Každé zadání agentovi (programátor, tester, revizor) je **záznam SPAI** v backlogu hlavního repa
+(ne worktree), ne soubor ve scratchpadu — zůstane v historii, sidebar ho ukáže, stav je vidět.
+
+1. **Zápis:** `spai add "<řádek>
+<tělo>" --project <hlavní repo> --source orchestrator --json`.
+   Řádek `. <cíl jednou větou> :agent:coder:` (`:tester:`, `:review:`), anglicky; tělo =
+   hlavička konstant a body zadání níž. Duplicitu (kód 3) posuď: navazuje-li na starší
+   zadání, `--force` a odkaz `SPAI-NNN` v těle.
+2. **Odeslání:** `spai set <ID> working`, pak agentovi jen
+   „Do SPAI-012 @<projekt>: `spai show SPAI-012 --project <hlavní repo> --json`“.
+3. **Konec:** po sloučení `spai set <ID> done`; zahozené `cancelled`. Vrácená práce = nový
+   záznam s výtkou a odkazem na původní ID.
+4. Agent záznamy nemění (`spai add/set/delete` jen orchestrátor). Scratchpad zůstává pro
+   sondy, logy, testovací kopie a patche.
 
 ## Zadání programátorovi
 
