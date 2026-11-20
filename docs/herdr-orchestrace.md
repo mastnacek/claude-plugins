@@ -10,7 +10,7 @@ data). Platí, kdykoli sezení běží v herdr (`HERDR_ENV=1`). Uživatel mluví
 | **orchestrátor** | vlevo, celá výška | — | rozpad práce na zadání (SPAI), kontrola výsledku a brány, **jediný commit, sloučení a push**, komunikace s uživatelem |
 | **programátor** | vpravo nahoře | `scripts/agent.sh coder` (Sonnet, `CODE_MODE=1` volitelně) | píše kód ve svém worktree; zprávu commitu jen navrhne |
 | **tester** | vpravo pod programátorem | `scripts/agent.sh tester` (Haiku) | ověřuje podle scénáře nad testovacími daty; kód nemění |
-| **pozorovatel** | vpravo dole, malý | `agy` jen ke čtení (§ Pozorovatel) | čte přepisy, hodnotí postup, hlásí postřehy |
+| **kolega** | vpravo dole, malý (+ hlídač) | `scripts/kolega.sh`, startuje sám s agenty (§ Kolega) | čte přepisy všech sezení, hodnotí postup, hlásí postřehy |
 
 Najednou nejvýš jeden programátor, jeden tester a jeden revizor.
 
@@ -87,16 +87,21 @@ Scénář = kroky jako od uživatele a očekávaný výsledek každého; tester 
 krok → výsledek → OK/chyba. Testuje nad **kopií** dat ve scratchpadu, nikdy nad skutečnými.
 Příkazy pluginu (`/…`) a dialogy v jeho okně obsluhuješ ty; rozhraní čteš z panelu.
 
-## Pozorovatel (pair programmer)
+## Kolega (pair programmer)
 
-`agy` (Gemini) v malém panelu čte přepis orchestrátora i programátora a hodnotí postup.
+Role **kolega**: `agy` (Gemini) jen ke čtení sleduje orchestrátora i všechny agenty (programátor,
+tester, fable) a hlásí postřehy. Zadání role: `prompts/kolega.md`.
 
-- Spuštění jen ke čtení: `agy --dangerously-skip-permissions --mode plan --settings <soubor s
-  {"permissions":{"deny":["command(*)"]},"allowNonWorkspaceAccess":true}> --add-dir <přepisy>
-  --add-dir <repo> --add-dir <scratchpad>`; role v souboru ve scratchpadu.
-- Sám od sebe nepokračuje: po každém sloučeném úkolu mu pošli „Continue monitoring …“.
+- **Spouští se sám:** `scripts/agent.sh` při startu každého agenta zavolá `scripts/kolega.sh`
+  (idempotentní; `NO_KOLEGA=1` ho vypne). Orchestrátor ho může spustit i ručně na začátku práce.
+- `kolega.sh` založí vpravo dole panel „kolega (agy)“ (`--dangerously-skip-permissions --mode plan`,
+  `deny command(*)`, čtení `~/.claude/projects`, `D:/01_programovani`, scratchpad) a pod ním malý
+  panel „kolega-hlídač“ (`scripts/kolega-watch.sh`).
+- **Hlídač** každých 10 min zjistí sezení (`scripts/kolega-sessions.sh`: panely s agentem claude →
+  ID sezení z herdr → přepis JSONL) a pošle kolegovi pobídku se seznamem, jen když je nečinný
+  a v přepisech přibyly řádky. Agy sám od sebe nepokračuje.
 - **Je to kolega, ne autorita:** každý postřeh ověř v přepisu a podle konvencí; uživateli řekni,
-  co platí, co jen zčásti a co ne. Agy posílá přepisy Googlu — upozorni na to uživatele.
+  co platí, co jen zčásti a co ne. Platné zapiš do SPAI `:workflow:`. Agy posílá přepisy Googlu.
 
 ## Poznatky o postupu práce
 

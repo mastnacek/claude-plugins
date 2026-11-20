@@ -55,4 +55,7 @@ rules="$(mktemp "${TMPDIR:-/tmp}/agent-$role-XXXXXX.md")"
 export PATH="/d/01_programovani/_tools:$PATH"
 export SPAI_BIN="${SPAI_BIN:-D:/01_programovani/_tools/spai.exe}"
 
+# Kolega (pozorovatel) běží vždy, když se pracuje s agenty; kolega.sh je idempotentní.
+[[ "${HERDR_ENV:-}" == 1 && -z "${NO_KOLEGA:-}" ]] && { bash "$canon/scripts/kolega.sh" >/dev/null 2>&1 || true; }
+
 CC_ROLE="$role" exec claude --model "$model" "${extra[@]}" "$@"
