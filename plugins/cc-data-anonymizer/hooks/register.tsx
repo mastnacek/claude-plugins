@@ -2,12 +2,14 @@
 // each other. Nothing else lives here.
 
 import type { Register } from "claude-code";
+import { registerFindingsBand } from "./features/findings-band/register";
 import { registerPromptMask } from "./features/prompt-mask/register";
 import { registerReplyUnmask } from "./features/reply-unmask/register";
 import { registerToolMask } from "./features/tool-mask/register";
 
 export const register: Register = (on, options) => {
 	registerPromptMask(on);
+	registerFindingsBand(on);
 	registerToolMask(on);
 	registerReplyUnmask(on, options);
 };

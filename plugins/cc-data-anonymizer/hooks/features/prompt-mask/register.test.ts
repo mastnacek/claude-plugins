@@ -14,7 +14,7 @@ const anonDouble = (on: On, options: { isMissing?: boolean; scanFound?: boolean 
 			value: { exitCode, stdout, stderr: "", isStdoutTruncated: false, isStderrTruncated: false },
 		});
 		if (command === "help") return reply("{}");
-		if (command === "scan") return options.scanFound ? reply("secret #1, 4 znaků", 3) : reply("");
+		if (command === "scan") return options.scanFound ? reply(JSON.stringify({ ok: true, findings: [{ kind: "secret", rule: "vault", chars: 4, places: [{ path: "/p/s.txt", line: 1, column: 1 }] }] }), 3) : reply("");
 		const swap = command === "mask" ? (s: string) => s.replaceAll("REAL", "FAKE") : (s: string) => s.replaceAll("FAKE", "REAL");
 		return reply(JSON.stringify({ ok: true, text: swap(e.init?.stdin ?? "") }));
 	});
@@ -33,6 +33,7 @@ test("the submitted prompt is masked", async ($, on) => {
 
 test("a mentioned file with secrets is denied when the dialog is dismissed", async ($, on) => {
 	anonDouble(on, { scanFound: true });
+	on("session.cwd", () => ({ value: "/p" }));
 	on("tool.call", { tool: "AskUserQuestion" }, () => ({ deny: "dismissed" }));
 	on("prompt.mention", () => ({ type: "file" }));
 	const out = await $.prompt.mention({ mention: "s.txt", path: "/p/s.txt" });
