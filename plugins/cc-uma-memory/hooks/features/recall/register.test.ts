@@ -9,9 +9,9 @@ const fact = (id: string) => ({ id, title: `Fact ${id}`, fact_type: "decision", 
 const verdict = (ids: string[], search = true) => JSON.stringify({ search, judged_by: "jev", fact_types: [], recalled: ids.length, facts: ids.map(fact), note: null });
 
 /** `runs` answers successive `uma` calls (the last one repeats); returns what was run, what reached the bottom and what was logged. */
-function setup(on: On, runs: Run[], settings = { recall: true, writeGate: "ask" }) {
+function setup(on: On, runs: Run[], settings = { recall: true, writeGate: "ask" }, env: Record<string, string> = {}) {
 	mock.store(on, { settings });
-	mock.env(on, { HOME: "/home/t" });
+	mock.env(on, { HOME: "/home/t", ...env });
 	on("session.start", (_$, e) => ({ cwd: e.cwd }));
 	on("command.register", () => ({ value: { command: "uma" } }));
 	on("ui.status", () => ({ value: undefined }));
@@ -53,7 +53,7 @@ async function submit($: Host, text: string) {
 
 test("a prompt gets the facts as hidden context, runs in the session's cwd with a 3 s timeout, one log line", async ($, on) => {
 	const seen = setup(on, [{ exitCode: 0, stdout: verdict(["A", "B"]), stderr: "" }]);
-	await submit($, "proč VSA?");
+	await submit($, "why VSA?");
 	expect(seen.contexts[0]?.[0]).toContain("- [decision] Fact A (project:app): Snippet A");
 	expect(seen.contexts[0]?.[0]).toContain("Fact B");
 	expect(seen.cwd).toEqual(["/work/app"]);
@@ -115,6 +115,24 @@ test("recall off, commands and empty prompts never call uma", async ($, on) => {
 	const seen = setup(on, [{ exitCode: 0, stdout: verdict(["A"]), stderr: "" }], { recall: false, writeGate: "ask" });
 	await submit($, "proč VSA?");
 	expect(seen.argv).toEqual([]);
+});
+
+test("after a compaction the inserted facts may be inserted again; without one they may not", async ($, on) => {
+	const seen = setup(on, [{ exitCode: 0, stdout: verdict(["A"]), stderr: "" }]);
+	on("session.compact", (_$, e) => (e.trigger === "precompute" ? { skip: "off" } : { messages: [{ role: "user", text: "summary", toolUses: [] }] }) as never);
+	await submit($, "první");
+	await submit($, "druhý");
+	expect(seen.contexts.map((c) => c !== undefined)).toEqual([true, false]);
+	await ($ as unknown as { session: { compact: (a: never) => Promise<unknown> } }).session.compact({ trigger: "manual", messages: [{ role: "user", text: "hi", toolUses: [] }] } as never);
+	await submit($, "třetí");
+	expect(seen.argv[2]).not.toContain("--exclude");
+	expect(seen.contexts[2]?.[0]).toContain("Fact A");
+});
+
+test("UMA_RECALL_DEBUG=1 logs the first 60 characters recall is asked with", async ($, on) => {
+	const seen = setup(on, [{ exitCode: 0, stdout: verdict([], false), stderr: "" }], { recall: true, writeGate: "ask" }, { UMA_RECALL_DEBUG: "1" });
+	await submit($, "x".repeat(100));
+	expect(seen.logs).toEqual([`recall debug: ${"x".repeat(60)}`]);
 });
 
 test("a slash-led prompt is not recalled for", async ($, on) => {

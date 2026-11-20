@@ -8,8 +8,8 @@ test("argv lists active decisions and patterns as JSON", () => {
 
 test("format matches pi's formatRulesForSystemPrompt: header, instruction, first body line", () => {
 	const text = formatRules([
-		{ fact_type: "decision", title: "Use VSA", body: "Slices own their code.\nSecond line is dropped." },
-		{ fact_type: "pattern", title: "No body", body: "" },
+		{ id: "1", fact_type: "decision", title: "Use VSA", body: "Slices own their code.\nSecond line is dropped." },
+		{ id: "2", fact_type: "pattern", title: "No body", body: "" },
 	]);
 	expect(text).toBe(
 		[
@@ -22,7 +22,7 @@ test("format matches pi's formatRulesForSystemPrompt: header, instruction, first
 });
 
 test("at most 10 rules; none → empty text", () => {
-	const many = Array.from({ length: 14 }, (_, i) => ({ fact_type: "decision", title: `T${i}`, body: "b" }));
+	const many = Array.from({ length: 14 }, (_, i) => ({ id: `I${i}`, fact_type: "decision", title: `T${i}`, body: "b" }));
 	expect(formatRules(many).split("\n")).toHaveLength(2 + 10);
 	expect(formatRules(many)).toContain("T9");
 	expect(formatRules(many)).not.toContain("T10");
@@ -30,7 +30,7 @@ test("at most 10 rules; none → empty text", () => {
 });
 
 test("parse: an array of facts, anything else is unreadable", () => {
-	expect(parseRules('[{"id":"1","title":"A","fact_type":"decision","body":"x"}]')).toEqual([{ title: "A", fact_type: "decision", body: "x" }]);
+	expect(parseRules('[{"id":"1","title":"A","fact_type":"decision","body":"x"}]')).toEqual([{ id: "1", title: "A", fact_type: "decision", body: "x" }]);
 	expect(parseRules("[]")).toEqual([]);
 	expect(parseRules("not json")).toBeUndefined();
 	expect(parseRules('{"a":1}')).toBeUndefined();

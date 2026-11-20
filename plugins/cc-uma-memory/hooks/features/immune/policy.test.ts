@@ -67,6 +67,13 @@ test("a path in the UMA store is not an edit for immune (write-gate guards it)",
 	expect(isStorePath("C:\\w\\.uma\\a.md")).toBe(true);
 });
 
+test("isStorePath knows the short Windows/macOS global stores but not the watchdog dir", () => {
+	expect(isStorePath("C:\\Users\\u\\AppData\\Roaming\\uma\\global\\fact\\01.md")).toBe(true);
+	expect(isStorePath("/Users/x/Library/Application Support/uma/global/decision/01.md")).toBe(true);
+	expect(isStorePath("C:\\Users\\u\\AppData\\Roaming\\uma\\agent-watchdog\\log.jsonl")).toBe(false);
+	expect(isStorePath("/Users/x/Library/Application Support/uma/agent-watchdog/log.jsonl")).toBe(false);
+});
+
 test("no warnings means allow in every mode", () => {
 	for (const mode of ["off", "warn", "ask", "auto"] as const) expect(decideAction(mode, [])).toEqual({ kind: "allow" });
 });

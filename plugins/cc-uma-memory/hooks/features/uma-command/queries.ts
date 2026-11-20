@@ -6,6 +6,7 @@
 
 import { debtOutput, doctorOutput, listOutput, readOutput, searchOutput, sentence, timelineOutput } from "./output";
 import type { Result } from "./output";
+import type { Prose } from "./translate";
 
 export const README_URL = "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-uma-memory#requirements";
 
@@ -14,7 +15,7 @@ export type QuerySubcommand = (typeof QUERY_SUBCOMMANDS)[number];
 
 export const isQuery = (sub: string | undefined): sub is QuerySubcommand => (QUERY_SUBCOMMANDS as readonly (string | undefined)[]).includes(sub);
 
-export type Plan = { argv: string[]; /** Builds the answer from a successful run's stdout: the model's line and the person's data. */ render: (stdout: string) => Result } | { usage: string };
+export type Plan = { argv: string[]; /** Builds the answer from a successful run's stdout: the model's line and the person's data. */ render: (stdout: string) => Result; /** What of the output is fact prose to show translated (none = nothing). */ prose?: Prose } | { usage: string };
 
 /** The flag value after `name`, or undefined when absent or missing. */
 const valueOf = (args: readonly string[], name: string): string | undefined => {
@@ -30,17 +31,17 @@ export function planQuery(sub: QuerySubcommand, args: readonly string[]): Plan {
 			const query = args.join(" ");
 			if (!query) return { usage: "Použití: /uma search <dotaz>" };
 			// `--` keeps a query like "--vectorize" a query, not a switch.
-			return { argv: ["uma", "search", "--json", "--", query], render: (out) => searchOutput(query, out) };
+			return { argv: ["uma", "search", "--json", "--", query], render: (out) => searchOutput(query, out), prose: "titles" };
 		}
 		case "list": {
 			const scope = args[0];
 			if (args.length > 1 || scope?.startsWith("-")) return { usage: "Použití: /uma list [global|<projekt>]" };
-			return { argv: scope ? ["uma", "list", "--json", "--scope", scope] : ["uma", "list", "--json"], render: (out) => listOutput(scope ? `Fakta (${scope})` : "Fakta", out) };
+			return { argv: scope ? ["uma", "list", "--json", "--scope", scope] : ["uma", "list", "--json"], render: (out) => listOutput(scope ? `Fakta (${scope})` : "Fakta", out), prose: "titles" };
 		}
 		case "read": {
 			const id = args[0];
 			if (!id || args.length > 1 || id.startsWith("-")) return { usage: "Použití: /uma read <id>" };
-			return { argv: ["uma", "read", "--json", "--", id], render: (out) => readOutput(id, out) };
+			return { argv: ["uma", "read", "--json", "--", id], render: (out) => readOutput(id, out), prose: "titles-body" };
 		}
 		case "timeline": {
 			const usage = "Použití: /uma timeline [--id <ULID>] [--all]";
@@ -48,7 +49,7 @@ export function planQuery(sub: QuerySubcommand, args: readonly string[]): Plan {
 			const rest = args.filter((a, i) => a !== "--all" && !(a === "--id") && !(id !== undefined && args[i - 1] === "--id"));
 			if (rest.length > 0 || (args.includes("--id") && id === undefined)) return { usage };
 			const argv = ["uma", "timeline", "--json", ...(id ? ["--id", id] : []), ...(args.includes("--all") ? ["--all"] : [])];
-			return { argv, render: timelineOutput };
+			return { argv, render: timelineOutput, prose: "titles" };
 		}
 		case "doctor":
 			if (args.length > 0) return { usage: "Použití: /uma doctor" };

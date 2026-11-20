@@ -26,6 +26,21 @@
       "description": "Reverse-engineers a verifiable spec (rules, tests, traceability) from an existing codebase so it can be rebuilt with proven parity."
     },
     {
+      "name": "cc-agent-watchdog",
+      "source": "./plugins/cc-agent-watchdog",
+      "description": "Watchdog pro agenty: deník volání nástrojů, pravidla a skóre programátora a testera"
+    },
+    {
+      "name": "cc-pixel-buddy",
+      "source": "./plugins/cc-pixel-buddy",
+      "description": "Pixelová počítačová hlavička vedle chatu: nálada podle práce, užitečné hlášky a statistiky dne"
+    },
+    {
+      "name": "cc-herdr-plugin-dev",
+      "source": "./plugins/cc-herdr-plugin-dev",
+      "description": "Psaní herdr pluginů: skill s dokumentací, kostra, validace manifestu a brány před úpravou"
+    },
+    {
       "name": "cc-spai-tasks",
       "source": "./plugins/cc-spai-tasks",
       "description": "SPAI úkoly, nápady a poznámky v docs/spai/ projektu, sdílené s pi"

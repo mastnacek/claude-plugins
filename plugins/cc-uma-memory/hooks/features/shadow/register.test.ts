@@ -53,12 +53,14 @@ test("a red cargo test followed by a green one stages a compiler_recovery draft,
 	await bash($, "cargo test");
 	await clock.advance(1);
 	expect(distills(argv)).toEqual([]);
+	await $.tool.call({ tool: "Edit", file_path: "/w/src/main.rs", old_string: "a", new_string: "b" } as never);
 	greenNow = true;
 	await bash($, "cargo test");
 	await clock.advance(1);
 	const [run] = distills(argv);
 	expect(run?.slice(0, 5)).toEqual(["uma", "staging", "distill", "--trigger", "compiler_recovery"]);
 	expect(run?.[6]).toContain("`cargo test` initially failed:\nExit code 101");
+	expect(run?.[6]).toContain("Fixed by changing: /w/src/main.rs.");
 	expect(run).toContain("off");
 	// The failure was spent: another green run is not a recovery.
 	await bash($, "cargo test");
@@ -66,11 +68,33 @@ test("a red cargo test followed by a green one stages a compiler_recovery draft,
 	expect(distills(argv)).toHaveLength(1);
 });
 
+test("a recovery after changing only test files (Edit or sed -i) stages nothing", async ($, on) => {
+	greenNow = false;
+	const { argv, clock } = setup(on, { bash: (c) => (c.startsWith("sed") ? { result: { stdout: "", stderr: "" }, text: "" } : REDGREEN(c)) });
+	await start($);
+	await bash($, "cargo test");
+	await $.tool.call({ tool: "Edit", file_path: "/w/src/a.test.ts", old_string: "a", new_string: "b" } as never);
+	await bash($, "sed -i 's/a/b/' tests/b.rs");
+	greenNow = true;
+	await bash($, "cargo test");
+	await clock.advance(1);
+	expect(distills(argv)).toEqual([]);
+});
+
+test("today's pasted instruction is not a correction", async ($, on) => {
+	const { argv, clock } = setup(on);
+	await start($);
+	await prompt($, "Enable uma memory globally instead of claude memory; there is an uma command for this.");
+	await clock.advance(1);
+	expect(distills(argv)).toEqual([]);
+});
+
 test("jev mode asks the judge", async ($, on) => {
 	greenNow = false;
 	const { argv, clock } = setup(on, { shadow: "jev", bash: REDGREEN });
 	await start($);
 	await bash($, "cargo test");
+	await $.tool.call({ tool: "Edit", file_path: "/w/src/main.rs", old_string: "a", new_string: "b" } as never);
 	greenNow = true;
 	await bash($, "cargo test");
 	await clock.advance(1);
@@ -129,6 +153,7 @@ test("a tool result is passed on unchanged, also when uma is missing", async ($,
 	await start($);
 	const red = (await bash($, "cargo test")) as { isError?: boolean };
 	expect(red.isError).toBe(true);
+	await $.tool.call({ tool: "Edit", file_path: "/w/src/main.rs", old_string: "a", new_string: "b" } as never);
 	greenNow = true;
 	await bash($, "cargo test");
 	await clock.advance(1);

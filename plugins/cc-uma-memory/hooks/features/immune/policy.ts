@@ -21,6 +21,9 @@ export const RULES_ARGV = (type: string): string[] => ["uma", "list", "--json", 
 export const DIALOG_TITLE = "🛡️ UMA imunitní interceptor";
 export const PROCEED = "Ano, pokračovat";
 export const BLOCK = "Ne, zablokovat";
+/** The person said "Ne, zablokovat": the model must not retry the same edit (as write-gate's DENIED_REASON). */
+export const DENIED_BY_USER = "Uživatel úpravu zamítl. Nezkoušej ji znovu bez nového pokynu.";
+
 export const NO_UI_REASON = "Imunitní interceptor se potřeboval zeptat uživatele, ale nelze (bez dialogu). Úprava zablokována.";
 
 // ── assessment (thresholds and metric verbatim from pi) ───────────────────
@@ -72,7 +75,14 @@ export function assessEdit(pain: PainVerdict | undefined, rules: RuleL1[], added
 export function isStorePath(targetPath: string): boolean {
 	const norm = targetPath.replace(/\\/g, "/").toLowerCase();
 	if (norm.includes("/.uma/") || norm.startsWith(".uma/") || norm.endsWith("/.uma") || norm === ".uma") return true;
-	const globalMarkers = ["/uma/uma/data/global/", "/uma/data/global/", "/com.uma.uma/global/", "/.local/share/uma/global/"];
+	const globalMarkers = [
+		"/uma/uma/data/global/",
+		"/uma/data/global/",
+		"/com.uma.uma/global/",
+		"/.local/share/uma/global/",
+		"/appdata/roaming/uma/global/",
+		"/application support/uma/global/",
+	];
 	return globalMarkers.some((m) => norm.includes(m) || norm.endsWith(m.slice(0, -1)));
 }
 

@@ -5,6 +5,7 @@
 import type { PluginState, ShapedValue } from "claude-code";
 import { PICK_BODY, PICK_FULL, PICK_TITLE, previewOf, wrap, WRAP_COLUMNS } from "../../shared/proposal";
 import type { Proposal } from "../../shared/proposal";
+import type { Display } from "../../shared/translate";
 
 type Out = ShapedValue<PluginState["cc-uma-memory"]["commandOutputs"]>[string];
 
@@ -95,9 +96,9 @@ export function proposalOf(d: Draft, projectName: string): Proposal {
 export const percent = (confidence: number): string => `${Math.round(confidence * 100)} %`;
 
 /** The main dialog's question: the shared preview, headed as a draft under review. */
-export function questionOf(d: Draft, v: Proposal, index: number, total: number): string {
+export function questionOf(d: Draft, v: Proposal, index: number, total: number, shown?: Display): string {
 	const head = `📝 UMA • Koncept ${index + 1} z ${total} • spouštěč ${d.trigger || "?"} • jistota ${percent(d.confidence)}`;
-	return previewOf(v).replace(/^[^\n]*/, head);
+	return previewOf(v, shown).replace(/^[^\n]*/, head);
 }
 
 /** The edit menu's picks: a draft's tags cannot be changed (the engine's approve takes title and body only). */

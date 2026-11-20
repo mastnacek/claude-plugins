@@ -4,12 +4,14 @@
 export type ShadowMode = "off" | "on" | "jev";
 export type ImmuneMode = "off" | "warn" | "ask" | "auto";
 /** `immuneModel` "" = the default model of the immune recommendation (OpenRouter). */
-export type Settings = { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: ImmuneMode; immuneModel: string; humility: boolean; shadow: ShadowMode };
+export type Lang = "cs" | "en";
+/** `lang`: the language facts are SHOWN in (`cs` = translated for display, `en` = as stored). What is stored is English either way. */
+export type Settings = { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: ImmuneMode; immuneModel: string; humility: boolean; shadow: ShadowMode; lang: Lang };
 
 /** The model the immune recommendation asks by default (kept equal to immune/recommendation.ts: slices share no code). */
 export const DEFAULT_IMMUNE_MODEL = "google/gemini-3.5-flash-lite";
 
-export const DEFAULTS: Settings = { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on" };
+export const DEFAULTS: Settings = { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on", lang: "cs" };
 
 /** What `$.store` held; anything unreadable falls back to the default for that key. */
 export function parseStored(value: unknown): Settings {
@@ -22,6 +24,7 @@ export function parseStored(value: unknown): Settings {
 		immuneModel: typeof obj.immuneModel === "string" && MODEL_ID_RE.test(obj.immuneModel) ? obj.immuneModel : DEFAULTS.immuneModel,
 		humility: typeof obj.humility === "boolean" ? obj.humility : DEFAULTS.humility,
 		shadow: obj.shadow === "off" || obj.shadow === "on" || obj.shadow === "jev" ? obj.shadow : DEFAULTS.shadow,
+		lang: obj.lang === "cs" || obj.lang === "en" ? obj.lang : DEFAULTS.lang,
 	};
 }
 
@@ -102,4 +105,16 @@ export function shadowCommand(current: Settings, arg: string | undefined, extra:
 	if (arg === undefined) return { settings: current, text: `Stínový pracovník: ${current.shadow} — ${SHADOW_DESCRIPTIONS[current.shadow]}` };
 	if ((arg !== "on" && arg !== "off" && arg !== "jev") || extra > 0) return { settings: current, text: "Neznámý argument. Zkus /uma shadow [on|off|jev]." };
 	return { settings: { ...current, shadow: arg }, text: `Stínový pracovník: ${arg} — ${SHADOW_DESCRIPTIONS[arg]} (platí hned, ve všech sezeních; koncepty posuzuješ v /uma review)` };
+}
+
+const LANG_DESCRIPTIONS: Record<Lang, string> = {
+	cs: "fakta se ukazují přeložená do češtiny (OpenRouter); uložená a modelu předaná zůstávají anglická",
+	en: "fakta se ukazují tak, jak jsou uložena (bez překladu)",
+};
+
+/** `/uma lang [cs|en]` — how facts are shown to the person; what is stored never changes. Without an argument it only reports. */
+export function langCommand(current: Settings, arg: string | undefined, extra: number): SettingResult {
+	if (arg === undefined) return { settings: current, text: `Jazyk zobrazení faktů: ${current.lang} — ${LANG_DESCRIPTIONS[current.lang]}` };
+	if ((arg !== "cs" && arg !== "en") || extra > 0) return { settings: current, text: "Neznámý argument. Zkus /uma lang [cs|en]." };
+	return { settings: { ...current, lang: arg }, text: `Jazyk zobrazení faktů: ${arg} — ${LANG_DESCRIPTIONS[arg]} (platí hned, ve všech sezeních)` };
 }

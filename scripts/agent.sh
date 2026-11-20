@@ -7,7 +7,11 @@
 #
 # Role jde do CC_ROLE: hook .claude/hooks/orchestrator-only-git.sh pak agentovi
 # zamítne git commit a git push — ty dělá jen orchestrátor.
+# Stálá pravidla role (pravidla, Definition of Done, hodnocení, instant failure)
+# přidá k system promptu prompts/<role>.md; konstanty dává hlavička zadání.
 set -euo pipefail
+
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 role="${1:-}"
 shift || true
@@ -28,5 +32,8 @@ for ((i = 0; i < ${#args[@]}; i++)); do
     [[ -n "$name" ]] && extra+=(--settings "{\"enabledPlugins\":{\"$name@mastnacek\":false}}")
   fi
 done
+
+prompt="$repo/prompts/$role.md"
+[[ -r "$prompt" ]] && extra+=(--append-system-prompt-file "$prompt")
 
 CC_ROLE="$role" exec claude --model "$model" "${extra[@]}" "$@"

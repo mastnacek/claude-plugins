@@ -18,12 +18,13 @@ import { classify, styleOf, typeColor } from "./classify";
 import { failure, fromText, helpOutput, usage } from "./output";
 import type { Out, Outputs, Result } from "./output";
 import { failedRun, isQuery, missingBinary, planQuery } from "./queries";
-import { appendCommand, humilityCommand, immuneCommand, immuneModelCommand, parseStored, recallCommand, shadowCommand, writeGateCommand } from "./settings";
+import { appendCommand, humilityCommand, immuneCommand, immuneModelCommand, langCommand, parseStored, recallCommand, shadowCommand, writeGateCommand } from "./settings";
 import type { Settings } from "./settings";
+import { translateResult } from "./translate";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const commandOutputsAtom = atom({ plugin: "cc-uma-memory", key: "commandOutputs" } as const, {} as Outputs, { shape: "output-2" });
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on" } as Settings, { shape: "settings-5" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on", lang: "cs" } as Settings, { shape: "settings-6" });
 
 type $ = EngineInterface;
 
@@ -44,6 +45,7 @@ const HELP: ReadonlyArray<readonly [string, string]> = [
 	["/uma immune-model [<id>|default]", "model OpenRouteru pro doporučení v dialogu (výchozí google/gemini-3.5-flash-lite)"],
 	["/uma humility [on|off]", "brána pokory: po verdiktu LOW z uma_humility zastaví první Write/Edit, dokud nepřečteš soubory a nevyslovíš hypotézu (výchozí off)"],
 	["/uma shadow [on|off|jev]", "stínový pracovník: sbírá koncepty (obnova po pádu, tvá oprava, závislosti, opakované příkazy); jev = posoudí je Jev přes OpenRouter (výchozí on)"],
+	["/uma lang [cs|en]", "jazyk zobrazení faktů: cs = přeložená do češtiny (OpenRouter), en = jak jsou uložena; ukládají se vždy anglicky (výchozí cs)"],
 	["/uma review", "projde koncepty a každý ukáže dialogem: schválit / upravit / přeskočit / zamítnout"],
 	["/uma staging list|show <id>|discard <id>", "koncepty čekající na posouzení"],
 	["/uma search <dotaz>", "hledání ve faktech"],
@@ -64,7 +66,9 @@ async function runQuery($: $, sub: Parameters<typeof planQuery>[0], args: string
 	try {
 		const run = await $.process.run(plan.argv, { cwd: await $.session.cwd(), timeoutMs: QUERY_TIMEOUT_MS });
 		if (run.exitCode !== 0) return failure(failedRun(sub, run.exitCode, run.stderr || run.stdout));
-		return plan.render(run.stdout);
+		const result = plan.render(run.stdout);
+		// Display only: the frame shows the facts in Czech, the model's line stays as the engine gave it.
+		return plan.prose ? await translateResult($, result, plan.prose, (await read($, settingsAtom)).lang) : result;
 	} catch (error) {
 		return failure(missingBinary(error instanceof Error ? error.message.split("\n")[0] ?? "" : String(error)));
 	}
@@ -75,9 +79,9 @@ async function runCommand($: $, args: string): Promise<Result | undefined> {
 	if (sub === undefined || sub === "help") return helpOutput(HELP);
 	if (isQuery(sub)) return runQuery($, sub, [arg, ...rest].filter((a): a is string => a !== undefined));
 	if (sub === "immune" && arg === "stats") return undefined; // the immune slice owns its log
-	if (sub !== "recall" && sub !== "write-gate" && sub !== "append" && sub !== "immune" && sub !== "immune-model" && sub !== "humility" && sub !== "shadow") return undefined;
+	if (sub !== "recall" && sub !== "write-gate" && sub !== "append" && sub !== "immune" && sub !== "immune-model" && sub !== "humility" && sub !== "shadow" && sub !== "lang") return undefined;
 	const current = await read($, settingsAtom);
-	const change = sub === "recall" ? recallCommand : sub === "append" ? appendCommand : sub === "immune" ? immuneCommand : sub === "immune-model" ? immuneModelCommand : sub === "humility" ? humilityCommand : sub === "shadow" ? shadowCommand : writeGateCommand;
+	const change = sub === "recall" ? recallCommand : sub === "append" ? appendCommand : sub === "immune" ? immuneCommand : sub === "immune-model" ? immuneModelCommand : sub === "humility" ? humilityCommand : sub === "shadow" ? shadowCommand : sub === "lang" ? langCommand : writeGateCommand;
 	const result = change(current, arg, rest.length);
 	if (result.settings !== current) {
 		await $.store.set(STORE_KEY, result.settings);
@@ -157,7 +161,16 @@ export function drawOutput(Box: Components["Box"], Text: Components["Text"], out
 		if (parts.length > 0) body.push(<Text key="p">{"   "}{parts}</Text>);
 		if (it.id) body.push(<Text key="i" dimColor>{`   🆔 ${it.id}`}</Text>);
 		if (it.tags && it.tags.length > 0) body.push(<Text key="g" dimColor>{`   🏷️  ${it.tags.join(" · ")}`}</Text>);
-		for (const [j, line] of (it.lines ?? []).entries()) body.push(<Text key={`l${j}`}>{"   "}{styled(line || " ", undefined, false)}</Text>);
+		// Detail lines (a fact's body) sit in a box indented by 3, so a long line wraps indented, not from column 0.
+		if (it.lines && it.lines.length > 0) {
+			body.push(
+				<Box key="d" flexDirection="column" paddingLeft={3}>
+					{it.lines.map((line, j) => (
+						<Box key={`l${j}`}>{styled(line || " ", undefined, false)}</Box>
+					))}
+				</Box>,
+			);
+		}
 		rows.push(
 			<Box key={`i${i}`} flexDirection="column" marginTop={1}>
 				{body}
@@ -189,6 +202,7 @@ function completions(text: string, token: string): PromptAutocompleteSuggestion[
 			["immune-model", "model OpenRouteru pro doporučení"],
 			["humility", "brána pokory před úpravou neznámého kódu"],
 			["shadow", "stínový pracovník sbírající koncepty"],
+			["lang", "jazyk zobrazení faktů (cs = překlad, en = originál)"],
 			["review", "posouzení konceptů"],
 			["staging", "koncepty čekající na posouzení"],
 			["search", "hledání ve faktech"],
@@ -208,6 +222,7 @@ function completions(text: string, token: string): PromptAutocompleteSuggestion[
 	else if (words[0] === "immune" && words.length === 2) options = [["off"], ["warn"], ["ask"], ["auto"], ["stats", "jak jsi odpovídal na dialogy"]];
 	else if (words[0] === "humility" && words.length === 2) options = [["on"], ["off"]];
 	else if (words[0] === "shadow" && words.length === 2) options = [["on"], ["off"], ["jev", "koncepty posuzuje Jev přes OpenRouter"]];
+	else if (words[0] === "lang" && words.length === 2) options = [["cs", "fakta přeložená do češtiny"], ["en", "fakta jak jsou uložena"]];
 	else if (words[0] === "staging" && words.length === 2) options = [["list", "koncepty ke schválení"], ["show", "jeden koncept"], ["discard", "zahodit koncept"]];
 	else if (words[0] === "immune-model" && words.length === 2) options = [["default", "google/gemini-3.5-flash-lite"]];
 	else if (words[0] === "debt" && words.length === 2) options = [["list", "otevřené i vyrovnané dluhy"], ["clear", "smazat všechny dluhy"]];
@@ -267,7 +282,7 @@ export async function startUmaCommand($: EngineInterface): Promise<void> {
 	await $.command.register({
 		name: COMMAND,
 		description: "Paměť UMA: vzpomínky k promptu, schvalování zápisu, automatická paměť Claude",
-		argumentHint: "search | list | read | timeline | doctor | reindex | export | debt | recall | append | write-gate | immune | immune-model | humility | shadow | review | staging | claude-memory | help",
+		argumentHint: "search | list | read | timeline | doctor | reindex | export | debt | recall | append | write-gate | immune | immune-model | humility | shadow | lang | review | staging | claude-memory | help",
 	});
 	const stored = parseStored(await $.store.get(STORE_KEY));
 	await update($, settingsAtom, () => stored);

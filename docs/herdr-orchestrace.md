@@ -103,6 +103,12 @@ herdr pane read <pane> --source recent | grep -v '^\s*$' | tail -40
 
 ## Zadání programátorovi
 
+Stálá pravidla rolí (pravidla, Definition of Done, „How you're graded“, instant failure)
+jsou v `prompts/coder.md` a `prompts/tester.md`; `scripts/agent.sh` je přidá k system
+promptu (`--append-system-prompt-file`). Zadání proto začíná **hlavičkou konstant**
+z těch souborů (`LANG`, `WORKDIR`, `SCRATCH`, `ALLOWED_PATHS`, `GATE`, `HARD_CONSTRAINTS`…;
+tester `TEST_METHOD`, `SCENARIO`, `TEST_ENV`) a pravidla už neopakuje.
+
 Každé zadání obsahuje:
 
 1. **cíl** jednou větou a odkaz na dokumenty, které má přečíst

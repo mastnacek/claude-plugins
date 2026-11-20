@@ -47,6 +47,9 @@ const CORRECTION_MARKERS: readonly string[] = [
 	"that's incorrect", "that is incorrect", "you should not",
 ];
 
+/** A marker that is no explicit error indicator: it corrects a plain message, but does not turn a request for an operation into a repair request. */
+const WEAK_MARKER = "instead of";
+
 /** English openers a translation produces for "Špatně:" / "Chyba:". */
 const CORRECTION_OPENERS = /^(?:wrong|incorrect|mistake|error)\s*[:!,.-]/i;
 
@@ -60,16 +63,31 @@ const TASK_DIRECTIVE =
 	/\b(?:use|call|run|invoke)\s+(?:the\s+)?[\w-]+\s+tool\b|\buma_[a-z_]+\b|\bnástroj\w*|\b(?:zavolej|spusť|použij nástroj|vytvoř soubor)\b|\b(?:edit|write|bash|read)\s+tool\b/i;
 
 /**
+ * A request for an operation (not a correction unless it also carries an explicit error
+ * indicator, see `isUserCorrection`): the message opens with an imperative verb ("Enable uma
+ * memory globally instead of …", "Přidej …") or points at a command to run ("there is
+ * an uma command for this"). Pi's TASK_DIRECTIVE misses these: "instead of" alone then
+ * staged guidance as a correction. A correction opens with its own word ("Špatně",
+ * "No", "Don't use …"), so those openers are not in the list.
+ */
+const OPERATION_REQUEST =
+	/^(?:please\s+|prosím\s+)?(?:enable|disable|add|create|install|set\s?up|switch|turn|make|run|call|open|show|write|implement|fix|update|remove|delete|start|stop|try|check|find|list|move|rename|configure|migrate|zapni|vypni|přidej|vytvoř|nainstaluj|nastav|přepni|udělej|spusť|zavolej|otevři|ukaž|napiš|implementuj|oprav|uprav|odstraň|smaž|zkus|zkontroluj|najdi)\b|\bcommand\s+for\s+(?:this|that|it)\b|\bpříkaz\s+(?:na|pro)\s+(?:to|tohle)\b|\b(?:uma|git|npm|cargo|claude)\s+(?:command|příkaz)\b/i;
+
+/**
  * True when a user message corrects the agent and is worth distilling.
- * A task directive is never a correction; a correction reacts to something, so
- * without an earlier assistant reply there is nothing to correct. The text is the
- * person's own (Claude Code hands the prompt as typed), so Czech markers match directly.
+ * A task directive or an operation request is never a correction; a correction reacts
+ * to something, so without an earlier assistant reply there is nothing to correct. The
+ * text is the person's own (Claude Code hands the prompt as typed), so Czech markers
+ * match directly. Pi's extra input, the translate plugin's record of the original text,
+ * has no counterpart here: the prompt is not translated.
  */
 export function isUserCorrection(text: string, hasPriorAssistant: boolean): boolean {
 	const t = text.trim();
 	if (!hasPriorAssistant || !t || t.length >= MAX_CORRECTION_CHARS || TASK_DIRECTIVE.test(t)) return false;
 	const lower = t.toLowerCase();
-	return CORRECTION_OPENERS.test(t) || CORRECTION_MARKERS.some((m) => lower.includes(m));
+	const explicit = CORRECTION_OPENERS.test(t) || CORRECTION_MARKERS.some((m) => m !== WEAK_MARKER && lower.includes(m));
+	if (OPERATION_REQUEST.test(t)) return explicit;
+	return explicit || lower.includes(WEAK_MARKER);
 }
 
 /** Whether a path is a dependency manifest the worker watches. */
@@ -86,9 +104,39 @@ export function dependencyContext(tool: string, path: string, text: string): str
 	return `File: ${path}\nModified dependencies:\n${text.slice(0, EDIT_CHARS)}`;
 }
 
-/** The context handed to the judge once a red build/test run was followed by a green one. */
-export function recoveryContext(failedCommand: string, failedOutput: string, okCommand: string): string {
-	return `Command \`${failedCommand}\` initially failed:\n${failedOutput.trim()}\n\nSubsequent command succeeded: \`${okCommand}\`.`;
+/** A test file by name or folder: `*.test.*`, `*.spec.*`, `*_test.*`, `test_*.py`, `tests/`, `__tests__/`. */
+export function isTestPath(path: string): boolean {
+	const p = path.replace(/\\/g, "/");
+	const name = p.slice(p.lastIndexOf("/") + 1);
+	return /\.(?:test|spec)\.[^.]+$/.test(name) || /_test\.[^.]+$/.test(name) || /^test_.*\.py$/.test(name) || /(?:^|\/)(?:tests?|__tests__)\//.test(p);
+}
+
+/** Only the build/test parts of a compound command: `cd x && sed -i … && tsc` → `tsc`. */
+function testPart(command: string): string {
+	const parts = command.split(/&&|\|\||;|\|/).map((c) => c.trim()).filter(isTestOrBuildCommand);
+	return parts.length > 0 ? parts.join(" && ") : command.trim();
+}
+
+/** Files a shell command writes: in-place `sed`/`perl`, `tee`, `>`/`>>` redirects. */
+export function shellWrittenPaths(command: string): string[] {
+	const pathLike = /^[\w./@~-]*\w\.\w+$/;
+	const out: string[] = [];
+	for (const part of command.split(/&&|\|\||;|\|/)) {
+		const tokens = part.trim().split(/\s+/);
+		if (/\b(?:sed|perl)\b/.test(part) && tokens.some((t) => /^-\w*i/.test(t) || t === "--in-place")) out.push(...tokens.filter((t) => pathLike.test(t)));
+		tokens.forEach((t, i) => {
+			if (t === "tee" || t === ">" || t === ">>") {
+				const next = tokens[i + 1];
+				if (next !== undefined && pathLike.test(next)) out.push(next);
+			}
+		});
+	}
+	return out;
+}
+
+/** The context handed to the judge once a red build/test run was followed by a green one: the error and what fixed it, never the edit command itself. */
+export function recoveryContext(failedCommand: string, failedOutput: string, okCommand: string, edited: readonly string[]): string {
+	return `Command \`${testPart(failedCommand)}\` initially failed:\n${failedOutput.trim()}\n\nFixed by changing: ${edited.join(", ")}.\nSubsequent command succeeded: \`${testPart(okCommand)}\`.`;
 }
 
 export type Trigger = "compiler_recovery" | "user_correction" | "dependency_change";
@@ -110,17 +158,35 @@ export function stagedDraft(stdout: string): boolean {
 	}
 }
 
-/** The last red build/test run, kept until a green one follows (or it grows stale). */
-export type Failure = { command: string; output: string; at: number };
+/** Most changed files kept (and named in the context) per failure. */
+const MAX_EDITED = 5;
+
+/** The last red build/test run, kept until a green one follows (or it grows stale), and the non-test files changed since. */
+export type Failure = { command: string; output: string; at: number; edited: string[] };
+
+/** A file changed after a red run: only non-test files count as a fix worth learning from. */
+export function afterEdit(failure: Failure | null, path: string): Failure | null {
+	if (!failure || !path || isTestPath(path)) return failure;
+	const edited = failure.edited ?? [];
+	if (edited.includes(path) || edited.length >= MAX_EDITED) return failure;
+	return { ...failure, edited: [...edited, path] };
+}
 
 /**
  * What a finished Bash call changes: a red build/test run is remembered; a green one
- * within the TTL of a red one is a recovery (the context to distill) and clears it.
+ * within the TTL of a red one is a recovery (the context to distill) and clears it —
+ * but only when a non-test file changed in between. A test file edited to match the
+ * code, or a bare rerun, teaches nothing. Files the command itself writes count too.
  * Anything that is not a build/test command leaves the memory as it was.
  */
 export function afterBash(failure: Failure | null, command: string, failed: boolean, output: string, now: number): { failure: Failure | null; context?: string } {
-	if (!isTestOrBuildCommand(command)) return { failure };
-	if (failed) return { failure: { command, output: output.slice(0, OUTPUT_CHARS), at: now } };
-	if (failure && now - failure.at < FAILURE_TTL_MS) return { failure: null, context: recoveryContext(failure.command, failure.output, command) };
-	return { failure };
+	let current = failure;
+	for (const path of shellWrittenPaths(command)) current = afterEdit(current, path);
+	if (!isTestOrBuildCommand(command)) return { failure: current };
+	if (failed) return { failure: { command, output: output.slice(0, OUTPUT_CHARS), at: now, edited: [] } };
+	if (current && now - current.at < FAILURE_TTL_MS) {
+		const edited = current.edited ?? [];
+		return edited.length > 0 ? { failure: null, context: recoveryContext(current.command, current.output, command, edited) } : { failure: null };
+	}
+	return { failure: current };
 }

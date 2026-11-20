@@ -11,19 +11,23 @@
 
 import type { On } from "claude-code";
 import { atom, read, update } from "claude-code";
-import { RULE_TYPES, formatRules, parseRules, rulesArgv } from "./policy";
+import { recordContext } from "../../shared/audit";
+import { LANGUAGE_RULE, MAX_RULES, RULE_TYPES, formatRules, parseRules, rulesArgv } from "./policy";
 import type { Rule } from "./policy";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev" }, { shape: "settings-5" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on", lang: "cs" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev"; lang: "cs" | "en" }, { shape: "settings-6" });
 const rulesSessionAtom = atom({ plugin: "cc-uma-memory", key: "rulesSession" } as const, { session: "", text: null, failing: false } as { session: string; text: string | null; failing: boolean });
 
 const TIMEOUT_MS = 5000;
 const SECTION_ID = "cc-uma-memory:rules";
+const LANGUAGE_ID = "cc-uma-memory:language";
 
 export function registerRules(on: On): void {
 	on("prompt.compose", async ($, e, next) => {
-		const composed = await next(e);
+		const base = await next(e);
+		// The language rule is not a memory rule: it stays when `/uma append off` drops the rules.
+		const composed = { ...base, sections: [...base.sections, { id: LANGUAGE_ID, text: LANGUAGE_RULE, scope: "session" as const }] };
 		if (!(await read($, settingsAtom)).append) return composed;
 
 		const session = await $.session.id();
@@ -53,6 +57,8 @@ export function registerRules(on: On): void {
 			}
 			text = formatRules(rules);
 			await update($, rulesSessionAtom, () => ({ session, text, failing: false }));
+			// Audit trail: the ids of the rules that really went into the prompt (once per fetch, not per request).
+			await recordContext($, { source: "rules", factIds: rules.slice(0, MAX_RULES).map((r) => r.id).filter(Boolean), scope: "session" });
 		}
 
 		if (!text) return composed;

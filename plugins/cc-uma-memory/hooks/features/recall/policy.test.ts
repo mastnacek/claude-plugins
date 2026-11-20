@@ -1,5 +1,5 @@
 import { expect, test } from "claude-code/testing";
-import { buildRecallContext, factCount, parseVerdict, recallArgv } from "./policy";
+import { buildRecallContext, factCount, parseVerdict, recallArgv, recallTimeout } from "./policy";
 import type { RecallFact, RecallVerdict } from "./policy";
 
 const fact = (id: string, over: Partial<RecallFact> = {}): RecallFact => ({
@@ -11,6 +11,13 @@ const fact = (id: string, over: Partial<RecallFact> = {}): RecallFact => ({
 	...over,
 });
 const verdict = (facts: RecallFact[], search = true): RecallVerdict => ({ search, judged_by: "jev", facts, note: null });
+
+test("argv: English prompt uses jev; Czech diacritics switch to jev-relevance with the semantic fallback", () => {
+	expect(recallArgv("why VSA?", []).slice(3, 6)).toEqual(["--judge", "jev", "--json"]);
+	const cs = recallArgv("proč VSA?", []);
+	expect(cs.slice(3, 7)).toEqual(["--judge", "jev-relevance", "--semantic-fallback", "--json"]);
+	expect(cs.slice(-2)).toEqual(["--", "proč VSA?"]);
+});
 
 test("context: header and one line per fact — type, title, scope, snippet", () => {
 	const ctx = buildRecallContext(verdict([fact("A"), fact("B", { scope: "Global", fact_type: "note" })]), new Set());
@@ -61,4 +68,9 @@ test("Czech plural of the one-line report", () => {
 	expect(factCount(2)).toBe("2 fakta");
 	expect(factCount(3)).toBe("3 fakta");
 	expect(factCount(5)).toBe("5 faktů");
+});
+
+test("recallTimeout: 3 s for an English prompt, 8 s for the semantic fallback of a Czech one", () => {
+	expect(recallTimeout("why VSA?")).toBe(3000);
+	expect(recallTimeout("V jakém jazyce se ukládají fakta?")).toBe(8000);
 });

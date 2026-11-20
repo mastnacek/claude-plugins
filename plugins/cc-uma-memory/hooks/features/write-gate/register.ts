@@ -24,9 +24,12 @@ import { MUSCLE_CHANGED, MUSCLE_DENIED, MUSCLE_DRY_RUN_FAILED, MUSCLE_NO_HASH, M
 import type { MuscleRun } from "./bypass";
 import { APPROVE, BACK, BACK_FULL, DONE, EDIT, HEADER, PICK_BODY, PICK_FULL, PICK_TAGS, PICK_TITLE, REJECT, approvedInput, fieldQuestion, fullTextQuestion, normalizeScope, optionOf, previewOf, scopeOption, tagsOf, toggleScope, withField } from "../../shared/proposal";
 import type { EditField, Proposal } from "../../shared/proposal";
+import { suspiciousFact, warnedOptions, warnedQuestion } from "../../shared/suspicious";
+import { displayOf } from "../../shared/translate";
+import type { Display } from "../../shared/translate";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev" }, { shape: "settings-5" });
+const settingsAtom = atom({ plugin: "cc-uma-memory", key: "settings" } as const, { recall: true, writeGate: "ask", append: true, immune: "warn", immuneModel: "", humility: false, shadow: "on", lang: "cs" } as { recall: boolean; writeGate: "ask" | "off"; append: boolean; immune: "off" | "warn" | "ask" | "auto"; immuneModel: string; humility: boolean; shadow: "off" | "on" | "jev"; lang: "cs" | "en" }, { shape: "settings-6" });
 
 type $ = EngineInterface;
 
@@ -125,10 +128,10 @@ async function ask($: $, question: string, options: string[]): Promise<string | 
 }
 
 /** The edit menu → one field (or the full text) → back; returns the proposal as changed. Dismissed = no change. */
-async function editMenu($: $, v: Proposal): Promise<Proposal> {
-	const pick = await ask($, `✏️ Co upravit?\n\n${previewOf(v)}`, [PICK_TITLE, PICK_BODY, PICK_TAGS, PICK_FULL]);
+async function editMenu($: $, v: Proposal, shown: Display): Promise<Proposal> {
+	const pick = await ask($, `✏️ Co upravit?\n\n${previewOf(v, shown)}`, [PICK_TITLE, PICK_BODY, PICK_TAGS, PICK_FULL]);
 	if (pick === PICK_FULL) {
-		await ask($, fullTextQuestion(v), [BACK_FULL, DONE]);
+		await ask($, fullTextQuestion(v, shown.translated), [BACK_FULL, DONE]);
 		return v;
 	}
 	const field: EditField | undefined = pick === PICK_TITLE ? "title" : pick === PICK_BODY ? "body" : pick === PICK_TAGS ? "tags" : undefined;
@@ -156,12 +159,19 @@ async function review($: $, tool: string, input: Record<string, unknown>): Promi
 		staleAfter: str(input.staleAfter),
 		template: str(input.template),
 	};
+	const lang = (await read($, settingsAtom)).lang;
+	let shown: Display | undefined;
 	for (;;) {
-		const answer = await ask($, previewOf(v), [APPROVE, EDIT, scopeOption(v), REJECT]);
+		// Display only: the preview shows the Czech translation, `v` (what is saved) stays the English original.
+		// After an edit of title or body the old translation is dropped and the new text translated.
+		shown = await displayOf($, shown, v.title, v.body, lang);
+		// A suspicious proposal gets a warning header and "Reject" as the first (default) choice; approving stays possible.
+		const findings = suspiciousFact(v.title, v.body, v.tags);
+		const answer = await ask($, warnedQuestion(previewOf(v, shown), findings), warnedOptions([APPROVE, EDIT, scopeOption(v), REJECT], findings));
 		if (answer === undefined) return { deny: NO_UI_REASON };
 		if (answer === APPROVE) return approvedInput(input, v);
 		if (answer === REJECT) return { deny: DENIED_REASON };
-		if (answer === EDIT) v = await editMenu($, v);
+		if (answer === EDIT) v = await editMenu($, v, shown);
 		else if (answer === scopeOption(v)) v = { ...v, scope: toggleScope(v.scope, v.projectName) };
 		else return { deny: `Uživatel zápis do paměti UMA zamítl a napsal: ${answer.slice(0, 300)}` };
 	}

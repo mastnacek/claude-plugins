@@ -1,0 +1,10 @@
+{
+  "name": "cc-herdr-plugin-dev",
+  "version": "0.1.0",
+  "description": "Psaní herdr pluginů: skill s dokumentací, kostra, validace manifestu a brány před úpravou",
+  "author": { "name": "mastnacek" },
+  "homepage": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-herdr-plugin-dev",
+  "repository": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-herdr-plugin-dev",
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}

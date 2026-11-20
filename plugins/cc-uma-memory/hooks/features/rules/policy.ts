@@ -2,7 +2,7 @@
 // output is read, and the exact system-prompt text (a port of pi's
 // `formatRulesForSystemPrompt`, English like the model's instructions).
 
-export type Rule = { title: string; fact_type: string; body: string };
+export type Rule = { id: string; title: string; fact_type: string; body: string };
 
 /** Fact types that act as rules, in the order pi lists them. */
 export const RULE_TYPES = ["decision", "pattern"] as const;
@@ -25,6 +25,7 @@ export function parseRules(stdout: string): Rule[] | undefined {
 	return parsed
 		.filter((f): f is Record<string, unknown> => typeof f === "object" && f !== null)
 		.map((f) => ({
+			id: typeof f.id === "string" ? f.id : "",
 			title: typeof f.title === "string" ? f.title : "",
 			fact_type: typeof f.fact_type === "string" ? f.fact_type : "",
 			body: typeof f.body === "string" ? f.body : "",
@@ -44,3 +45,13 @@ export function formatRules(rules: readonly Rule[]): string {
 	}
 	return lines.join("\n");
 }
+
+/**
+ * The system-prompt section that tells the model what language to write facts in. Always sent
+ * (independent of `/uma append`, which switches the rules off): the person reads facts in Czech
+ * through display translation, but UMA stores English.
+ */
+export const LANGUAGE_RULE = [
+	"## UMA fact language",
+	"Write the title, body and tags of every fact you save with uma_write or uma_supersede in English, even when the user writes in Czech or another language. The user sees a Czech translation when they review the proposal; the English text is what is stored.",
+].join("\n");
