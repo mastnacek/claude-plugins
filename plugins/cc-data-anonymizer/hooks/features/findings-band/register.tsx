@@ -1,15 +1,31 @@
 import type { Register } from "claude-code";
-import { atom, read } from "claude-code";
+import { atom, read, update } from "claude-code";
 import { kindColor } from "../../shared/findings";
 
 // Declared in each file that touches it: the engine's scan reads the ref where it is used.
 const findings = atom({ plugin: "cc-data-anonymizer", key: "findings" } as const, null);
+const warning = atom({ plugin: "cc-data-anonymizer", key: "redactWarning" } as const, null);
 
 // While the consent dialog is open, the band above the prompt shows what
 // `anon scan` found: each file once, then its lines (kind colored).
 export const registerFindingsBand = ((on) => {
+	// A redact warning stays until the next turn starts.
+	on("turn.start", async ($, e, next) => {
+		await update($, warning, () => null);
+		return next(e);
+	});
+
 	on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
 		const groups = await read($, findings);
+		const warn = await read($, warning);
+		if (warn !== null && groups === null) {
+			const { Box, Text } = $.ui.resolve(e);
+			return (
+				<Box borderStyle="round" borderColor="warning" paddingX={1}>
+					<Text color="warning">🔒 anon · {warn}</Text>
+				</Box>
+			);
+		}
 		if (groups === null) return next(e);
 		const { Box, Text } = $.ui.resolve(e);
 		return (

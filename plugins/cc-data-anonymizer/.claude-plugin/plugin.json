@@ -10,6 +10,13 @@
   "license": "MIT",
   "types": "./types/index.d.ts",
   "userConfig": {
+    "style": {
+      "type": "string",
+      "title": "Replacement style",
+      "description": "How anon mask replaces values: fake (realistic fake values), redact (REDACTED, cannot be restored), tag («REDACTED:kind:n», restorable). \"default\" leaves it to anon (rules.toml).",
+      "options": ["default", "fake", "redact", "tag"],
+      "default": "default"
+    },
     "unmaskReply": {
       "type": "boolean",
       "title": "Unmask replies on screen",

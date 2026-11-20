@@ -5,6 +5,14 @@ export const UNMASKED_FIELDS: Readonly<Record<string, readonly string[]>> = {
 	Write: ["file_path", "content"],
 };
 
+// A leftover standalone REDACTED (not a «REDACTED:kind:n» tag) was masked with `redact` and cannot be restored.
+const LEFTOVER = /(?<![:\w])REDACTED(?![:\w])/;
+
+/** True when one of the listed text fields still holds a REDACTED value after unmask. */
+export function hasRedacted(input: Record<string, unknown>, fields: readonly string[]): boolean {
+	return fields.some((field) => field !== "file_path" && LEFTOVER.test(String(input[field] ?? "")));
+}
+
 /** Copy of `input` with the listed fields replaced by `convert`'s results (one call). */
 export async function mapFields<T extends Record<string, unknown>>(
 	input: T,

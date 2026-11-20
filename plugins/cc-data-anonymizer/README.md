@@ -21,4 +21,7 @@ Needs the `anon` binary: `ANON_BIN`, then `PATH`, then `D:/01_programovani/_tool
 
 ## Commands
 
-No commands. Setting `unmaskReply` (default off): show replies with the original values.
+No commands. Settings:
+
+- `unmaskReply` (default off): show replies with the original values.
+- `style` (`default`, `fake`, `redact`, `tag`; default `default`): passed to `anon mask --style`. `fake` gives realistic fake values, `redact` gives `REDACTED` (cannot be restored; an Edit/Write/Bash input that still holds it goes through unchanged and the band above the prompt warns), `tag` gives `«REDACTED:<kind>:<n>»` (stable, restorable). `default` sends no flag, so `[anon]` in anon's `rules.toml` decides.

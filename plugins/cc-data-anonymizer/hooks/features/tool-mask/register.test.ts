@@ -55,3 +55,33 @@ test("anon missing: the call is denied (fail closed)", async ($, on) => {
 	const out = await $.tool.call({ tool: "Bash", command: "echo REAL" });
 	expect(out.deny ?? out.text).toContain("anon was not found");
 });
+
+test("style option is passed to anon mask only for mask", { options: { style: "tag" } }, async ($, on) => {
+	const argvs: string[][] = [];
+	on("env.get", () => ({ value: undefined }));
+	on("process.run", (_$, e) => {
+		argvs.push([...e.argv]);
+		const stdout = e.argv[1] === "help" ? "{}" : JSON.stringify({ ok: true, text: e.init?.stdin ?? "" });
+		return { value: { exitCode: 0, stdout, stderr: "", isStdoutTruncated: false, isStderrTruncated: false } };
+	});
+	on("tool.call", () => ({ result: { type: "text", file: { content: "x" } } }));
+	await $.tool.call({ tool: "Edit", file_path: "/p/a.txt", old_string: "a", new_string: "b" });
+	const mask = argvs.find((a) => a[1] === "mask");
+	const unmask = argvs.find((a) => a[1] === "unmask");
+	expect(mask).toContain("--style");
+	expect(mask).toContain("tag");
+	expect(unmask).not.toContain("--style");
+});
+
+test("no style option: no --style flag", async ($, on) => {
+	const argvs: string[][] = [];
+	on("env.get", () => ({ value: undefined }));
+	on("process.run", (_$, e) => {
+		argvs.push([...e.argv]);
+		const stdout = e.argv[1] === "help" ? "{}" : JSON.stringify({ ok: true, text: e.init?.stdin ?? "" });
+		return { value: { exitCode: 0, stdout, stderr: "", isStdoutTruncated: false, isStderrTruncated: false } };
+	});
+	on("tool.call", () => ({ result: { type: "text", file: { content: "x" } } }));
+	await $.tool.call({ tool: "Bash", command: "echo a" });
+	expect(argvs.some((a) => a.includes("--style"))).toBe(false);
+});

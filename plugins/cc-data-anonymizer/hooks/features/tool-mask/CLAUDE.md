@@ -12,11 +12,13 @@ zpět na originály. Bez něj by agent četl originály nebo by Edit nenašel te
   - `Read` — při prvním čtení souboru dialog s `anon scan` a volbou „Povolit“.
   - `Bash` (`command`), `Edit` (`file_path`, `old_string`, `new_string`), `Write` (`file_path`, `content`) — pole projdou `anon unmask` (`fields.ts`).
   - výsledek (všechny řetězce, tvar zůstává) a `context` projdou `anon mask`; chyba nástroje se vrací jako maskovaný `deny`.
+- volba `style` (`default|fake|redact|tag`) se předává `anon mask --style`; `default` příznak nepošle (rozhodne `rules.toml` anonu). `unmask` styl nepotřebuje (fake i tag jdou vrátit).
+- vstup Edit/Write/Bash, v němž po `unmask` zůstalo samostatné `REDACTED` (styl `redact`), projde beze změny a pás nad promptem ukáže varování (atom `redactWarning`, smaže se při dalším `turn.start`).
 - `anon` chybí nebo selže → `deny` s jasnou zprávou (fail-closed).
 
 ## Kontrakt
 
-- **`$.state`:** nic nečte ani nepíše.
+- **`$.state`:** píše `redactWarning` (čte ho `findings-band`).
 - **Shared:** `anon` (`convert`), `consent` (`isFileAllowed`).
 
 ## Nepatří sem

@@ -8,8 +8,8 @@ import { registerReplyUnmask } from "./features/reply-unmask/register";
 import { registerToolMask } from "./features/tool-mask/register";
 
 export const register: Register = (on, options) => {
-	registerPromptMask(on);
+	registerPromptMask(on, options);
 	registerFindingsBand(on);
-	registerToolMask(on);
+	registerToolMask(on, options);
 	registerReplyUnmask(on, options);
 };
