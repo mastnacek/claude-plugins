@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "lastUpdated": "2026-11-20 15:56:17",
-  "lastId": "SPAI-010",
+  "lastUpdated": "2026-11-20 17:12:30",
+  "lastId": "SPAI-012",
   "records": [
     {
       "id": "SPAI-002",
@@ -129,6 +129,34 @@
       "project": "claude",
       "projectPath": "D:/01_programovani/claude",
       "file": "2026-11-20-SPAI-010-agentsh-puts-d01-programovani-tools-first-in-path.md"
+    },
+    {
+      "id": "SPAI-011",
+      "title": "agent-wait.sh decides 'done' from the worker's transcript (last assistant message with stop_reason end_turn), not only from the pane",
+      "type": "Todo",
+      "status": "todo",
+      "symbol": ".",
+      "timestamp": "2026-11-20 17:12:02",
+      "tags": [
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-20-SPAI-011-agent-waitsh-decides-done-from-the-workers.md"
+    },
+    {
+      "id": "SPAI-012",
+      "title": "Orchestrator smoke-tests every new feature of a task itself (new commands, flags, benchmarks), not only the gate",
+      "type": "Note",
+      "status": "note",
+      "symbol": "-",
+      "timestamp": "2026-11-20 17:12:30",
+      "tags": [
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-20-SPAI-012-orchestrator-smoke-tests-every-new-feature-of-a.md"
     }
   ]
 }
