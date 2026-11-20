@@ -134,6 +134,16 @@ function strings(v: unknown, depth = 0): string[] {
 	return Object.values(v).flatMap((x) => strings(x, depth + 1));
 }
 
+/** The fields the guard reads (paths, a Glob pattern, a command): what must be unmasked before it judges. */
+export function guardedFields(input: Record<string, unknown>): Record<string, unknown> {
+	const tool = String(input.tool ?? "");
+	const picked: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(input)) {
+		if (key === "command" || (!SKIP_KEYS.has(key) && (PATH_KEY.test(key) || (tool === "Glob" && key === "pattern")))) picked[key] = value;
+	}
+	return picked;
+}
+
 /** Why the call must be denied, or null. The input is the tool.call event. */
 export function checkInput(input: Record<string, unknown>, g: Guard): string | null {
 	const tool = String(input.tool ?? "");

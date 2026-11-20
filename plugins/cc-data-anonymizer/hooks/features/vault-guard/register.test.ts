@@ -7,13 +7,17 @@ type On = Parameters<TestBody>[1];
 const VARS: Record<string, string> = { APPDATA: "C:\\Users\\tester\\AppData\\Roaming", USERPROFILE: "C:\\Users\\tester" };
 const SCRATCH = "C:/Users/tester/AppData/Local/Temp/scratch";
 
-const world = (on: On, vars: Record<string, string> = VARS) => {
+const world = (on: On, vars: Record<string, string> = VARS, unmaskExit = 0) => {
 	const calls: string[] = [];
 	on("env.get", (_$, e) => ({ value: vars[(e as unknown as { name: string }).name] }));
 	on("session.cwd", () => ({ value: "D:/work/proj" }));
 	on("process.run", (_$, e) => {
 		calls.push(e.argv.join(" "));
-		return { value: { exitCode: 0, stdout: "{}", stderr: "", isStdoutTruncated: false, isStderrTruncated: false } };
+		const reply = (stdout: string) => ({ value: { exitCode: 0, stdout, stderr: "", isStdoutTruncated: false, isStderrTruncated: false } });
+		// A stand-in for anon unmask: the tag stands for the made-up user name.
+		if (e.argv[1] === "unmask" && unmaskExit !== 0) return { value: { exitCode: unmaskExit, stdout: "", stderr: "boom", isStdoutTruncated: false, isStderrTruncated: false } };
+		if (e.argv[1] === "unmask") return reply(JSON.stringify({ ok: true, text: (e.init?.stdin ?? "").replaceAll("«TAG:user»", "tester") }));
+		return reply("{}");
 	});
 	on("tool.call", () => ({ result: "ran" }));
 	return calls;
@@ -138,6 +142,35 @@ for (const [name, input] of ALLOW) {
 		expect(denied(out)).toBe(false);
 	});
 }
+
+const TAGGED = "C:/Users/«TAG:user»/AppData/Roaming/anon";
+
+for (const input of [
+	{ tool: "Read", file_path: TAGGED + "/rules.toml" },
+	{ tool: "Glob", pattern: "*.toml", path: TAGGED },
+	{ tool: "Grep", pattern: "a", path: TAGGED },
+	{ tool: "Bash", command: "cat " + TAGGED + "/rules.toml" },
+	{ tool: "PowerShell", command: "Get-Content C:\\Users\\«TAG:user»\\AppData\\Roaming\\anon\\rules.toml" },
+]) {
+	test("denied after unmasking a placeholder: " + input.tool + " " + JSON.stringify(input).slice(0, 60), async ($, on) => {
+		world(on);
+		const out = await $.tool.call(input as never);
+		expect(denied(out)).toBe(true);
+	});
+}
+
+test("a masked path elsewhere is allowed", async ($, on) => {
+	world(on);
+	on("tool.call", { tool: "Read" }, () => ({ result: { content: "plain" } }));
+	const out = await $.tool.call({ tool: "Read", file_path: "C:/Users/«TAG:user»/Documents/a.txt" } as never);
+	expect(denied(out)).toBe(false);
+});
+
+test("anon failing while unmasking denies", async ($, on) => {
+	world(on, VARS, 2);
+	const out = await $.tool.call({ tool: "Read", file_path: "D:/work/proj/a.txt" } as never);
+	expect(denied(out)).toBe(true);
+});
 
 test("the message names the reason, offers ! and quotes no path", async ($, on) => {
 	world(on);

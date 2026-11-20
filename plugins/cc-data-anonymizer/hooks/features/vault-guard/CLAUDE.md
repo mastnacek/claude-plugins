@@ -14,11 +14,12 @@ složku anon a spustit příkazy anon, které odhalují originály nebo mění t
 - Bash/PowerShell (každý nástroj s polem `command`) → zamítnuto, když příkaz: zmiňuje domov v jakémkoli zápisu nebo jmenuje `vault.bin|vault.key|map.db`; volá DPAPI; spouští `anon` (i cestou, přes `env`, `&`, `Start-Process`, uvnitř `bash -c "…"`) s `unmask|map|vault|tui|rules|import|export`, `--with-values` nebo `--reveal`.
 - Zástupný znak (`* ? [..] {..} **`) zamítne příkaz jen tehdy, když jeho expanze může dosáhnout domova (porovnává se po složkách); `a['b']` nebo `FRAMES["x"][0]` v kódu a textu projdou.
 - Povoleno: `anon scan|mask` bez těchto voleb, `--help`, `--version`, `help …`, `ANON_HOME=<jiná složka> anon mask soubor`.
+- Dvě kontroly: nejdřív vstup tak, jak ho napsal model, pak po `anon unmask` polí s cestami a příkazu (`guardedFields`; `shared/anon.ts` `convert`) — zástupný symbol ve jménu uživatele jinak vede na skutečný domov až po stráži. Selhání `anon` = zamítnutí se zprávou `anon`.
 - Zpráva uvádí důvod, říká, že to může uživatel udělat sám (`! <příkaz>`), a nikdy necituje cestu ani obsah. Chyba stráže = zamítnutí.
 
 ## Kontrakt
 
-- **`$.state`:** nic. **Čte:** proměnné prostředí a `$.session.cwd()`. **Shared:** nic.
+- **`$.state`:** nic. **Čte:** proměnné prostředí a `$.session.cwd()`. **Shared:** `anon` (`convert`, jen `unmask`).
 
 ## Nepatří sem
 

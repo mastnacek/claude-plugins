@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2
+
+- `vault-guard`: stráž posuzuje i odmaskovaný vstup. Cesta se zástupným symbolem (tag místo uživatelského jména) už neobejde stráž; po kontrole maskovaného vstupu se pole s cestami a příkaz projdou `anon unmask` a zkontrolují se znovu. Selhání odmaskování = zamítnutí.
+
 ## 0.5.1
 
 - `vault-guard`: méně falešných zamítnutí. Zástupný znak (`* ? [..] {..}`) se počítá jen tehdy, když ho jde rozvinout na domov anon; hranaté závorky v kódu a textu (`a['b']`, `FRAMES["x"][0]`) už příkaz neblokují. Složka repozitáře s názvem `anon` mimo domov se nezamítá.

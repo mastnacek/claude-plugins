@@ -1,5 +1,6 @@
 import type { Register } from "claude-code";
-import { checkInput, homesOf } from "./rules";
+import { AnonError, convert } from "../../shared/anon";
+import { checkInput, guardedFields, homesOf } from "./rules";
 
 const advice = (reason: string) =>
 	"anon guard: blocked " + reason + ". The anon vault, map and original values are off limits to agents. " +
@@ -21,9 +22,17 @@ export const registerVaultGuard = ((on) => {
 			// The engine always knows the directory; if it did not, relative paths resolve from the root.
 			const cwd = (await $.session.cwd().catch(() => "")) || "/";
 			const guard = { homes: homesOf(vars, cwd), cwd, vars };
-			const reason = checkInput(e as unknown as Record<string, unknown>, guard);
+			const input = e as unknown as Record<string, unknown>;
+			const masked = checkInput(input, guard);
+			if (masked !== null) return { deny: advice(masked) };
+			// The model may write a placeholder (a tag standing for the user name in a path) that tool-mask
+			// turns into the real path later: judge the input the tool would really get. Failure = deny (catch).
+			const real = await convert($, "unmask", guardedFields(input));
+			const reason = checkInput({ ...input, ...real }, guard);
 			if (reason !== null) return { deny: advice(reason) };
-		} catch {
+		} catch (error) {
+			// anon missing or failing: say so (the guard cannot unmask), fail closed all the same.
+			if (error instanceof AnonError) return { deny: "anon guard: call blocked, it could not be checked. " + error.message };
 			return { deny: advice("a call the guard could not check") };
 		}
 		return next(e);
