@@ -1,6 +1,6 @@
 {
   "name": "cc-data-anonymizer",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Maskuje citlivá data (jména Notes, e-maily, hesla, tokeny) v promptech, @ souborech a výsledcích nástrojů přes CLI anon",
   "author": {
     "name": "mastnacek"
@@ -16,6 +16,20 @@
       "description": "How anon mask replaces values: fake (realistic fake values), redact (REDACTED, cannot be restored), tag («REDACTED:kind:n», restorable). \"default\" leaves it to anon (rules.toml).",
       "options": ["default", "fake", "redact", "tag"],
       "default": "default"
+    },
+    "consent": {
+      "type": "string",
+      "title": "Consent dialog",
+      "description": "ask: the first read of a file with sensitive values asks for permission. never: mask with the configured style and only show the note, never ask. Agent sessions (CC_ROLE set) and non-interactive runs never ask.",
+      "options": ["ask", "never"],
+      "default": "ask"
+    },
+    "reveal": {
+      "type": "string",
+      "title": "Values on screen",
+      "description": "How much of a detected value the findings list and the note under the row show (screen only, never the model): partial (names, e-mails, usernames, hosts and IPs in full; passwords, secrets and tokens as first 2 and last 2 characters), full, none.",
+      "options": ["partial", "full", "none"],
+      "default": "partial"
     },
     "unmaskReply": {
       "type": "boolean",

@@ -139,7 +139,7 @@ const card = (decision: unknown) => ({
 });
 
 test("a card under the right tool row groups the findings, colored, no value", async ($, on) => {
-	on("state.get", () => stored({ toolu_1: card(null) }));
+	on("state.get", (_$, e) => (e.key === "cards" ? stored({ toolu_1: card(null) }) : stored(null)));
 	on("ui.render", ($, e) => {
 		const { Text } = $.ui.resolve(e);
 		return <Text>row</Text>;
@@ -152,7 +152,7 @@ test("a card under the right tool row groups the findings, colored, no value", a
 });
 
 test("a card after the decision ends with a colored status line", async ($, on) => {
-	on("state.get", () => stored({ toolu_1: card({ isAllowed: true, style: "tag" }) }));
+	on("state.get", (_$, e) => (e.key === "cards" ? stored({ toolu_1: card({ isAllowed: true, style: "tag" }) }) : stored(null)));
 	const ui = await $.ui.mount({ ...TOOL_USE });
 	const status = await ui.find({ type: "Text", text: /povoleno/ });
 	expect(status?.text).toContain("styl tag");
@@ -161,7 +161,7 @@ test("a card after the decision ends with a colored status line", async ($, on) 
 });
 
 test("another tool row gets no card", async ($, on) => {
-	on("state.get", () => stored({ toolu_2: card(null) }));
+	on("state.get", (_$, e) => (e.key === "cards" ? stored({ toolu_2: card(null) }) : stored(null)));
 	on("ui.render", ($, e) => {
 		const { Text } = $.ui.resolve(e);
 		return <Text>row</Text>;

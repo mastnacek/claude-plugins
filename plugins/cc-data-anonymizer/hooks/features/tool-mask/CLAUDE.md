@@ -9,7 +9,7 @@ zpět na originály. Bez něj by agent četl originály nebo by Edit nenašel te
 ## Co dělá
 
 - `tool.call` na `Read|Grep|Bash|Edit|Write|mcp__*` (`register.ts`):
-  - `Read` — při prvním čtení souboru dialog s `anon scan` a volbou „Povolit“.
+  - `Read` v `~/.claude/projects/**` a dalších složkách stavu agentů projde bez maskování; jinak při prvním čtení souboru dialog s `anon scan` a volbou „Povolit“.
   - `Bash` (`command`), `Edit` (`file_path`, `old_string`, `new_string`), `Write` (`file_path`, `content`) — pole projdou `anon unmask` (`fields.ts`).
   - výsledek (všechny řetězce, tvar zůstává) a `context` projdou `anon mask`; chyba nástroje se vrací jako maskovaný `deny`.
 - volba `style` (`default|fake|redact|tag`) se předává `anon mask --style`; `default` příznak nepošle (rozhodne `rules.toml` anonu). `unmask` styl nepotřebuje (fake i tag jdou vrátit).
@@ -18,7 +18,7 @@ zpět na originály. Bez něj by agent četl originály nebo by Edit nenašel te
 
 ## Kontrakt
 
-- **`$.state`:** píše `redactWarning` (čte ho `findings-band`).
+- **`$.state`:** píše `redactWarning` (čte ho `findings-band`) a `notes` (čte `mask-note`).
 - **Shared:** `anon` (`convert`), `consent` (`isFileAllowed`).
 
 ## Nepatří sem

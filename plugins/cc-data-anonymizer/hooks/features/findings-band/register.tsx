@@ -44,6 +44,7 @@ function renderGroups(groups: readonly FileFindings[], Box: Els["Box"], Text: El
 								<Text dimColor>{l.rule}</Text>
 								{"  "}
 								{l.chars} znaků
+								{l.shown !== undefined && <Text bold>{"  " + l.shown}</Text>}
 							</Text>
 						))}
 					</Box>

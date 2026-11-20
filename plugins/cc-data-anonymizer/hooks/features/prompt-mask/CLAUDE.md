@@ -14,7 +14,7 @@ uživatel napíše, a soubory z `@`. Bez něj by prompt i soubor odešly nezměn
 ## Kontrakt
 
 - **`$.state`:** nic nečte ani nepíše.
-- **Shared:** `anon` (`mask`), `consent` (`isFileAllowed`).
+- **Shared:** `anon` (`mask`), `consent` (`isFileAllowed`, `policyOf`), `notes` (`recordPromptNote`).
 
 ## Nepatří sem
 

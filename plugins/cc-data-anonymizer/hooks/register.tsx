@@ -2,6 +2,7 @@
 // each other. Nothing else lives here.
 
 import type { Register } from "claude-code";
+import { registerMaskNote } from "./features/mask-note/register";
 import { registerFindingsBand } from "./features/findings-band/register";
 import { registerPromptMask } from "./features/prompt-mask/register";
 import { registerReplyUnmask } from "./features/reply-unmask/register";
@@ -11,5 +12,6 @@ export const register: Register = (on, options) => {
 	registerPromptMask(on, options);
 	registerFindingsBand(on);
 	registerToolMask(on, options);
+	registerMaskNote(on);
 	registerReplyUnmask(on, options);
 };

@@ -4,13 +4,33 @@
 // surface can show one (headless, mobile only) it is the plain ask dialog.
 // Allowed paths live in this module's memory: a reload asks again.
 
-import type { EngineInterface } from "claude-code";
+import type { EngineInterface, Register } from "claude-code";
 import { atom, update } from "claude-code";
 import { scan } from "./anon";
 import { groupByFile, plainList } from "./findings";
+import { isAgentState } from "./paths";
+import { type Reveal, revealOf } from "./reveal";
 import type { FileFindings, ToolCard } from "../../types";
 
 type $ = EngineInterface;
+
+/** How a file is handled: asked about (`ask`) or masked without a question (`never`), and what values show. */
+export type Policy = { consent: "ask" | "never"; reveal: Reveal };
+
+export function policyOf(options: Parameters<Register>[1]): Policy {
+	return { consent: options.consent === "never" ? "never" : "ask", reveal: revealOf(options) };
+}
+
+/**
+ * No question when the option says never, in an agent session (CC_ROLE set: coder, tester, kolega…)
+ * or a non-interactive run (-p / SDK): nobody there can answer, so the agent would hang.
+ */
+async function isAsking($: $, policy: Policy): Promise<boolean> {
+	if (policy.consent === "never") return false;
+	if ((await $.env.get("CC_ROLE").catch(() => undefined))?.trim()) return false;
+	const entry = await $.env.get("CLAUDE_CODE_ENTRYPOINT").catch(() => undefined);
+	return !entry?.startsWith("sdk");
+}
 
 /** The id of the consent pane; the slice that draws it hooks `ui.render` for it. */
 export const CONSENT_PANE = "anon-consent";
@@ -67,9 +87,9 @@ async function askInPane($: $, groups: FileFindings[]): Promise<boolean | undefi
 	}
 }
 
-async function ask($: $, key: string, path: string, tool?: ToolRef): Promise<boolean> {
+async function ask($: $, key: string, path: string, reveal: Reveal, tool?: ToolRef): Promise<boolean> {
 	if (allowed.has(key)) return true;
-	const found = await scan($, path);
+	const found = await scan($, path, reveal);
 	if (!found.isFound) {
 		allowed.add(key);
 		return true;
@@ -104,11 +124,12 @@ async function ask($: $, key: string, path: string, tool?: ToolRef): Promise<boo
 }
 
 /** True when the agent may get this file (masked). Throws AnonError when anon fails. */
-export async function isFileAllowed($: $, path: string, tool?: ToolRef): Promise<boolean> {
+export async function isFileAllowed($: $, path: string, policy: Policy, tool?: ToolRef): Promise<boolean> {
 	const key = normalize(path);
-	if (allowed.has(key)) return true;
+	if (allowed.has(key) || isAgentState(path)) return true;
+	if (!(await isAsking($, policy))) return true; // masked all the same; the note under the row says so
 	if (!(await $.fs.stat(path).catch(() => undefined))) return true; // nothing to read, the tool reports it
-	const turn = queue.then(() => ask($, key, path, tool));
+	const turn = queue.then(() => ask($, key, path, policy.reveal, tool));
 	queue = turn.catch(() => undefined);
 	return turn;
 }

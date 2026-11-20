@@ -1,7 +1,9 @@
 import type { Register } from "claude-code";
 import { atom, update } from "claude-code";
-import { AnonError, convert, styleOf } from "../../shared/anon";
-import { isFileAllowed } from "../../shared/consent";
+import { AnonError, convert, noteSink, styleOf } from "../../shared/anon";
+import { isFileAllowed, policyOf } from "../../shared/consent";
+import { recordToolNote } from "../../shared/notes";
+import { isAgentState } from "../../shared/paths";
 import { UNMASKED_FIELDS, hasRedacted, mapFields } from "./fields";
 
 // Declared in each file that touches it: the engine's scan reads the ref where it is used.
@@ -13,9 +15,12 @@ const why = (error: unknown) => (error instanceof AnonError ? error.message : "a
 
 export const registerToolMask = ((on, options) => {
 	const style = styleOf(options);
+	const policy = policyOf(options);
 	on("tool.call", { tool: TOOLS }, async ($, e, next) => {
 		try {
-			if (e.tool === "Read" && !(await isFileAllowed($, e.file_path, { toolUseId: e.tool_use_id, style: style ?? "default" }))) {
+			// The harness's own state (session transcripts…) is not the person's file: left as it is.
+			if (e.tool === "Read" && isAgentState(e.file_path)) return next(e);
+			if (e.tool === "Read" && !(await isFileAllowed($, e.file_path, policy, { toolUseId: e.tool_use_id, style: style ?? "default" }))) {
 				return { deny: `${e.file_path} was not allowed by the user.` };
 			}
 
@@ -27,11 +32,17 @@ export const registerToolMask = ((on, options) => {
 
 			const ran = await next(input);
 			if (ran.deny !== undefined) return ran;
-			if (ran.isError === true) return { deny: await convert($, "mask", ran.text ?? "", style) };
-			return {
-				result: await convert($, "mask", ran.result, style),
-				...(ran.context ? { context: await convert($, "mask", ran.context, style) } : {}),
-			};
+			// The note under the row (counts, kinds, values as `reveal` allows) goes to $.state, never to the result.
+			const sink = noteSink(policy.reveal);
+			const masked =
+				ran.isError === true
+					? { deny: await convert($, "mask", ran.text ?? "", style, sink) }
+					: {
+							result: await convert($, "mask", ran.result, style, sink),
+							...(ran.context ? { context: await convert($, "mask", ran.context, style, sink) } : {}),
+						};
+			await recordToolNote($, e.tool_use_id, sink.note);
+			return masked;
 		} catch (error) {
 			return { deny: `${e.tool} blocked: ${why(error)}` };
 		}
