@@ -1,5 +1,5 @@
-"""Jemnější prototyp robota kolegy: 28 x 22 pixelů (půlbloky), obrys, stíny, odlesky.
-Spuštění: python preview2.py   (Ctrl+C konec)
+"""Prototyp robota kolegy: 18 x 22 pixelů (půlbloky), plátno 22 sloupců (vpravo efekty).
+Spuštění: python preview.py   (Ctrl+C konec)
 """
 import os, sys, time
 
@@ -29,43 +29,59 @@ P = {
     "l": (110, 190, 255),  # řádky textu
 }
 
-# Hlava s dvěma dalekohledovými očima; {L},{R} = 3x3 vnitřek oka.
+ROBOT_W = 18  # šířka robota v pixelech
+W = 22        # plátno: robot + 4 sloupce vpravo na efekty
+
+# Hlava s dvěma dalekohledovými očima; {L},{R} = 5 pixelů vnitřku oka.
 HEAD = [
-    ".............KK.............",
-    "............KAAK............",
-    ".............KK.............",
-    ".............aa.............",
-    "....KKKKKKKKKaaKKKKKKKKKK...",
-    "...KsshhhhhhhhhhhhhhhhhmdK..",
-    "..KKKKKKKhhhhhhhhhKKKKKKKK..",
-    ".KoooooooKhhhhhhhKoooooooKK.",
-    ".Ko{L0}oKmmmmmmmKo{R0}oKdK.",
-    ".Ko{L1}oKmmmmmmmKo{R1}oKdK.",
-    ".Ko{L2}oKdddddddKo{R2}oKdK.",
-    "..KKKKKKKKKKKKKKKKKKKKKKKK..",
+    "........KK........",
+    ".......KAAK.......",
+    "........KK........",
+    "........aa........",
+    "..KKKKKKaaKKKKKK..",
+    ".Kss" + "h" * 11 + "mdK",
+    ".KKKKKKKhhKKKKKKK.",
+    ".K{L0}KhhK{R0}K.",
+    ".K{L1}KmmK{R1}K.",
+    ".K{L2}KddK{R2}K.",
+    ".KKKKKKKKKKKKKKKK.",
 ]
 BODY = [
-    "...........KddK.............",
-    "..KK....KKKKKKKKKKKK....KK..",
-    ".KhhK..KOObbbbbbbbbBK..KhhK.",
-    ".KmmKKKKObKXXXXXXKbBKKKKmmK.",
-    "..KmmmmKbbKxxxxxxKbBKmmmmK..",
-    "....KKKKbbKXxXxXxKbBKKKK....",
-    ".......KbbbbbbbbbbbBK.......",
-    ".......KBBBBBBBBBBBBK.......",
-    "...KKKKKKKKKKKKKKKKKKKKK....",
-    "..KtTtTtTtTtTtTtTtTtTtTK....",
+    ".......KddK.......",
+    "....KKKKKKKKKK....",
+    ".KK.KOObbbbbBK.KK.",
+    "KhhKKbKXXXXKBKKhhK",
+    "KmmKKbKxxxxKBKKmmK",
+    ".KK.KbKxXxXKBK.KK.",
+    "....KbbbbbbbBK....",
+    "....KBBBBBBBBK....",
+    "..KKKKKKKKKKKKKK..",
+    ".KtTtTtTtTtTtTtTK.",
+    "..KKKKKKKKKKKKKK..",
 ]
+H_HEAD = len(HEAD)
+
 
 def eye(c, look):
-    # 5 sloupců vnitřku oka (o + 3 duhovka + o) podle směru pohledu
-    core = {"mid": [f"o{c}{c}{c}o".replace(c + c + c, c + "p" + c), f"o{c}p{c}o", f"o{c}{c}{c}o"],
+    """5 pixelů vnitřku oka (sklo + 3 duhovka + sklo) ve 3 řádcích podle směru pohledu."""
+    core = {"mid": [f"o{c}{c}{c}o", f"o{c}p{c}o", f"o{c}{c}{c}o"],
             "left": [f"{c}{c}{c}oo", f"{c}p{c}oo", f"{c}{c}{c}oo"],
             "right": [f"oo{c}{c}{c}", f"oo{c}p{c}", f"oo{c}{c}{c}"],
             "up": [f"o{c}p{c}o", f"o{c}{c}{c}o", "ooooo"],
             "shut": ["ooooo", "KKKKK", "ooooo"]}[look]
-    core[0] = "w" + core[0][1:] if look != "shut" else core[0]
+    if look != "shut":
+        core[0] = "w" + core[0][1:]
     return core
+
+
+def put(row, col, s):
+    """Vloží řetězec do řádku plátna od sloupce col ('.' = průhledné, nepřepisuje)."""
+    r = list(row)
+    for i, ch in enumerate(s):
+        if ch != "." and 0 <= col + i < W:
+            r[col + i] = ch
+    return "".join(r)
+
 
 def compose(color="c", look="mid", antenna="A", bubble=None, lines=False, red=False, zzz=0):
     L, R = eye(color, look), eye(color, look)
@@ -73,27 +89,30 @@ def compose(color="c", look="mid", antenna="A", bubble=None, lines=False, red=Fa
     for row in HEAD:
         for i in range(3):
             row = row.replace("{L%d}" % i, L[i]).replace("{R%d}" % i, R[i])
-        head.append(row.replace("A", antenna).ljust(28, ".")[:28])
-    body = [r.ljust(28, ".")[:28] for r in BODY]
-    g = head + body
+        head.append(row.replace("A", antenna))
+    g = head + list(BODY)
+    for r in g:
+        assert len(r) == ROBOT_W, (len(r), r)
+    g = [r.ljust(W, ".") for r in g]
     if red:
-        g[1] = g[1].replace("AA", "RR").replace(antenna * 2, "RR")
-        g = [r if i not in (16, 17) else r.replace("hh", "RR") for i, r in enumerate(g)]
-        g[2] = g[2][:22] + "KRK..."
-        g[3] = g[3][:22] + "KRK..."
-        g[5] = g[5][:22] + ".R...."
+        g[1] = g[1].replace(antenna * 2, "RR")
+        b = H_HEAD
+        g[b + 3] = g[b + 3].replace("hh", "RR")
+        g[1] = put(g[1], 19, "KRK")
+        g[2] = put(g[2], 19, "KRK")
+        g[4] = put(g[4], 20, "R")
     if bubble:
-        g[0] = g[0][:20] + bubble[0]
-        g[1] = g[1][:20] + bubble[1]
-        g[2] = g[2][:20] + bubble[2]
+        for i in range(3):
+            g[i] = put(g[i], 13, bubble[i])
     if lines:
-        for i, w in ((14, "lllll"), (16, "llll."), (18, "lllll")):
-            g[i] = g[i][:23] + w
+        for i, w_ in ((H_HEAD + 2, "llll"), (H_HEAD + 4, "lll."), (H_HEAD + 6, "llll")):
+            g[i] = put(g[i], 18, w_)
     if zzz:
         z = ["......qq", ".....q..", "....qq..", "qq......"][:zzz]
         for i, s in enumerate(z):
-            g[i] = g[i][:20] + s
+            g[i] = put(g[i], 13, s)
     return g
+
 
 FRAMES = {
     "čeká": [compose(), compose(), compose(), compose(look="shut")],
@@ -105,6 +124,7 @@ FRAMES = {
     "spí": [compose(look="shut", antenna="a", zzz=2), compose(look="shut", antenna="a", zzz=4)],
 }
 
+
 def cell(top, bot):
     t, b = P.get(top), P.get(bot)
     if t and b:
@@ -115,24 +135,25 @@ def cell(top, bot):
         return f"\x1b[38;2;{b[0]};{b[1]};{b[2]}m▄\x1b[0m"
     return " "
 
+
 def draw(grid, label):
-    rows = list(grid) + (["." * 28] if len(grid) % 2 else [])
+    rows = list(grid) + (["." * W] if len(grid) % 2 else [])
     out = ["\x1b[H"]
-    last = len(rows) - 2
     for y in range(0, len(rows), 2):
-        tail = f" \x1b[2m{label}\x1b[0m" if y == last else ""
-        out.append(" " + "".join(cell(a, b) for a, b in zip(rows[y], rows[y + 1])) + tail + "\x1b[K" + ("" if y == last else "\n"))
-    out.append("\x1b[J")
+        out.append(" " + "".join(cell(a, b) for a, b in zip(rows[y], rows[y + 1])) + "\x1b[K\n")
+    out.append(f" \x1b[2m{label}\x1b[0m\x1b[K\x1b[J")
     sys.stdout.write("".join(out)); sys.stdout.flush()
 
-os.system("")
-sys.stdout.write("\x1b[2J\x1b[?25l")
-try:
-    while True:
-        for state, frames in FRAMES.items():
-            for _ in range(3):
-                for f in frames:
-                    draw(f, state)
-                    time.sleep(0.4)
-except KeyboardInterrupt:
-    sys.stdout.write("\x1b[?25h\n")
+
+if __name__ == "__main__":
+    os.system("")
+    sys.stdout.write("\x1b[2J\x1b[?25l")
+    try:
+        while True:
+            for state, frames in FRAMES.items():
+                for _ in range(3):
+                    for f in frames:
+                        draw(f, state)
+                        time.sleep(0.4)
+    except KeyboardInterrupt:
+        sys.stdout.write("\x1b[?25h\n")
