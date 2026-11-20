@@ -1,6 +1,120 @@
 {
   "version": 1,
-  "lastUpdated": "2026-11-20 14:37:34",
-  "lastId": "SPAI-001",
-  "records": []
+  "lastUpdated": "2026-11-20 15:44:29",
+  "lastId": "SPAI-009",
+  "records": [
+    {
+      "id": "SPAI-002",
+      "title": "Run fast checks (clippy, lint, types) before slow tests in the gate",
+      "type": "Note",
+      "status": "note",
+      "symbol": "-",
+      "timestamp": "2026-11-20 15:39:41",
+      "tags": [
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-20-SPAI-002-run-fast-checks-clippy-lint-types-before-slow.md"
+    },
+    {
+      "id": "SPAI-003",
+      "title": "Agents keep command output small and gate logs in SCRATCH",
+      "type": "Note",
+      "status": "note",
+      "symbol": "-",
+      "timestamp": "2026-11-20 15:39:46",
+      "tags": [
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-20-SPAI-003-agents-keep-command-output-small-and-gate-logs-in.md"
+    },
+    {
+      "id": "SPAI-004",
+      "title": "Orchestrator checks git status and diff --stat before committing an agent's worktree",
+      "type": "Note",
+      "status": "note",
+      "symbol": "-",
+      "timestamp": "2026-11-20 15:40:23",
+      "tags": [
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-20-SPAI-004-orchestrator-checks-git-status-and-diff-stat.md"
+    },
+    {
+      "id": "SPAI-005",
+      "title": "Send slash commands from Git Bash with MSYS_NO_PATHCONV=1",
+      "type": "Note",
+      "status": "note",
+      "symbol": "-",
+      "timestamp": "2026-11-20 15:40:25",
+      "tags": [
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-20-SPAI-005-send-slash-commands-from-git-bash-with-msys-no.md"
+    },
+    {
+      "id": "SPAI-006",
+      "title": "Brief message must say 'carry it out fully now', not just 'Do SPAI-NNN'",
+      "type": "Note",
+      "status": "note",
+      "symbol": "-",
+      "timestamp": "2026-11-20 15:41:23",
+      "tags": [
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-20-SPAI-006-brief-message-must-say-carry-it-out-fully-now-not.md"
+    },
+    {
+      "id": "SPAI-007",
+      "title": "Treat the agy observer as a peer and verify its claims before acting",
+      "type": "Note",
+      "status": "note",
+      "symbol": "-",
+      "timestamp": "2026-11-20 15:42:25",
+      "tags": [
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-20-SPAI-007-treat-the-agy-observer-as-a-peer-and-verify-its.md"
+    },
+    {
+      "id": "SPAI-008",
+      "title": "Protect git in the herdr monorepo like claude and spai (watchdog or orchestrator-only hook)",
+      "type": "Todo",
+      "status": "todo",
+      "symbol": ".",
+      "timestamp": "2026-11-20 15:43:27",
+      "tags": [
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-20-SPAI-008-protect-git-in-the-herdr-monorepo-like-claude-and.md"
+    },
+    {
+      "id": "SPAI-009",
+      "title": "Run spai from a place Windows allows: ~/.cargo/bin/spai.exe is now refused (access denied)",
+      "type": "Todo",
+      "status": "todo",
+      "symbol": ".",
+      "timestamp": "2026-11-20 15:44:29",
+      "tags": [
+        "workflow",
+        "spai"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-20-SPAI-009-run-spai-from-a-place-windows-allows.md"
+    }
+  ]
 }
