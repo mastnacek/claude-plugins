@@ -12,6 +12,7 @@ Claude Code plugins by mastnacek, in one marketplace.
 /plugin install cc-pixel-buddy@mastnacek
 /plugin install cc-herdr-plugin-dev@mastnacek
 /plugin install cc-spai-tasks@mastnacek
+/plugin install cc-data-anonymizer@mastnacek
 ```
 
 | Plugin | What it does |
@@ -24,6 +25,7 @@ Claude Code plugins by mastnacek, in one marketplace.
 | [cc-pixel-buddy](plugins/cc-pixel-buddy) | Pixelová počítačová hlavička vedle chatu: nálada podle práce, užitečné hlášky a statistiky dne |
 | [cc-herdr-plugin-dev](plugins/cc-herdr-plugin-dev) | Psaní herdr pluginů: skill s dokumentací, kostra, validace manifestu a brány před úpravou |
 | [cc-spai-tasks](plugins/cc-spai-tasks) | SPAI úkoly, nápady a poznámky v docs/spai/ projektu, sdílené s pi |
+| [cc-data-anonymizer](plugins/cc-data-anonymizer) | Maskuje citlivá data (jména Notes, e-maily, hesla, tokeny) v promptech, @ souborech a výsledcích nástrojů přes CLI anon |
 
 Each plugin lives in `plugins/<name>/` with its own README, tests and version.
 
