@@ -12,6 +12,7 @@ složku anon a spustit příkazy anon, které odhalují originály nebo mění t
 - Domov anon = `ANON_HOME` sezení a výchozí umístění všech platforem, jejichž základ je v prostředí (`APPDATA`, `HOME`, `XDG_CONFIG_HOME`). Cesty se porovnávají bez ohledu na velikost písmen, `/` = `\`, `..`, `~`, proměnné, `/c/…`, relativní k cwd a názvy 8.3 (`rules.ts`).
 - Nástroje s cestou (jakýkoli klíč `*path`, `file`, `dir`, `uri`, …, také MCP) uvnitř domova → zamítnuto; Grep a Glob také tehdy, když jejich kořen (nebo cwd) domov obsahuje, a vzorek Globu s cestou.
 - Bash/PowerShell (každý nástroj s polem `command`) → zamítnuto, když příkaz: zmiňuje domov v jakémkoli zápisu nebo jmenuje `vault.bin|vault.key|map.db`; volá DPAPI; spouští `anon` (i cestou, přes `env`, `&`, `Start-Process`, uvnitř `bash -c "…"`) s `unmask|map|vault|tui|rules|import|export`, `--with-values` nebo `--reveal`.
+- Zástupný znak (`* ? [..] {..} **`) zamítne příkaz jen tehdy, když jeho expanze může dosáhnout domova (porovnává se po složkách); `a['b']` nebo `FRAMES["x"][0]` v kódu a textu projdou.
 - Povoleno: `anon scan|mask` bez těchto voleb, `--help`, `--version`, `help …`, `ANON_HOME=<jiná složka> anon mask soubor`.
 - Zpráva uvádí důvod, říká, že to může uživatel udělat sám (`! <příkaz>`), a nikdy necituje cestu ani obsah. Chyba stráže = zamítnutí.
 
@@ -29,5 +30,5 @@ složku anon a spustit příkazy anon, které odhalují originály nebo mění t
 ## Pasti
 
 - Stráž musí zůstat první v `register.tsx`; test „not even the consent scan ran“ to hlídá.
-- Hrubá heuristika: nezachytí přejmenovanou kopii binárky, zástupné znaky v shellu (`an*`), složené řetězce ani rekurzivní průchod shellem z nadřazené složky. Jistotu dá až oprávnění OS.
+- Hrubá heuristika: nezachytí přejmenovanou kopii binárky, zástupné znaky relativní k neznámé složce shellu (`cd …Roaming && ls an*`), složené řetězce ani rekurzivní průchod shellem z nadřazené složky. Jistotu dá až oprávnění OS.
 - Falešné poplatky jsou záměr (fail-closed): `echo "anon unmask"` se zamítne.

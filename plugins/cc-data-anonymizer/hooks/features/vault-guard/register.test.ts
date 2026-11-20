@@ -82,6 +82,12 @@ const DENY_COMMANDS: [string, string][] = [
 	["powershell -Command", 'powershell -Command "anon unmask f.txt"'],
 	["ANON_HOME set to the real home", "ANON_HOME=C:/Users/tester/AppData/Roaming/anon anon mask f.txt"],
 	["env:ANON_HOME set to the real home", "$env:ANON_HOME='C:\\Users\\tester\\AppData\\Roaming\\anon'; anon mask f.txt"],
+	["glob on the last component", "cat C:/Users/tester/AppData/Roaming/an*/map.db"],
+	["glob on a middle component", "cat C:/Users/tester/AppData/*/anon/map.db"],
+	["glob in the user folder", "cat /c/Users/*/AppData/Roaming/anon/map.db"],
+	["character class", "cat C:/Users/tester/AppData/Roaming/[a]non/map.db"],
+	["brace list", "cat C:/Users/tester/AppData/Roaming/{anon,x}/map.db"],
+	["double star", "cat C:/Users/tester/**/map.db"],
 	["DPAPI Unprotect", "[Security.Cryptography.ProtectedData]::Unprotect($b,$null,'CurrentUser')"],
 	["CryptUnprotectData", "python -c \"import win32crypt; win32crypt.CryptUnprotectData(b)\""],
 ];
@@ -115,6 +121,13 @@ const ALLOW: [string, Record<string, unknown>][] = [
 	["ordinary command", { tool: "Bash", command: "git status && ls D:/01_programovani/anon" }],
 	["APPDATA alone", { tool: "PowerShell", command: "echo $env:APPDATA" }],
 	["cd into the anon repo", { tool: "Bash", command: "cd D:/01_programovani/anon && cargo test" }],
+	["square brackets in quoted text", { tool: "Bash", command: "echo \"a['b']\"" }],
+	["python one-liner with indexing", { tool: "Bash", command: "herdr pane process-info --pane X | python -c \"import sys,json;print([p['cmdline'][:150] for p in json.load(sys.stdin)['result']['process_info']['foreground_processes']])\"" }],
+	["cd into a repo folder named anon, then sed", { tool: "Bash", command: "cd /d/01_programovani/anon && sed -n 1,80p core/src/shared/infra/overlay.rs" }],
+	["heredoc with dict indexing", { tool: "Bash", command: "cat > f.py <<'EOF'\nx = FRAMES[\"x\"][0]\nEOF" }],
+	["spai add text about the guard", { tool: "Bash", command: "spai add \"guard blocks the anon home on a[0] and {x}, ? and *\" --tag bug" }],
+	["glob that cannot reach the home", { tool: "Bash", command: "ls D:/work/*/src C:/Users/tester/Documents/[a-c]*" }],
+	["ls in the anon repo", { tool: "Bash", command: "ls /d/01_programovani/anon/core ; python -c \"print(1)\"" }],
 ];
 
 for (const [name, input] of ALLOW) {

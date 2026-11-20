@@ -77,21 +77,49 @@ function same(c: string, h: string): boolean {
 	return prefix.length > 0 && strip(h).startsWith(prefix);
 }
 
-const inside = (p: string[], home: string[]) => p.length >= home.length && home.every((h, i) => same(p[i]!, h));
-const above = (p: string[], home: string[]) => p.length < home.length && p.every((c, i) => same(c, home[i]!));
-
-/** Is the path in the anon home — or, with includeAbove, a folder that holds it (or a wildcard that may reach it)? */
-export function hitsHome(path: string, g: Guard, includeAbove: boolean): boolean {
-	let s = path;
-	const w = WILD.exec(s);
-	if (w) {
-		const cut = norm(s.slice(0, w.index));
-		s = cut.slice(0, cut.lastIndexOf("/") + 1) || "/";
-		includeAbove = true;
+/** One path component with shell wildcards (* ? [..] {a,b}) as a regular expression; an unclosed [ or { is literal. */
+function globRe(comp: string): RegExp {
+	let re = "";
+	for (let i = 0; i < comp.length; i++) {
+		const ch = comp[i]!;
+		if (ch === "*") re += ".*";
+		else if (ch === "?") re += ".";
+		else if (ch === "[" && comp.indexOf("]", i + 2) > 0) {
+			const end = comp.indexOf("]", i + 2);
+			const body = comp.slice(i + 1, end).replace(/^[!^]/, "^").replace(/\\/g, "\\\\");
+			re += "[" + body + "]";
+			i = end;
+		} else if (ch === "{" && comp.indexOf("}", i) > 0) {
+			const end = comp.indexOf("}", i);
+			re += "(?:" + comp.slice(i + 1, end).split(",").map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")";
+			i = end;
+		} else re += ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 	}
-	const p = pathParts(s, g);
+	try {
+		return new RegExp("^" + re + "$", "i");
+	} catch {
+		return /^.*$/; // a pattern we cannot read may match anything: doubt is a deny
+	}
+}
+
+/** Could the path (components, wildcards allowed) be the home, inside it, or — with includeAbove — a folder that holds it? */
+function reaches(p: string[], home: string[], includeAbove: boolean): boolean {
+	const match = (pi: number, hi: number): boolean => {
+		if (hi === home.length) return true;
+		if (pi === p.length) return includeAbove;
+		const c = p[pi]!;
+		if (c === "**") return match(pi + 1, hi) || match(pi, hi + 1);
+		if (WILD.test(c)) return globRe(c).test(home[hi]!) && match(pi + 1, hi + 1);
+		return same(c, home[hi]!) && match(pi + 1, hi + 1);
+	};
+	return match(0, 0);
+}
+
+/** Is the path in the anon home — or, with includeAbove, a folder that holds it? A wildcard counts only when its expansion could reach the home. */
+export function hitsHome(path: string, g: Guard, includeAbove: boolean): boolean {
+	const p = pathParts(path, g);
 	if (!p) return false;
-	return g.homes.some((h) => inside(p, h) || (includeAbove && above(p, h)));
+	return g.homes.some((h) => reaches(p, h, includeAbove));
 }
 
 // --- tools with a path -------------------------------------------------------------------
