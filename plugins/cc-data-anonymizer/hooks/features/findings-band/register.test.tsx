@@ -206,3 +206,18 @@ test("a Read where the pane is placed still uses the pane", async ($, on) => {
 	await ui.unmount();
 	expect((await result).deny).toBeUndefined();
 });
+
+test("the ask dialog of a tool call shows the colored findings above it", async ($, on) => {
+	on("state.get", () =>
+		stored([{ path: "src/a.txt", lines: [{ line: 3, column: 1, kind: "password", rule: "vault", chars: 8 }] }]),
+	);
+	const ui = await $.ui.mount({
+		plugin: "cc-data-anonymizer",
+		component: "AskUserQuestion",
+		props: { tool: "AskUserQuestion", questions: [] },
+		surface: "terminal",
+	});
+	expect((await ui.find({ type: "Text", text: /src\/a\.txt/ }))?.text).toBe("src/a.txt");
+	expect((await ui.find({ type: "Text", text: /^password$/ }))?.props?.color).toBe("error");
+	await ui.unmount();
+});

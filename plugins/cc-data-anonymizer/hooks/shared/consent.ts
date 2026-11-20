@@ -76,15 +76,29 @@ async function ask($: $, key: string, path: string, tool?: ToolRef): Promise<boo
 	}
 	const groups = groupByFile(found.findings, await $.session.cwd());
 	// A tool call: the findings are a card under its row (any terminal width); the pane is a bonus where it is placed.
-	if (tool !== undefined) await setCard($, tool.toolUseId, { groups, decision: null });
+	if (tool !== undefined) {
+		await setCard($, tool.toolUseId, { groups, decision: null });
+		$.ui.invalidate("ui.render");
+	}
 	const paneAnswer = await askInPane($, groups);
 	const question =
 		tool === undefined
 			? `Citlivé hodnoty v souborech:\n${plainList(groups)}\nAgent uvidí jen falešné náhrady. Povolit?`
 			: "Citlivé hodnoty jsou vypsané výše. Povolit?";
-	const isAllowed =
-		paneAnswer ?? (await $.ui.ask(question, [ALLOW, DENY]).catch(() => DENY)) === ALLOW;
-	if (tool !== undefined) await setCard($, tool.toolUseId, { groups, decision: { isAllowed, style: tool.style } });
+	let isAllowed = paneAnswer;
+	if (isAllowed === undefined) {
+		// A tool call: the findings show above the ask dialog (the row's card is not drawn while this hook waits).
+		if (tool !== undefined) await update($, findings, () => groups);
+		try {
+			isAllowed = (await $.ui.ask(question, [ALLOW, DENY]).catch(() => DENY)) === ALLOW;
+		} finally {
+			if (tool !== undefined) await update($, findings, () => null);
+		}
+	}
+	if (tool !== undefined) {
+		await setCard($, tool.toolUseId, { groups, decision: { isAllowed, style: tool.style } });
+		$.ui.invalidate("ui.render");
+	}
 	if (isAllowed) allowed.add(key);
 	return isAllowed;
 }
