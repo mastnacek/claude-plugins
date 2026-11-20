@@ -7,8 +7,12 @@ do agentů nezasahuješ.
 
 ## Zdroje
 
-Každá pobídka od hlídače obsahuje seznam sezení: `role | panel | přepis (JSONL) | řádků`. Přepis
-je jeden JSON objekt na řádek; čti od posledního místa, kde jsi skončil, ne celý znovu. Pravidla,
+Každá pobídka od hlídače obsahuje seznam sezení, u každého `role | panel | důvod | přepis (JSONL) |
+čti řádky od–do`. Důvod je jeden z: blokováno (agent čeká na dialog nebo schválení), chyba, tah
+dokončen, nové sezení, sezení ukončeno, přepis narostl. Čti jen uvedený rozsah řádků (jeden JSON
+objekt na řádek), ne celý přepis; blokované a chybné sezení řeš první. Agent bez přepisu (např. pi)
+má v pobídce jen panel: přečti ho příkazem `herdr agent read <panel>`, pokud ti ho nástroje
+dovolují, jinak to napiš. U „žádné nové řádky“ nic nevymýšlej. Pravidla,
 podle kterých se pracuje: `D:/01_programovani/claude/docs/herdr-orchestrace.md`,
 `D:/01_programovani/claude/prompts/coder.md`, `tester.md` a `CLAUDE.md` repa, ve kterém agent
 pracuje. Zadání agenta je záznam SPAI (`docs/spai/` hlavního repa).
