@@ -74,7 +74,10 @@ else
   done
   herdr agent wait "$kolega" --until idle --until done --timeout 60000 >/dev/null || true
   # Úvodní pobídka: role je v systémovém promptu; první záznam hned, ať je vidět, že běží.
-  [[ "$agent" == claude ]] && herdr agent prompt "$kolega" "Začni: přečti souvislosti (postup orchestrace, prompty rolí) a konec přepisů sezení, která najdeš v ~/.claude/projects (nejnovější soubory), a napiš první záznam podle své role." >/dev/null || true
+  if [[ "$agent" == claude ]]; then
+    live="$(bash "$canon/scripts/kolega-sessions.sh" 2>/dev/null | grep -v '^kolega|' | awk -F'|' '{printf "%s | %s | %s | řádků %s; ", $1, $2, $3, $4}')"
+    herdr agent prompt "$kolega" "Začni: přečti souvislosti (postup orchestrace, prompty rolí, zadání SPAI) a konec přepisů právě běžících sezení: ${live:-žádné nenalezeno}. Napiš první záznam podle své role. Jiné přepisy v ~/.claude/projects nehodnoť." >/dev/null || true
+  fi
 fi
 
 # Hlídač: plugin (události) když je zapojen a postavený, jinak záložní polling.
