@@ -14,6 +14,13 @@ type $ = EngineInterface;
 
 export class AnonError extends Error {}
 
+/** `anon unmask --strict` found tags anon does not know (forgotten, foreign, mangled, escaped). */
+export class UnknownTagsError extends AnonError {
+	constructor(readonly tags: string[]) {
+		super(`anon found tags it cannot restore: ${tags.join(" ")}`);
+	}
+}
+
 export type Style = "fake" | "redact" | "tag";
 
 /** The `style` option as an `anon mask --style` value; unset or "default" leaves it to anon (its rules.toml). */
@@ -122,10 +129,20 @@ async function transform(
 	text: string,
 	style?: Style,
 	sink?: NoteSink,
+	strict = true,
 ): Promise<string> {
 	if (text === "") return text;
-	const flags = command === "mask" && style ? ["--style", style] : [];
+	const flags = command === "mask" ? (style ? ["--style", style] : []) : strict ? ["--strict"] : [];
 	const run = await exec($, [command, "-", ...flags, "--json"], text);
+	// Exit 3 with --strict: the text still holds tags anon did not issue (listed in unknown_tags).
+	if (run.exitCode === 3 && command === "unmask" && strict) {
+		try {
+			const unknown = (JSON.parse(run.stdout) as { unknown_tags?: unknown }).unknown_tags;
+			if (Array.isArray(unknown) && unknown.length > 0) throw new UnknownTagsError(unknown.map(String));
+		} catch (error) {
+			if (error instanceof UnknownTagsError) throw error;
+		}
+	}
 	if (run.exitCode !== 0) {
 		throw new AnonError(`anon ${command} failed (exit ${run.exitCode}): ${firstLine(run.stderr || run.stdout)}`);
 	}
@@ -154,8 +171,8 @@ export function mask($: $, text: string, style?: Style, sink?: NoteSink): Promis
 	return transform($, "mask", text, style, sink);
 }
 
-export function unmask($: $, text: string): Promise<string> {
-	return transform($, "unmask", text);
+export function unmask($: $, text: string, strict = true): Promise<string> {
+	return transform($, "unmask", text, undefined, undefined, strict);
 }
 
 /**
@@ -189,13 +206,17 @@ export async function scan($: $, path: string, reveal: Reveal = "none"): Promise
 	return { isFound: true, findings };
 }
 
-/** Masks (or unmasks) every string inside `value` with one anon call; the shape is kept. */
+/**
+ * Masks (or unmasks) every string inside `value` with one anon call; the shape is kept.
+ * Unmask is strict unless told otherwise: tags anon cannot restore throw `UnknownTagsError`.
+ */
 export async function convert<T>(
 	$: $,
 	command: "mask" | "unmask",
 	value: T,
 	style?: Style,
 	sink?: NoteSink,
+	strict = true,
 ): Promise<T> {
 	const strings: string[] = [];
 	const collect = (node: unknown): void => {
@@ -206,7 +227,7 @@ export async function convert<T>(
 	collect(value);
 	if (strings.length === 0) return value;
 
-	const joined = await transform($, command, strings.join(SEPARATOR), style, sink);
+	const joined = await transform($, command, strings.join(SEPARATOR), style, sink, strict);
 	const parts = joined.split(SEPARATOR);
 	if (parts.length !== strings.length) throw new AnonError(`anon ${command} changed the structure of the text`);
 

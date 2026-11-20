@@ -1,10 +1,10 @@
 import type { Register } from "claude-code";
-import { AnonError, convert, noteSink, styleOf } from "../../shared/anon";
+import { AnonError, UnknownTagsError, convert, noteSink, styleOf } from "../../shared/anon";
 import { isFileAllowed, policyOf } from "../../shared/consent";
 import { recordToolNote } from "../../shared/notes";
 import { isAgentState } from "../../shared/paths";
 import { foreignTag, tagLike, unknownTagMessage } from "../../shared/tags";
-import { UNMASKED_FIELDS, hasRedacted, mapFields, textsOf } from "./fields";
+import { UNMASKED_FIELDS, mapFields, textsOf, writesRedacted } from "./fields";
 
 const TOOLS = /^(Read|Grep|Bash|PowerShell|Edit|Write|NotebookEdit|NotebookRead)$|^mcp__/;
 
@@ -31,11 +31,9 @@ export const registerToolMask = ((on, options) => {
 			// A tag this session was not issued is never sent to anon: it could pull another project's value.
 			const foreign = await foreignTag($, textsOf(e, fields));
 			if (foreign !== undefined) return { deny: unknownTagMessage(foreign) };
+			// Strict unmask: a tag anon cannot restore (also a mangled or escaped one) throws UnknownTagsError.
 			const input = await mapFields(e, fields, (picked) => convert($, "unmask", picked));
-			// Whatever still looks like a tag after unmask is written nowhere.
-			const left = tagLike(textsOf(input, fields));
-			if (left !== undefined) return { deny: unknownTagMessage(left) };
-			if (hasRedacted(input, fields)) return { deny: REDACTED };
+			if (writesRedacted(e.tool, input)) return { deny: REDACTED };
 
 			const ran = await next(input);
 			if (ran.deny !== undefined) return ran;
@@ -51,6 +49,7 @@ export const registerToolMask = ((on, options) => {
 			await recordToolNote($, e.tool_use_id, sink.note);
 			return masked;
 		} catch (error) {
+			if (error instanceof UnknownTagsError) return { deny: unknownTagMessage(error.tags[0] ?? "") };
 			return { deny: `${e.tool} blocked: ${why(error)}` };
 		}
 	});

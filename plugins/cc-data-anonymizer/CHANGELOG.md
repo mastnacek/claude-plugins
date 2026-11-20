@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0
+
+- Odmaskování je přísné: plugin volá `anon unmask --strict`; značky, které anon nezná (zapomenuté, cizí, poškozené, escapované), anon vypíše a plugin zamítne stávající zprávou „Neznámá nebo poškozená značka …“. Vlastní kontrola zbytků po odmaskování odpadla.
+- Značka je jen skutečná značka: `REDACTED:druh:číslo` s číslicemi. Obecný zápis v dokumentaci (`druh` a `n` písmeny, zástupné symboly) je text a jde zapsat; značka v MCP vstupu se zamítá jen s číslem.
+- `REDACTED` se zamítá jen jako zapsaná hodnota: v Edit, Write a NotebookEdit jako hodnota v uvozovkách nebo hned za `=` či `:`; v Bash a PowerShellu jen u příkazu, který zapisuje soubor (`>`, `>>`, `tee`, `Set-Content`, `Add-Content`, `Out-File`, `sed -i`, `-OutFile`). Čtení, hledání a text o `REDACTED` projdou.
+- Odstraněn mrtvý čtenář `redactWarning` (pás nad promptem ve `findings-band`) a jeho klíč v kontraktu `$.state`.
+- `vault-guard` odmaskovává nepřísně (kontroluje jen cesty).
+- Vyžaduje anon s `unmask --strict`.
+
 ## 0.6.0
 
 - PowerShell: výstup se maskuje jako u Bash, `command` se před spuštěním odmaskuje. NotebookEdit: odmaskuje se `new_source` i cesta k notebooku; maskují se i výsledky NotebookRead.

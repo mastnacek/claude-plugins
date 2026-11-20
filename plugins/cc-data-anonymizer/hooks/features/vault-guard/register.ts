@@ -27,7 +27,8 @@ export const registerVaultGuard = ((on) => {
 			if (masked !== null) return { deny: advice(masked) };
 			// The model may write a placeholder (a tag standing for the user name in a path) that tool-mask
 			// turns into the real path later: judge the input the tool would really get. Failure = deny (catch).
-			const real = await convert($, "unmask", guardedFields(input));
+			// Not strict: the guard only needs the real paths; a tag nobody can restore stays as it is.
+			const real = await convert($, "unmask", guardedFields(input), undefined, undefined, false);
 			const reason = checkInput({ ...input, ...real }, guard);
 			if (reason !== null) return { deny: advice(reason) };
 		} catch (error) {

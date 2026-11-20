@@ -12,11 +12,10 @@ stiskem povolit nebo zamítnout. (Název složky zůstal z doby, kdy to byl pás
 - `ui.render` na `ToolUse` — barevná karta pod řádkem nástroje (`tool_use_id` z atomu `cards`, `await next(e)` drží řádek): stejný seznam nálezů jako panel, po rozhodnutí stavový řádek (povoleno + styl / zamítnuto). Funguje při jakékoli šířce terminálu.
 - `ui.render` na `AskUserQuestion` — dialog `$.ui.ask` se kreslí, i když hook `tool.call` čeká; když je atom `findings` nastavený, vykreslí nad dialogem (`await next(e)`) stejný barevný seznam (nejvýš 6 řádků, zbytek „… a N dalších“). Tak člověk vidí nálezy PŘED rozhodnutím.
 - `ui.close` na `CONSENT_PANE` — zavření panelu (Esc, značka zavření) je `settleConsent(false)`, tedy zamítnutí.
-- `ui.render` na `AbovePrompt` — už jen varování `redactWarning` (vstup nástroje s nevratným `REDACTED`, píše `tool-mask`); `turn.start` ho maže. Nálezy pás nekreslí.
 
 ## Kontrakt
 
-- **`$.state`:** čte `cards` (píše `shared/consent` u volání nástroje), `redactWarning` (píše `tool-mask`, maže tady) a `findings` (píše `shared/consent` před otevřením panelu nebo dialogu u volání nástroje, po odpovědi maže).
+- **`$.state`:** čte `cards` (píše `shared/consent` u volání nástroje), `findings` (píše `shared/consent` před otevřením panelu nebo dialogu u volání nástroje, po odpovědi maže).
 - **Shared:** `consent` (`CONSENT_PANE`, `settleConsent`), `findings` (`kindColor`; seskupení dělá `consent`).
 - Atom `findings` je deklarovaný v každém souboru, který ho čte nebo píše (skenování enginu čte odkaz tam, kde se používá).
 

@@ -35,8 +35,6 @@ declare module "claude-code" {
 			promptNotes: Record<string, MaskNote> | null;
 			/** Tags «REDACTED:kind:n» anon issued to this session (from its masked output); an input tag outside this list is denied. */
 			issuedTags: string[] | null;
-			/** Why a tool input could not be fully restored (style redact); null when there is nothing to warn about. */
-			redactWarning: string | null;
 		};
 	}
 }

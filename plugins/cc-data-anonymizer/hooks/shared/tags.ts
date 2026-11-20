@@ -13,9 +13,9 @@ const issued = atom({ plugin: "cc-data-anonymizer", key: "issuedTags" } as const
 const KEEP = 5000;
 
 const FULL = /«REDACTED:[^\s«»]*:\d+»/gi;
-// An opening mark (guillemet, its JSON or HTML/XML escape) followed by REDACTED, or REDACTED:kind.
-const OPEN = "(?:«|\\u00ab|&laquo;|&#0*171;|&#x0*ab;|&lt;&lt;)";
-const LIKE = new RegExp(OPEN + "\\s*REDACTED\\S*|REDACTED:[A-Za-z_]\\S*", "i");
+// A real tag has digits for n, in whatever brackets or letter case. A generic form in documentation
+// (kind and n as letters or placeholders) is text.
+const LIKE = /REDACTED:[A-Za-z_-]+:\d+/i;
 
 /** The tags in anon's masked text. */
 export function tagsIn(text: string): string[] {
@@ -38,7 +38,7 @@ export async function foreignTag($: $, texts: string[]): Promise<string | undefi
 	return undefined;
 }
 
-/** The first thing in the texts that looks like a tag (whole, partial, escaped, any case). */
+/** The first tag in the texts (kind and digits, any brackets or letter case). */
 export function tagLike(texts: string[]): string | undefined {
 	for (const text of texts) {
 		const m = LIKE.exec(text);

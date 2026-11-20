@@ -104,17 +104,7 @@ test("where no pane can be shown the plain ask dialog is used", async ($, on) =>
 	expect(out.deny).toContain("not allowed");
 });
 
-test("the band above the prompt shows only the redact warning, never findings", async ($, on) => {
-	on("state.get", (_$, e) =>
-		e.key === "redactWarning" ? stored("nelze obnovit") : stored([{ path: "src/a.txt", lines: [] }]),
-	);
-	const ui = await $.ui.mount({ ...BAND });
-	expect((await ui.find({ type: "Text", text: /nelze obnovit/ }))?.text).toContain("nelze obnovit");
-	expect(await ui.find({ type: "Text", text: /src\/a\.txt/ })).toBeUndefined();
-	await ui.unmount();
-});
-
-test("no warning, no band", async ($, on) => {
+test("nothing is drawn above the prompt", async ($, on) => {
 	on("state.get", () => stored(null));
 	on("ui.render", ($, e) => {
 		const { Text } = $.ui.resolve(e);
