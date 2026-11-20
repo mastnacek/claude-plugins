@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "lastUpdated": "2026-11-20 17:52:39",
-  "lastId": "SPAI-014",
+  "lastUpdated": "2026-11-20 18:03:23",
+  "lastId": "SPAI-015",
   "records": [
     {
       "id": "SPAI-002",
@@ -191,6 +191,21 @@
       "project": "claude",
       "projectPath": "D:/01_programovani/claude",
       "file": "2026-11-20-SPAI-014-event-driven-kolega-herdr-plugin-watcher-near-real.md"
+    },
+    {
+      "id": "SPAI-015",
+      "title": "Animated pixel-art robot for the kolega watcher pane (Rust) instead of the kolega's text",
+      "type": "Idea",
+      "status": "idea",
+      "symbol": "?",
+      "timestamp": "2026-11-20 18:03:23",
+      "tags": [
+        "kolega",
+        "ui"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-20-SPAI-015-animated-pixel-art-robot-for-the-kolega-watcher.md"
     }
   ]
 }
