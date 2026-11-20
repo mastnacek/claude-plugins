@@ -11,7 +11,7 @@ export type FileFindings = { path: string; lines: FindingLine[] };
 declare module "claude-code" {
 	interface PluginState {
 		"cc-data-anonymizer": {
-			/** What the consent dialog is asking about right now; null when no dialog is open. */
+			/** What the consent pane is asking about right now; null when no pane is open. */
 			findings: FileFindings[] | null;
 			/** Why a tool input could not be fully restored (style redact); null when there is nothing to warn about. */
 			redactWarning: string | null;

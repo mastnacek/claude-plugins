@@ -8,7 +8,7 @@ uživatel napíše, a soubory z `@`. Bez něj by prompt i soubor odešly nezměn
 ## Co dělá
 
 - `prompt.submit` (`register.ts`) — text prochází `anon mask`; selže-li anon, prompt se zahodí (`drop`), nikdy neodejde původní. Řádek slash příkazu engine přepsat nedovolí, ten se nemění.
-- `prompt.mention` — při prvním čtení souboru ukáže `anon scan` v dialogu (`shared/consent`); bez „Povolit“ je `deny`.
+- `prompt.mention` — při prvním čtení souboru ukáže `anon scan` v panelu souhlasu (`shared/consent`); bez „Povolit“ je `deny`.
 - `prompt.attachment` (`file`, `edited_text_file`, `nested_memory`) — text přílohy projde `anon mask`; selže-li, příloha se vynechá (`text: null`).
 
 ## Kontrakt
