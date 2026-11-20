@@ -58,7 +58,7 @@ case "$agent" in
   pi)
     cmd="pi ${KOLEGA_PI_MODEL:+--model '$KOLEGA_PI_MODEL'} --exclude-tools bash,edit,write" ;;
   claude)
-    cmd="\$env:CC_ROLE='kolega'; \$env:NO_KOLEGA='1'; claude --model haiku --allowedTools 'Read,Grep,Glob' --disallowedTools 'Write,Edit,NotebookEdit,Bash,PowerShell,Agent,WebFetch' --settings '{\"enabledPlugins\":{\"cc-data-anonymizer@mastnacek\":false}}' $dirs" ;;
+    cmd="\$env:CC_ROLE='kolega'; \$env:NO_KOLEGA='1'; claude --model haiku --append-system-prompt-file '$(cygpath -m "$canon")/prompts/kolega.md' --allowedTools 'Read,Grep,Glob' --disallowedTools 'Write,Edit,NotebookEdit,Bash,PowerShell,Agent,WebFetch' --settings '{\"enabledPlugins\":{\"cc-data-anonymizer@mastnacek\":false}}' $dirs" ;;
 esac
 herdr pane run "$kolega" "$cmd" >/dev/null
 if [[ "$agent" == agy ]]; then
@@ -73,6 +73,8 @@ else
     herdr pane send-keys "$kolega" Down >/dev/null; herdr pane send-keys "$kolega" Enter >/dev/null
   done
   herdr agent wait "$kolega" --until idle --until done --timeout 60000 >/dev/null || true
+  # Úvodní pobídka: role je v systémovém promptu; první záznam hned, ať je vidět, že běží.
+  [[ "$agent" == claude ]] && herdr agent prompt "$kolega" "Začni: přečti souvislosti (postup orchestrace, prompty rolí) a konec přepisů sezení, která najdeš v ~/.claude/projects (nejnovější soubory), a napiš první záznam podle své role." >/dev/null || true
 fi
 
 # Hlídač: plugin (události) když je zapojen a postavený, jinak záložní polling.
