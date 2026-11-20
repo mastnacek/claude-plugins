@@ -37,7 +37,7 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 ## Řezy
 
 - `prompt-mask` — maskuje prompt a `@` soubory (`anon mask`), při prvním souboru ukáže `anon scan` a čeká na povolení.
-- `tool-mask` — maskuje výsledky Read, Grep, Bash, Edit, Write a MCP; vstupy Edit, Write, Bash odmaskuje (`anon unmask`).
+- `tool-mask` — maskuje výsledky Read, Grep, Bash, PowerShell, Edit, Write, NotebookEdit a MCP; vstupy Edit, Write, NotebookEdit, Bash, PowerShell odmaskuje (`anon unmask`); neznámé a cizí značky, `REDACTED` v zápisu a značky v MCP zamítne.
 - `findings-band` — barevný panel souhlasu (nálezy po souborech, tlačítka Povolit / Zamítnout; záloha `$.ui.ask`) a pás nad promptem s varováním `redact`.
 - `mask-note` — malý rámeček pod řádkem nástroje a pod zprávou uživatele: „zamaskováno N hodnot (druhy), styl X“ a hodnoty podle volby `reveal` (jen obrazovka, nikdy model).
 - `vault-guard` — fail-closed stráž: agentům zakáže soubory v domově anon (vault, klíč, mapa, pravidla) a příkazy `anon`, které odhalují originály nebo mění trezor, i DPAPI; zamítnutí říká, že to uživatel udělá sám (`!`).

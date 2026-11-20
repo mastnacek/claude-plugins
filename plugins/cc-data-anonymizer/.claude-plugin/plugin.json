@@ -1,6 +1,6 @@
 {
   "name": "cc-data-anonymizer",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Maskuje citlivá data (jména Notes, e-maily, hesla, tokeny) v promptech, @ souborech a výsledcích nástrojů přes CLI anon",
   "author": {
     "name": "mastnacek"

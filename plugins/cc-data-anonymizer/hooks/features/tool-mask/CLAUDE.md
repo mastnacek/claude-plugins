@@ -8,17 +8,18 @@ zpět na originály. Bez něj by agent četl originály nebo by Edit nenašel te
 
 ## Co dělá
 
-- `tool.call` na `Read|Grep|Bash|Edit|Write|mcp__*` (`register.ts`):
+- `tool.call` na `Read|Grep|Bash|PowerShell|Edit|Write|NotebookEdit|NotebookRead|mcp__*` (`register.ts`):
   - `Read` v `~/.claude/projects/**` a dalších složkách stavu agentů projde bez maskování; jinak při prvním čtení souboru dialog s `anon scan` a volbou „Povolit“.
-  - `Bash` (`command`), `Edit` (`file_path`, `old_string`, `new_string`), `Write` (`file_path`, `content`) — pole projdou `anon unmask` (`fields.ts`).
+  - `Bash`/`PowerShell` (`command`), `Edit` (`file_path`, `old_string`, `new_string`), `Write` (`file_path`, `content`), `NotebookEdit` (`notebook_path`, `new_source`) — pole projdou `anon unmask` (`fields.ts`).
   - výsledek (všechny řetězce, tvar zůstává) a `context` projdou `anon mask`; chyba nástroje se vrací jako maskovaný `deny`.
 - volba `style` (`default|fake|redact|tag`) se předává `anon mask --style`; `default` příznak nepošle (rozhodne `rules.toml` anonu). `unmask` styl nepotřebuje (fake i tag jdou vrátit).
-- vstup Edit/Write/Bash, v němž po `unmask` zůstalo samostatné `REDACTED` (styl `redact`), projde beze změny a pás nad promptem ukáže varování (atom `redactWarning`, smaže se při dalším `turn.start`).
+- značky (`shared/tags.ts`): vstupní úplná značka, kterou anon v tomto sezení nevydal (`issuedTags`), se zamítne před `anon unmask`; po odmaskování zůstane-li cokoli podobné značce (částečná, jiná velikost, HTML/JSON escape), zamítne se také („Neznámá nebo poškozená značka …“).
+- zápis se samostatným `REDACTED` (styl `redact`) se zamítne; vstup `mcp__*` se značkou se zamítne (MCP značky neodmaskuje).
 - `anon` chybí nebo selže → `deny` s jasnou zprávou (fail-closed).
 
 ## Kontrakt
 
-- **`$.state`:** píše `redactWarning` (čte ho `findings-band`) a `notes` (čte `mask-note`).
+- **`$.state`:** píše `notes` (čte `mask-note`); `issuedTags` píše `shared/anon.ts` při každém `mask`, čte `shared/tags.ts`. `redactWarning` už nikdo nepíše (čte ho ještě `findings-band`).
 - **Shared:** `anon` (`convert`), `consent` (`isFileAllowed`).
 
 ## Nepatří sem

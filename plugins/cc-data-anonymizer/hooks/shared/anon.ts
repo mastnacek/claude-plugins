@@ -8,6 +8,7 @@ import type { EngineInterface, Register } from "claude-code";
 import type { MaskNote } from "../../types";
 import type { Finding } from "./findings";
 import { type Reveal, shown } from "./reveal";
+import { rememberTags } from "./tags";
 
 type $ = EngineInterface;
 
@@ -137,6 +138,8 @@ async function transform(
 	if (parsed.ok !== true || typeof parsed.text !== "string") {
 		throw new AnonError(`anon ${command} reported an error`);
 	}
+	// Every tag the model gets to see is one this session was issued; unmask accepts no other.
+	if (command === "mask") await rememberTags($, parsed.text);
 	if (command === "mask" && sink !== undefined) {
 		const note = noteOf(parsed);
 		if (note.count > 0) {

@@ -1,15 +1,15 @@
 import type { Register } from "claude-code";
-import { atom, update } from "claude-code";
 import { AnonError, convert, noteSink, styleOf } from "../../shared/anon";
 import { isFileAllowed, policyOf } from "../../shared/consent";
 import { recordToolNote } from "../../shared/notes";
 import { isAgentState } from "../../shared/paths";
-import { UNMASKED_FIELDS, hasRedacted, mapFields } from "./fields";
+import { foreignTag, tagLike, unknownTagMessage } from "../../shared/tags";
+import { UNMASKED_FIELDS, hasRedacted, mapFields, textsOf } from "./fields";
 
-// Declared in each file that touches it: the engine's scan reads the ref where it is used.
-const warning = atom({ plugin: "cc-data-anonymizer", key: "redactWarning" } as const, null);
+const TOOLS = /^(Read|Grep|Bash|PowerShell|Edit|Write|NotebookEdit|NotebookRead)$|^mcp__/;
 
-const TOOLS = /^(Read|Grep|Bash|Edit|Write)$|^mcp__/;
+const MCP_TAG = "MCP nástroje značky neodmaskují; použij Edit/Write.";
+const REDACTED = "Zápis obsahuje REDACTED (styl redact): původní hodnotu nejde obnovit. Přečti soubor znovu a nepřepisuj zamaskované místo.";
 
 const why = (error: unknown) => (error instanceof AnonError ? error.message : "anon failed unexpectedly");
 
@@ -24,11 +24,18 @@ export const registerToolMask = ((on, options) => {
 				return { deny: `${e.file_path} was not allowed by the user.` };
 			}
 
+			// MCP tools get no unmask: a tag in their input would reach the server as it is.
+			if (e.tool.startsWith("mcp__") && tagLike([JSON.stringify(e)]) !== undefined) return { deny: MCP_TAG };
+
 			const fields = UNMASKED_FIELDS[e.tool] ?? [];
+			// A tag this session was not issued is never sent to anon: it could pull another project's value.
+			const foreign = await foreignTag($, textsOf(e, fields));
+			if (foreign !== undefined) return { deny: unknownTagMessage(foreign) };
 			const input = await mapFields(e, fields, (picked) => convert($, "unmask", picked));
-			if (hasRedacted(input, fields)) {
-				await update($, warning, () => `${e.tool}: the input holds REDACTED values; they cannot be restored (style redact).`);
-			}
+			// Whatever still looks like a tag after unmask is written nowhere.
+			const left = tagLike(textsOf(input, fields));
+			if (left !== undefined) return { deny: unknownTagMessage(left) };
+			if (hasRedacted(input, fields)) return { deny: REDACTED };
 
 			const ran = await next(input);
 			if (ran.deny !== undefined) return ran;

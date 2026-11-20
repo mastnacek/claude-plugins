@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0
+
+- PowerShell: výstup se maskuje jako u Bash, `command` se před spuštěním odmaskuje. NotebookEdit: odmaskuje se `new_source` i cesta k notebooku; maskují se i výsledky NotebookRead.
+- Neznámé značky: po odmaskování vstupu cokoli, co připomíná značku (úplná, jiná velikost písmen, částečná, HTML/XML escape, JSON escape), se zamítne: „Neznámá nebo poškozená značka …“. Značka se nikdy nezapíše.
+- Značky sezení: plugin si pamatuje značky, které anon v tomto sezení vydal (`issuedTags` v `$.state`); vstupní značka mimo ně se zamítne dřív, než se zavolá `anon unmask`.
+- Styl `redact`: zápis (Edit, Write, NotebookEdit, Bash, PowerShell) se samostatným `REDACTED` se zamítá, už ne jen varuje.
+- MCP: vstup `mcp__*` se značkou se zamítá („MCP nástroje značky neodmaskují; použij Edit/Write.“).
 ## 0.5.2
 
 - `vault-guard`: stráž posuzuje i odmaskovaný vstup. Cesta se zástupným symbolem (tag místo uživatelského jména) už neobejde stráž; po kontrole maskovaného vstupu se pole s cestami a příkaz projdou `anon unmask` a zkontrolují se znovu. Selhání odmaskování = zamítnutí.
