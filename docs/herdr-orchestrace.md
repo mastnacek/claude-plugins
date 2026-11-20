@@ -111,7 +111,7 @@ Každé zadání agentovi (programátor, tester, revizor) je **záznam SPAI** v 
    hlavička konstant a body zadání níž. Duplicitu (kód 3) posuď: navazuje-li na starší
    zadání, `--force` a odkaz `SPAI-NNN` v těle.
 2. **Odeslání:** `spai set <ID> working`, pak agentovi jen
-   „Do SPAI-012 @<projekt>: `spai show SPAI-012 --project <hlavní repo> --json`“.
+   „Read SPAI-012 @<projekt> (`spai show SPAI-012 --project <hlavní repo> --json`) and carry it out fully now.“.
 3. **Konec:** po sloučení `spai set <ID> done --evidence "<commit>, <brána>"`; zahozené
    `cancelled`. Výtku k vrácené práci a předání zapiš `spai log <ID> "<text>"`.
 4. Agent záznamy nemění (`spai add/set/delete` jen orchestrátor). Scratchpad zůstává pro
