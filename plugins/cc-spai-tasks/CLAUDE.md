@@ -36,6 +36,6 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 
 ## Řezy
 
-- **guard-spai-files** — zamítne ruční zápis do `docs/spai/*.md` a `.index.json` (Write, Edit, NotebookEdit, zjevný zápis v Bash); zapisuje jen `spai`.
+- **guard-spai-files** — zamítne ruční zápis do `docs/spai/*.md` a `.index.json` (Write, Edit, NotebookEdit, zjevný zápis v Bash) i mazání shellem (`rm`, `git rm`, `del`, `Remove-Item`, `unlink`); zapisuje a maže jen `spai`.
 
 <!-- Jeden řádek na řez: název — co dělá jednou větou. -->

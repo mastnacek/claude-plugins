@@ -1,9 +1,10 @@
 // decide.ts — may this tool call touch a SPAI record by hand? Pure: no disk, no engine.
 //
 // A SPAI record is a `.md` file (or `.index.json`) under a `docs/spai/` (older: `.pi/spai/`)
-// folder. Only the `spai` binary writes them.
+// folder. Only the `spai` binary writes (`add`, `set`) and deletes (`delete`) them.
 
 export const DENY = "Záznamy SPAI zapisuje jen `spai` — použij `spai add` / `spai set` (skill spai).";
+export const DENY_DELETE = "Záznamy SPAI maže jen `spai delete` (skill spai).";
 
 /** Is this path a SPAI record? Both slashes, any case (Windows). */
 export function isSpaiRecord(path: string): boolean {
@@ -79,15 +80,34 @@ function writesRecord(cmd: string, args: string[]): boolean {
 	}
 }
 
+const DELETERS = new Set(["rm", "del", "erase", "remove-item", "ri", "unlink"]);
+
+/** Does this simple command delete a record (`rm`, `git rm`, `del`, `Remove-Item`, `unlink`)? */
+function deletesRecord(cmd: string, args: string[]): boolean {
+	const plain = args.filter((a) => !a.startsWith("-")).flatMap((a) => a.split(","));
+	if (cmd === "git") return plain[0] === "rm" && plain.slice(1).some(isSpaiRecord);
+	return DELETERS.has(cmd) && plain.some(isSpaiRecord);
+}
+
 /** Does this shell command obviously write to a record? Reading passes; when unsure, false. */
 export function bashWritesRecord(command: string): boolean {
+	return scan(command, writesRecord, true);
+}
+
+/** Does this shell command obviously delete a record? Reading passes; when unsure, false. */
+export function bashDeletesRecord(command: string): boolean {
+	return scan(command, deletesRecord, false);
+}
+
+/** Walks the simple commands of a shell line; `redirects`: a `>` into a record counts too. */
+function scan(command: string, test: (cmd: string, args: string[]) => boolean, redirects: boolean): boolean {
 	let words: string[] = [];
 	let redirect = false;
 	const done = (): boolean => {
 		let i = 0;
 		while (i < words.length && ENV_ASSIGN.test(words[i] as string)) i++;
 		const cmd = words[i];
-		const hit = cmd !== undefined && writesRecord(nameOf(cmd), words.slice(i + 1));
+		const hit = cmd !== undefined && test(nameOf(cmd), words.slice(i + 1));
 		words = [];
 		return hit;
 	};
@@ -98,7 +118,7 @@ export function bashWritesRecord(command: string): boolean {
 			if (done()) return true;
 		} else if (redirect) {
 			redirect = false;
-			if (isSpaiRecord(t.text)) return true;
+			if (redirects && isSpaiRecord(t.text)) return true;
 		} else words.push(t.text);
 	}
 	return done();
@@ -106,7 +126,11 @@ export function bashWritesRecord(command: string): boolean {
 
 /** The reason to refuse a tool call, or `null` to let it through. */
 export function decide(tool: string, input: { file_path?: unknown; notebook_path?: unknown; command?: unknown }): string | null {
-	if (tool === "Bash") return typeof input.command === "string" && bashWritesRecord(input.command) ? DENY : null;
+	if (tool === "Bash") {
+		if (typeof input.command !== "string") return null;
+		if (bashDeletesRecord(input.command)) return DENY_DELETE;
+		return bashWritesRecord(input.command) ? DENY : null;
+	}
 	const path = tool === "NotebookEdit" ? input.notebook_path : input.file_path;
 	return typeof path === "string" && isSpaiRecord(path) ? DENY : null;
 }

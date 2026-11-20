@@ -6,6 +6,9 @@ test("file tools and Bash: record writes denied, the rest passes", async ($, on)
 	expect((await $.tool.call({ tool: "Write", file_path: "/w/docs/spai/a.md", content: "x" })).deny).toContain(deny);
 	expect((await $.tool.call({ tool: "Edit", file_path: "D:\\w\\docs\\spai\\a.md", old_string: "a", new_string: "b" })).deny).toContain(deny);
 	expect((await $.tool.call({ tool: "Bash", command: "echo x > docs/spai/a.md" })).deny).toContain(deny);
+	expect((await $.tool.call({ tool: "Bash", command: "rm docs/spai/a.md" })).deny).toContain("spai delete");
+	expect((await $.tool.call({ tool: "Bash", command: "git rm docs/spai/a.md" })).deny).toContain("spai delete");
+	expect((await $.tool.call({ tool: "Bash", command: "rm out.txt" })).deny).toBeUndefined();
 	expect((await $.tool.call({ tool: "Write", file_path: "/w/src/a.md", content: "x" })).deny).toBeUndefined();
 	expect((await $.tool.call({ tool: "Bash", command: "cat docs/spai/a.md" })).deny).toBeUndefined();
 });

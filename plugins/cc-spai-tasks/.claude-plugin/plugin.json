@@ -1,6 +1,6 @@
 {
   "name": "cc-spai-tasks",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "SPAI úkoly, nápady a poznámky v docs/spai/ projektu, sdílené s pi",
   "author": { "name": "mastnacek" },
   "homepage": "https://github.com/mastnacek/claude-plugins/tree/main/plugins/cc-spai-tasks",

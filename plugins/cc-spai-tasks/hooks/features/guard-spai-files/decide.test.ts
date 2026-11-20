@@ -1,5 +1,5 @@
 import { describe, expect, test } from "claude-code/testing";
-import { DENY, bashWritesRecord, decide, isSpaiRecord } from "./decide";
+import { DENY, DENY_DELETE, bashDeletesRecord, bashWritesRecord, decide, isSpaiRecord } from "./decide";
 
 describe("isSpaiRecord", () => {
 	test("records", () => {
@@ -17,6 +17,50 @@ describe("isSpaiRecord", () => {
 		expect(isSpaiRecord("src/spai/a.md")).toBe(false);
 		expect(isSpaiRecord("docs/spai-x/a.md")).toBe(false);
 		expect(isSpaiRecord("D:\\proj\\docs\\spai\\a.json")).toBe(false);
+	});
+});
+
+describe("deleting records", () => {
+	test("Bash deletes denied", () => {
+		for (const c of [
+			"rm docs/spai/a.md",
+			"rm -f docs/spai/2026-01-01-SPAI-001-a.md",
+			"rm -rf /w/p/.pi/spai/a.md",
+			"rm docs/spai/*.md",
+			"git rm docs/spai/a.md",
+			"git rm -f --cached docs/spai/.index.json",
+			"del docs\\spai\\a.md",
+			"del /q D:\\p\\DOCS\\SPAI\\a.md",
+			"Remove-Item docs/spai/a.md",
+			"Remove-Item -Force -LiteralPath 'D:\\p\\docs\\spai\\a.md'",
+			"remove-item x.txt,docs/spai/a.md",
+			"unlink docs/spai/.index.json",
+			"ls && FOO=1 rm docs/spai/a.md",
+			"/bin/rm docs/spai/a.md",
+		])
+			expect(bashDeletesRecord(c), c).toBe(true);
+	});
+	test("Bash non-deletes pass", () => {
+		for (const c of [
+			"rm out.txt",
+			"rm -rf target",
+			"git rm src/a.rs",
+			"git add docs/spai/a.md",
+			"git status docs/spai/a.md",
+			"cat docs/spai/a.md",
+			"ls docs/spai/ && rm out.txt",
+			"spai delete 7",
+			"spai delete docs/spai/a.md",
+			"echo rm docs/spai/a.md",
+			"cat docs/spai/a.md | tee out.txt",
+		])
+			expect(bashDeletesRecord(c), c).toBe(false);
+	});
+	test("decide gives the delete reason", () => {
+		expect(decide("Bash", { command: "rm docs/spai/a.md" })).toBe(DENY_DELETE);
+		expect(DENY_DELETE).toBe("Záznamy SPAI maže jen `spai delete` (skill spai).");
+		expect(decide("Bash", { command: "echo x > docs/spai/a.md" })).toBe(DENY);
+		expect(decide("Bash", { command: "rm out.txt" })).toBeNull();
 	});
 });
 
