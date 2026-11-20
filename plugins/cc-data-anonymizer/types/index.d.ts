@@ -13,6 +13,8 @@ declare module "claude-code" {
 		"cc-data-anonymizer": {
 			/** What the consent dialog is asking about right now; null when no dialog is open. */
 			findings: FileFindings[] | null;
+			/** Why a tool input could not be fully restored (style redact); null when there is nothing to warn about. */
+			redactWarning: string | null;
 		};
 	}
 }

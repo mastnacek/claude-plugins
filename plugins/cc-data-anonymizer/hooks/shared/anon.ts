@@ -4,12 +4,20 @@
 // Every failure throws AnonError: callers fail closed (deny / drop), never pass
 // the original through.
 
-import type { EngineInterface } from "claude-code";
+import type { EngineInterface, Register } from "claude-code";
 import type { Finding } from "./findings";
 
 type $ = EngineInterface;
 
 export class AnonError extends Error {}
+
+export type Style = "fake" | "redact" | "tag";
+
+/** The `style` option as an `anon mask --style` value; unset or "default" leaves it to anon (its rules.toml). */
+export function styleOf(options: Parameters<Register>[1]): Style | undefined {
+	const value = options.style;
+	return value === "fake" || value === "redact" || value === "tag" ? value : undefined;
+}
 
 type ScanFinding = { kind: string; rule: string; chars: number; places: { path: string; line: number; column: number }[] };
 export type ScanResult = { isFound: boolean; findings: Finding[] };
@@ -50,9 +58,10 @@ function firstLine(text: string): string {
 	return text.trim().split("\n")[0] ?? "";
 }
 
-async function transform($: $, command: "mask" | "unmask", text: string): Promise<string> {
+async function transform($: $, command: "mask" | "unmask", text: string, style?: Style): Promise<string> {
 	if (text === "") return text;
-	const run = await exec($, [command, "-", "--json"], text);
+	const flags = command === "mask" && style ? ["--style", style] : [];
+	const run = await exec($, [command, "-", ...flags, "--json"], text);
 	if (run.exitCode !== 0) {
 		throw new AnonError(`anon ${command} failed (exit ${run.exitCode}): ${firstLine(run.stderr || run.stdout)}`);
 	}
@@ -68,8 +77,8 @@ async function transform($: $, command: "mask" | "unmask", text: string): Promis
 	return parsed.text;
 }
 
-export function mask($: $, text: string): Promise<string> {
-	return transform($, "mask", text);
+export function mask($: $, text: string, style?: Style): Promise<string> {
+	return transform($, "mask", text, style);
 }
 
 export function unmask($: $, text: string): Promise<string> {
@@ -96,7 +105,7 @@ export async function scan($: $, path: string): Promise<ScanResult> {
 }
 
 /** Masks (or unmasks) every string inside `value` with one anon call; the shape is kept. */
-export async function convert<T>($: $, command: "mask" | "unmask", value: T): Promise<T> {
+export async function convert<T>($: $, command: "mask" | "unmask", value: T, style?: Style): Promise<T> {
 	const strings: string[] = [];
 	const collect = (node: unknown): void => {
 		if (typeof node === "string") strings.push(node);
@@ -106,7 +115,7 @@ export async function convert<T>($: $, command: "mask" | "unmask", value: T): Pr
 	collect(value);
 	if (strings.length === 0) return value;
 
-	const joined = await transform($, command, strings.join(SEPARATOR));
+	const joined = await transform($, command, strings.join(SEPARATOR), style);
 	const parts = joined.split(SEPARATOR);
 	if (parts.length !== strings.length) throw new AnonError(`anon ${command} changed the structure of the text`);
 
