@@ -11,7 +11,7 @@ SPAI úkoly, nápady a poznámky v docs/spai/ projektu, sdílené s pi
 
 ## What it does
 
-<!-- One bullet per feature, in the words a user would search for. -->
+- **Hand-edit guard.** Refuses Write, Edit, NotebookEdit and obvious Bash writes (`>`, `>>`, `tee`, `sed -i`, `cp`/`mv` into it) aimed at `docs/spai/*.md` or `.index.json`. SPAI records are written only by the `spai` binary (`spai add` / `spai set`).
 
 ## Commands
 

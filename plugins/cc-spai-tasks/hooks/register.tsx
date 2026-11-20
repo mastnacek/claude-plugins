@@ -6,6 +6,7 @@
 // slice is wired by an explicit call, never a loop over a list.
 
 import type { Register } from "claude-code";
+import { registerGuardSpaiFiles } from "./features/guard-spai-files/register";
 
 export const register: Register = (on) => {
 	on("session.start", async (_$, e, next) => {
@@ -13,5 +14,5 @@ export const register: Register = (on) => {
 		return next(e);
 	});
 
-	// registerXxx(on);  — one line per slice
+	registerGuardSpaiFiles(on);
 };
