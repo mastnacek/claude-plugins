@@ -8,17 +8,15 @@ set -euo pipefail
 role="${CC_ROLE:-}"
 [[ -z "$role" || "$role" == "orchestrator" ]] && exit 0
 
-command="$(jq -r '.tool_input.command // empty')"
+# Bez jq: jq z WinGet Links v Git Bash nejde spustit (exit 126 = hook nic
+# neblokoval). Prohledává se celý JSON vstup; příkaz je v něm doslova.
+command="$(cat)"
 
 # git commit / git push i s volbami před podpříkazem (git -C dir commit),
 # kdekoli v řetězci příkazů (a && git commit, …).
-if grep -qE '(^|[;&|(]|[[:space:]])git([[:space:]]+-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*)?)*[[:space:]]+(commit|push)([[:space:]]|$)' <<<"$command"; then
-  jq -n --arg role "$role" '{
-    hookSpecificOutput: {
-      hookEventName: "PreToolUse",
-      permissionDecision: "deny",
-      permissionDecisionReason: ("Jsi " + $role + ": commit a push dělá jen orchestrátor. Nech změny v pracovním stromu a v závěrečné zprávě navrhni zprávu commitu.")
-    }
-  }'
+# `"` na začátku = začátek hodnoty "command" v JSON.
+if grep -qE '(^|[";&|(]|[[:space:]])git([[:space:]]+-[^[:space:]]+([[:space:]]+[^-[:space:]"][^[:space:]"]*)?)*[[:space:]]+(commit|push)([[:space:]"]|$)' <<<"$command"; then
+  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Jsi %s: commit a push dělá jen orchestrátor. Nech změny v pracovním stromu a v závěrečné zprávě navrhni zprávu commitu."}}
+' "$role"
 fi
 exit 0
