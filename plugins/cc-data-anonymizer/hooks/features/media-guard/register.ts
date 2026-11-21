@@ -2,10 +2,7 @@ import type { Register } from "claude-code";
 import { AnonError, convert, noteSink, styleOf } from "../../shared/anon";
 import { isAsking, policyOf } from "../../shared/consent";
 import { recordToolNote } from "../../shared/notes";
-import { isAgentState } from "../../shared/paths";
-
-const PDF = /\.pdf$/i;
-const IMAGE = /\.(png|jpe?g|gif|bmp|webp|tiff?)$/i;
+import { isAgentState, isImage, isPdf } from "../../shared/paths";
 
 export const NO_PDFTOTEXT =
 	"PDF nejde zamaskovat: pdftotext není v PATH (nainstaluj poppler). Dokument se modelu nepředává.";
@@ -28,7 +25,7 @@ export const registerMediaGuard = ((on, options) => {
 	on("tool.call", { tool: "Read" }, async ($, e, next) => {
 		const path = typeof e.file_path === "string" ? e.file_path : "";
 		if (isAgentState(path)) return next(e);
-		if (PDF.test(path)) {
+		if (isPdf(path)) {
 			// The PDF itself never reaches the model: only its text, masked.
 			let text: string;
 			try {
@@ -49,7 +46,7 @@ export const registerMediaGuard = ((on, options) => {
 				return { deny: `Read blocked: ${why(error)}` };
 			}
 		}
-		if (IMAGE.test(path)) {
+		if (isImage(path)) {
 			const key = path.replace(/\\/g, "/").toLowerCase();
 			if (allowedImages.has(key)) return next(e);
 			if (await isAsking($, policy)) {

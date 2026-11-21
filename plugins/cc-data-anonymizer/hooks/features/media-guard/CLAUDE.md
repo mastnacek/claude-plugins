@@ -24,5 +24,5 @@ PDF a obrázky nesou originály, které `anon mask` na bajtech nezamaskuje. Řez
 
 ## Pasti
 
-- Řez odpovídá sám a `next` nevolá: musí stát před `tool-mask`.
+- Řez odpovídá sám (PDF) nebo po souhlasu volá `next` (obrázek): musí stát před `tool-mask`, který média přeskakuje (`isMedia`), jinak by obrázek šel do `anon scan`. Test celým řetězcem: `hooks/chain.test.ts`.
 - Tvar výsledku je jako u textového Read (`file.content`).

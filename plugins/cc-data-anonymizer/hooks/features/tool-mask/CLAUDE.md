@@ -9,6 +9,7 @@ zpět na originály. Bez něj by agent četl originály nebo by Edit nenašel te
 ## Co dělá
 
 - `tool.call` na `Read|Grep|Bash|PowerShell|Edit|Write|NotebookEdit|NotebookRead|mcp__*` (`register.ts`):
+  - `Read` PDF a obrázku (`shared/paths` `isMedia`) projde beze změny: patří `media-guard`, žádný `anon scan` ani maskování. Binární soubor (anon: „není UTF-8 text“) → „Binární soubor nejde zamaskovat; čtení zamítnuto.“
   - `Read` v `~/.claude/projects/**` a dalších složkách stavu agentů projde bez maskování; jinak při prvním čtení souboru dialog s `anon scan` a volbou „Povolit“.
   - `Bash`/`PowerShell` (`command`), `Edit` (`file_path`, `old_string`, `new_string`), `Write` (`file_path`, `content`), `NotebookEdit` (`notebook_path`, `new_source`) — pole projdou `anon unmask` (`fields.ts`).
   - výsledek (všechny řetězce, tvar zůstává) a `context` projdou `anon mask`; chyba nástroje se vrací jako maskovaný `deny`.

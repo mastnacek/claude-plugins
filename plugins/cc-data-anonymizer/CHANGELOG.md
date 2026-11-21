@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1
+
+- Obrázky a PDF řeší jen `media-guard`: `tool-mask` a skenování souhlasu je podle přípony (bez ohledu na velikost písmen) přeskočí. Čtení `.png` se už nezastaví na „anon scan failed … soubor není UTF-8 text“, ale dojde k dialogu „Obrázek nejde zamaskovat. Poslat ho modelu?“; povolený obrázek projde beze změny.
+- Jiný binární soubor (ne UTF-8): zpráva „Binární soubor nejde zamaskovat; čtení zamítnuto.“ místo surové chyby anonu.
+- Testy `hooks/chain.test.ts` jedou celým řetězcem hooků z `register.tsx`.
+
 ## 0.8.0
 
 - Tajemství se nevracejí do příkazů: volba `shellSecrets` (`deny` výchozí | `ask` | `allow`) a `shellSecretKinds`. Příkaz Bash/PowerShell se značkou druhu `password`, `secret`, `card`, `iban` nebo `national-id` se zamítne; `ask` se zeptá (agenti a `-p` zamítnou). Ostatní druhy se obnovují jako dřív. Jen značky: u stylu `fake` druh není znát.

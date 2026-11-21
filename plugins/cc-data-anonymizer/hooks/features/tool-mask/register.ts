@@ -2,7 +2,7 @@ import type { Register } from "claude-code";
 import { AnonError, UnknownTagsError, convert, noteSink, styleOf } from "../../shared/anon";
 import { isFileAllowed, policyOf } from "../../shared/consent";
 import { recordToolNote } from "../../shared/notes";
-import { isAgentState } from "../../shared/paths";
+import { isAgentState, isMedia } from "../../shared/paths";
 import { foreignTag, tagLike, unknownTagMessage } from "../../shared/tags";
 import { UNMASKED_FIELDS, mapFields, textsOf, writesRedacted } from "./fields";
 
@@ -10,6 +10,8 @@ const TOOLS = /^(Read|Grep|Bash|PowerShell|Edit|Write|NotebookEdit|NotebookRead)
 
 const MCP_TAG = "MCP nástroje značky neodmaskují; použij Edit/Write.";
 const REDACTED = "Zápis obsahuje REDACTED (styl redact): původní hodnotu nejde obnovit. Přečti soubor znovu a nepřepisuj zamaskované místo.";
+
+export const BINARY = "Binární soubor nejde zamaskovat; čtení zamítnuto.";
 
 const why = (error: unknown) => (error instanceof AnonError ? error.message : "anon failed unexpectedly");
 
@@ -20,6 +22,8 @@ export const registerToolMask = ((on, options) => {
 		try {
 			// The harness's own state (session transcripts…) is not the person's file: left as it is.
 			if (e.tool === "Read" && isAgentState(e.file_path)) return next(e);
+			// PDFs and images are media-guard's: no text scan, no masking (a consented image passes as it is).
+			if (e.tool === "Read" && isMedia(e.file_path)) return next(e);
 			if (e.tool === "Read" && !(await isFileAllowed($, e.file_path, policy, { toolUseId: e.tool_use_id, style: style ?? "default" }))) {
 				return { deny: `${e.file_path} was not allowed by the user.` };
 			}
@@ -50,6 +54,8 @@ export const registerToolMask = ((on, options) => {
 			return masked;
 		} catch (error) {
 			if (error instanceof UnknownTagsError) return { deny: unknownTagMessage(error.tags[0] ?? "") };
+			// anon refuses a file that is not UTF-8 text: say so plainly instead of its raw error.
+			if (e.tool === "Read" && error instanceof AnonError && /UTF-8/i.test(error.message)) return { deny: BINARY };
 			return { deny: `${e.tool} blocked: ${why(error)}` };
 		}
 	});
