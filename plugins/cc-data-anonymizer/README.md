@@ -23,6 +23,28 @@ Needs the `anon` binary: `ANON_BIN`, then `PATH`, then `D:/01_programovani/_tool
 
 Agents cannot read or change the anon home (`vault.bin`, `vault.key`, `map.db`, `rules.toml`), run `anon unmask|map|vault|tui|rules|import|export`, `--with-values` or `--reveal`, point `ANON_HOME` at the real home or call DPAPI. The denial says so and that you can do it yourself with `!` in the prompt. `anon scan|mask`, `--help`, `--version` and `ANON_HOME=<other folder>` stay allowed.
 
+## Vault-first workflow (anon 2026-11-21)
+
+anon now treats the vault as the main source; rules that only guess are suggestions.
+
+- **Vault (exact match):** passwords, user names, servers, colleague and customer names, internal names. Bulk import: `anon vault import <file.csv|txt>` (columns `kind,label,value[,options]`) or `Ctrl+O` on the Trezor page of `anon tui`. Names get Czech declension variants automatically (e.g. Havlíček, Havlíčka, Havlíčkovi, Havlíčková), each word also on its own, whole words of 4+ characters only.
+- **Rules that still mask:** passwords and secrets, Gitleaks tokens and keys, checksum-validated data (IBAN, card, rodné číslo, IČO).
+- **Rules that only suggest:** user names, Notes names, IP, phone. They do not mask; findings go to the **Návrhy** page of `anon tui`: Enter = add to the vault, F3 = never mask (word exception), Del = drop. A value masked once (it is in the map) stays masked everywhere.
+- **Never mask a kind:** `[anon] never_mask = ["email"]` in `rules.toml`; per rule: `[anon] mode_<rule-id> = "mask" | "suggest" | "off"`.
+- **Round trip:** the map keeps the exact found form, so writes restore the original byte for byte; `anon unmask --strict` fails on unknown tags and leftover fake values.
+
+### Master password
+
+- First run `anon unlock` **in your own terminal window** (never through `!` in a Claude Code session: the password would end up in the transcript). The first unlock sets the master password and converts the vault; the map and fake values stay the same. Until then the old vault without a password keeps working.
+- The key is protected by Argon2id (about 0.5 s on this PC) and XChaCha20-Poly1305, plus DPAPI on top.
+- After 30 minutes without use the vault locks (`[anon] lock_minutes`). While locked, the plugin denies every read and write in all sessions, agents included, until you run `anon unlock` again or press `Ctrl+K` in `anon tui` (`Ctrl+L` locks).
+- `anon lock` locks now, `anon passwd` changes the password, `anon vault rekey` makes a new data key (crash-safe).
+- **If you forget the master password, the vault and the map cannot be recovered.** Keep it in your password manager.
+
+### Limits
+
+Protection against an agent running as your own Windows user is not complete: the agent can still put a tag into a shell command and let it be restored, or read a written file in an encoded form. A real boundary is only an agent under another account, in a container or a VM.
+
 ## Commands
 
 No commands. Settings:
