@@ -33,6 +33,8 @@ declare module "claude-code" {
 			notes: Record<string, MaskNote> | null;
 			/** What masking did for a prompt and its @ files, by the key of the submitted text; drawn under the message. */
 			promptNotes: Record<string, MaskNote> | null;
+			/** Prompts (by the key of the submitted text) that carried pasted images, which cannot be masked; value = image count. Drawn under the message. */
+			promptImages: Record<string, number> | null;
 			/** Tags «REDACTED:kind:n» anon issued to this session (from its masked output); an input tag outside this list is denied. */
 			issuedTags: string[] | null;
 		};

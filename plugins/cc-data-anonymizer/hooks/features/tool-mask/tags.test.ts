@@ -57,7 +57,7 @@ test("PowerShell output is masked", async ($, on) => {
 	expect(JSON.stringify(out.result)).not.toContain("REAL");
 });
 
-test("PowerShell command with a known tag is restored before it runs", async ($, on) => {
+test("PowerShell command with a known tag is restored before it runs", { options: { shellSecrets: "allow" } }, async ($, on) => {
 	const { tool: t } = world(on);
 	await issue($);
 	await $.tool.call({ tool: "PowerShell", command: "Set-Content a.txt '" + TAG + "'" });
@@ -133,7 +133,7 @@ test("MCP input without a tag still runs and its result is masked", async ($, on
 	expect(JSON.stringify(out.result)).toContain(TAG);
 });
 
-test("anon unmask is asked for --strict, and a tag it lists is denied with the usual message", async ($, on) => {
+test("anon unmask is asked for --strict, and a tag it lists is denied with the usual message", { options: { shellSecrets: "allow" } }, async ($, on) => {
 	const { argvs, tool: t } = world(on);
 	await issue($);
 	await $.tool.call({ tool: "Bash", command: "echo " + TAG });

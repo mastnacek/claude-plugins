@@ -43,7 +43,7 @@ anon now treats the vault as the main source; rules that only guess are suggesti
 
 ### Limits
 
-Protection against an agent running as your own Windows user is not complete: the agent can still put a tag into a shell command and let it be restored, or read a written file in an encoded form. A real boundary is only an agent under another account, in a container or a VM.
+Protection against an agent running as your own Windows user is not complete: the agent can still read a written file in an encoded form. Secrets are not restored into shell commands (`shellSecrets`), but only a tag shows the kind: with style `fake` a fake password in a command is restored, as before. Pasted images in a prompt cannot be masked; a warning line shows under the message. A real boundary is only an agent under another account, in a container or a VM.
 
 ## Commands
 
@@ -51,5 +51,8 @@ No commands. Settings:
 
 - `consent` (`ask` default | `never`): `never` masks without a dialog and only shows the note under the row; agent sessions (`CC_ROLE` set) and `-p` runs never ask.
 - `reveal` (`partial` default | `full` | `none`): detected values on screen only, never sent to the model; names, e-mails, usernames, hosts and IPs in full, passwords/secrets/tokens as first 2 and last 2 characters.
+- `shellSecrets` (`deny` default | `ask` | `allow`): a Bash or PowerShell command with a tag of a kind from `shellSecretKinds` (default `password,secret,card,iban,national-id`) is refused: "Hesla a tajemství se do příkazů nevracejí…". `ask` shows a dialog (agent sessions and `-p` refuse). Other kinds (name, username, host, email, ip) are restored as before; Edit, Write and NotebookEdit are unchanged.
+- PDF: `Read` of a `.pdf` returns only the masked text from `pdftotext` (poppler, must be on PATH, else the read is denied); the document itself is never passed on.
+- Images: `Read` of png, jpg, jpeg, gif, bmp, webp, tif, tiff asks "Obrázek nejde zamaskovat. Poslat ho modelu?"; agent sessions, `-p` runs and `consent: never` deny.
 - `unmaskReply` (default off): show replies with the original values.
 - `style` (`default`, `fake`, `redact`, `tag`; default `default`): passed to `anon mask --style`. `fake` gives realistic fake values, `redact` gives `REDACTED` (cannot be restored; a write that stores it as a value is denied), `tag` gives `«REDACTED:<kind>:<n>»` (stable, restorable). `default` sends no flag, so `[anon]` in anon's `rules.toml` decides.

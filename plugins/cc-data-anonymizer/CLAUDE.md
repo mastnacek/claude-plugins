@@ -38,6 +38,8 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 
 - `prompt-mask` — maskuje prompt a `@` soubory (`anon mask`), při prvním souboru ukáže `anon scan` a čeká na povolení.
 - `tool-mask` — maskuje výsledky Read, Grep, Bash, PowerShell, Edit, Write, NotebookEdit a MCP; vstupy Edit, Write, NotebookEdit, Bash, PowerShell odmaskuje (`anon unmask`); neznámé a cizí značky (přes `anon unmask --strict`), `REDACTED` zapsané jako hodnota souboru a značky v MCP zamítne.
+- `shell-secrets` — příkaz Bash/PowerShell se značkou druhu z `shellSecretKinds` (výchozí password, secret, card, iban, national-id) zamítne (`shellSecrets`: deny | ask | allow); stojí před `tool-mask`.
+- `media-guard` — `Read` PDF vrátí jen zamaskovaný text z `pdftotext` (bez něj zamítne); `Read` obrázku se ptá na souhlas (agenti a `-p` zamítnou).
 - `findings-band` — barevný panel souhlasu (nálezy po souborech, tlačítka Povolit / Zamítnout; záloha `$.ui.ask`) .
 - `mask-note` — malý rámeček pod řádkem nástroje a pod zprávou uživatele: „zamaskováno N hodnot (druhy), styl X“ a hodnoty podle volby `reveal` (jen obrazovka, nikdy model).
 - `vault-guard` — fail-closed stráž: agentům zakáže soubory v domově anon (vault, klíč, mapa, pravidla) a příkazy `anon`, které odhalují originály nebo mění trezor, i DPAPI; zamítnutí říká, že to uživatel udělá sám (`!`).

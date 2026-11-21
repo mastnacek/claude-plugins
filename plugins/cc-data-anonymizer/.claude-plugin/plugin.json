@@ -1,6 +1,6 @@
 {
   "name": "cc-data-anonymizer",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Maskuje citlivá data (jména Notes, e-maily, hesla, tokeny) v promptech, @ souborech a výsledcích nástrojů přes CLI anon",
   "author": {
     "name": "mastnacek"
@@ -30,6 +30,19 @@
       "description": "How much of a detected value the findings list and the note under the row show (screen only, never the model): partial (names, e-mails, usernames, hosts and IPs in full; passwords, secrets and tokens as first 2 and last 2 characters), full, none.",
       "options": ["partial", "full", "none"],
       "default": "partial"
+    },
+    "shellSecrets": {
+      "type": "string",
+      "title": "Secrets in shell commands",
+      "description": "What happens when a Bash or PowerShell command holds a tag of a secret kind (see shellSecretKinds): deny (default, the command is refused), ask (a dialog; agent sessions and -p runs refuse), allow (the secret is restored into the command). Edit and Write are not affected.",
+      "options": ["deny", "ask", "allow"],
+      "default": "deny"
+    },
+    "shellSecretKinds": {
+      "type": "string",
+      "title": "Secret kinds",
+      "description": "Comma-separated kinds of masked value that shellSecrets guards.",
+      "default": "password,secret,card,iban,national-id"
     },
     "unmaskReply": {
       "type": "boolean",

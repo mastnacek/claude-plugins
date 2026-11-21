@@ -27,4 +27,4 @@ uživatel napíše, a soubory z `@`. Bez něj by prompt i soubor odešly nezměn
 ## Pasti
 
 - Argumenty slash příkazu tenhle řez nemaskuje (`e.command` engine nedovolí přepsat).
-- Obrázky a jiné přílohy promptu se nemaskují.
+- Obrázky vložené do promptu se nemaskují; `prompt.submit` si zapamatuje jejich počet (`promptImages`) a `mask-note` pod zprávou ukáže varování.

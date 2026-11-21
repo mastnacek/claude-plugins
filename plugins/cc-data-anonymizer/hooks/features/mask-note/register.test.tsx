@@ -172,3 +172,16 @@ test("a prompt and its @ file get a frame under the user message, from the submi
 	expect(await other.find({ type: "Text", text: /zamaskováno/ })).toBeUndefined();
 	await other.unmount();
 });
+
+test("a prompt with a pasted image gets a one-line warning under the message", async ($, on) => {
+	anonDouble(on);
+	rowDouble(on);
+	on("prompt.submit", (_$, e) => ({ text: e.text }));
+	await $.prompt.submit({ text: "look at this", attachments: [{ type: "image" }], wait: false, origin: { kind: "composer" } });
+	const ui = await $.ui.mount({ ...USER_MESSAGE("look at this") });
+	expect((await ui.find({ type: "Text", text: /obrázek v promptu nejde zamaskovat/ }))?.text).toContain("⚠");
+	await ui.unmount();
+	const other = await $.ui.mount({ ...USER_MESSAGE("something else") });
+	expect(await other.find({ type: "Text", text: /obrázek v promptu/ })).toBeUndefined();
+	await other.unmount();
+});

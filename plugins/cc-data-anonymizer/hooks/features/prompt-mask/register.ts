@@ -1,7 +1,7 @@
 import type { Register } from "claude-code";
 import { AnonError, mask, noteSink, styleOf } from "../../shared/anon";
 import { isFileAllowed, policyOf } from "../../shared/consent";
-import { recordPromptNote } from "../../shared/notes";
+import { recordPromptImages, recordPromptNote } from "../../shared/notes";
 
 const FILE_TEXT = /^(file|edited_text_file|nested_memory)$/;
 
@@ -20,6 +20,8 @@ export const registerPromptMask = ((on, options) => {
 			const text = await mask($, e.text, style, sink);
 			submitted = text;
 			await recordPromptNote($, text, sink.note);
+			// Pasted images cannot be masked: the screen says so under the message.
+			await recordPromptImages($, text, (e.attachments ?? []).filter((a) => a.type === "image").length);
 			return await next({ ...e, text });
 		} catch (error) {
 			return { drop: `Prompt not sent: ${why(error)}` };

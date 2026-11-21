@@ -25,7 +25,7 @@ export function policyOf(options: Parameters<Register>[1]): Policy {
  * No question when the option says never, in an agent session (CC_ROLE set: coder, tester, kolega…)
  * or a non-interactive run (-p / SDK): nobody there can answer, so the agent would hang.
  */
-async function isAsking($: $, policy: Policy): Promise<boolean> {
+export async function isAsking($: $, policy: Policy): Promise<boolean> {
 	if (policy.consent === "never") return false;
 	if ((await $.env.get("CC_ROLE").catch(() => undefined))?.trim()) return false;
 	const entry = await $.env.get("CLAUDE_CODE_ENTRYPOINT").catch(() => undefined);

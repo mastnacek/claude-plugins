@@ -8,7 +8,7 @@ a žádný dialog nevznikl. Řez kreslí malý rámeček s počtem, druhy a styl
 ## Co dělá
 
 - `ui.render` na `ToolUse` — pod řádkem nástroje rámeček „🔒 anon: zamaskováno N hodnot (druhy), styl X“; pod ním nalezené hodnoty (nejvýš 6, zbytek „… a N dalších“).
-- `ui.render` na `UserMessage` — totéž pod zprávou uživatele pro prompt a jeho `@` soubory (klíč = odeslaný, už zamaskovaný text).
+- `ui.render` na `UserMessage` — řádek „⚠ obrázek v promptu nejde zamaskovat“ (`promptImages`) a totéž pod zprávou uživatele pro prompt a jeho `@` soubory (klíč = odeslaný, už zamaskovaný text).
 
 ## Kontrakt
 

@@ -7,6 +7,7 @@ import type { MaskNote } from "../../../types";
 // Declared in each file that touches it: the engine's scan reads the ref where it is used.
 const notes = atom({ plugin: "cc-data-anonymizer", key: "notes" } as const, null);
 const promptNotes = atom({ plugin: "cc-data-anonymizer", key: "promptNotes" } as const, null);
+const promptImages = atom({ plugin: "cc-data-anonymizer", key: "promptImages" } as const, null);
 
 type Els = ReturnType<EngineInterface["ui"]["resolve"]>;
 
@@ -59,13 +60,16 @@ export const registerMaskNote = ((on) => {
 
 	on("ui.render", { component: "UserMessage" }, async ($, e, next) => {
 		const row = await next(e);
-		const note = (await read($, promptNotes))?.[textKey(e.props.text)];
-		if (note === undefined) return row;
+		const key = textKey(e.props.text);
+		const note = (await read($, promptNotes))?.[key];
+		const images = (await read($, promptImages))?.[key];
+		if (note === undefined && images === undefined) return row;
 		const els = $.ui.resolve(e);
 		return (
 			<els.Box flexDirection="column">
 				{row}
-				{frame(note, els)}
+				{images !== undefined && <els.Text color="warning">⚠ anon: obrázek v promptu nejde zamaskovat, model ho uvidí celý.</els.Text>}
+				{note !== undefined && frame(note, els)}
 			</els.Box>
 		);
 	});

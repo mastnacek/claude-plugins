@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0
+
+- Tajemství se nevracejí do příkazů: volba `shellSecrets` (`deny` výchozí | `ask` | `allow`) a `shellSecretKinds`. Příkaz Bash/PowerShell se značkou druhu `password`, `secret`, `card`, `iban` nebo `national-id` se zamítne; `ask` se zeptá (agenti a `-p` zamítnou). Ostatní druhy se obnovují jako dřív. Jen značky: u stylu `fake` druh není znát.
+- PDF: `Read` souboru `.pdf` vrátí jen zamaskovaný text z `pdftotext`; bez `pdftotext` v PATH se čtení zamítne. Dokument se modelu nikdy nepředá.
+- Obrázky: `Read` obrázku se ptá „Obrázek nejde zamaskovat. Poslat ho modelu?“ (agenti, `-p` a `consent: never` zamítnou). Vložený obrázek v promptu nejde zamaskovat: pod zprávou je řádek s varováním.
+
 ## 0.7.0
 
 - Odmaskování je přísné: plugin volá `anon unmask --strict`; značky, které anon nezná (zapomenuté, cizí, poškozené, escapované), anon vypíše a plugin zamítne stávající zprávou „Neznámá nebo poškozená značka …“. Vlastní kontrola zbytků po odmaskování odpadla.
