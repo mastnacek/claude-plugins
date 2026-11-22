@@ -2,20 +2,21 @@
 type: Todo
 title: "Kolega as a read-only session analyst: reads only session folders, hook-enforced, findings recorded as SPAI notes in the home backlog"
 timestamp: 2026-11-22 21:28:22
-status: working
+status: done
 source: claude-code
 tags: [agent, coder, kolega, workflow]
 facets:
   project: claude
   project_path: D:/01_programovani/claude
-spai_symbol: '/'
+spai_symbol: 'x'
 lang: en
 title_cs: "Kolega jako analytik sezení v režimu jen pro čtení: čte pouze složky sezení, vynuceno hookem, zjištění zaznamenána jako poznámky SPAI v domovském backlogu"
+done_evidence: "7990d12 + b01d23e; unittest 79 OK; SMOKE: Read/rg outside roots denied, no Write tool, kolega-read.py live, home SPAI-002 EN+CZ+tags"
 ---
 
 # SPAI-027: Kolega as a read-only session analyst: reads only session folders, hook-enforced, findings recorded as SPAI notes in the home backlog
 
-/ Kolega as a read-only session analyst: reads only session folders, hook-enforced, findings recorded as SPAI notes in the home backlog @claude :agent:coder:kolega:workflow:
+x Kolega as a read-only session analyst: reads only session folders, hook-enforced, findings recorded as SPAI notes in the home backlog @claude :agent:coder:kolega:workflow:
 
 Decided with the user 2026-11-22. Kolega studies our agent sessions and records fundamental insights; it grades no agent. Today it has only Read/Grep/Glob, cannot read the huge JSONL lines (Read/Grep skip them), may read any repo, and writes findings only into its pane.
 
@@ -54,3 +55,4 @@ Commit proposal: feat(kolega): read-only session analyst, hook-enforced, finding
 ## Log
 - 2026-11-22 21:32 (orchestrator) session fcd6058e-562f-4964-86ca-aad6ec25f330 pane w2J:p2N transcript C:/Users/jaroslav/.claude/projects/D--01-programovani-claude-kolega/fcd6058e-562f-4964-86ca-aad6ec25f330.jsonl
 - 2026-11-22 21:32 (orchestrator) orchestrator session ffe01966-1e2f-4b82-b29b-28c254f3953e transcript C:/Users/jaroslav/.claude/projects/D--01-programovani-claude/ffe01966-1e2f-4b82-b29b-28c254f3953e.jsonl
+- 2026-11-22 21:58 (spai) done: 7990d12 + b01d23e; unittest 79 OK; SMOKE: Read/rg outside roots denied, no Write tool, kolega-read.py live, home SPAI-002 EN+CZ+tags
