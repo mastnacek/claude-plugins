@@ -1,7 +1,7 @@
 // facts.ts — what a Bash command or a file tool does, read from the ledger event:
 // which paths it writes or deletes, whether it is a gate run, whether it is masked by a pipe.
 
-import { baseName, matchesAny, resolvePath, under } from "./paths";
+import { baseName, canon, matchesAny, resolvePath, SCRATCH_VARS, under } from "./paths";
 import { runsInterpreter, scriptWrites } from "./script";
 import { nameOf, parseCommand, positionals } from "./shell";
 import type { Cmd } from "./shell";
@@ -10,6 +10,9 @@ import type { Config, Ev, ToolEv } from "./types";
 export const FILE_TOOLS = new Set(["Write", "Edit", "MultiEdit", "NotebookEdit"]);
 
 export const isTool = (ev: Ev): ev is ToolEv => ev.kind === "tool";
+
+/** The tools that run a shell line. */
+export const isShellTool = (tool: string): boolean => tool === "Bash" || tool === "PowerShell";
 
 export type Facts = {
 	cmds: Cmd[];
@@ -25,6 +28,56 @@ const cache = new WeakMap<ToolEv, Facts>();
 
 const SED_INPLACE = /^-[nEsrz]*i.*$|^--in-place/;
 
+/** PowerShell parameters that take the next word as their value (the others are switches). */
+const PS_VALUE_PARAMS = new Set(["path", "filepath", "literalpath", "value", "encoding", "itemtype", "name", "destination", "width", "stream", "inputobject", "include", "exclude", "filter"]);
+
+/** `-Name value` pairs (names lower-case, `-Name:value` too) and the positional words of a PowerShell call. */
+function psArgs(words: readonly string[]): { named: Map<string, string>; pos: string[] } {
+	const named = new Map<string, string>();
+	const pos: string[] = [];
+	for (let i = 1; i < words.length; i++) {
+		const w = words[i] as string;
+		if (!/^-[A-Za-z]/.test(w)) {
+			pos.push(w);
+			continue;
+		}
+		const colon = w.indexOf(":");
+		if (colon > 0) named.set(w.slice(1, colon).toLowerCase(), w.slice(colon + 1));
+		else if (PS_VALUE_PARAMS.has(w.slice(1).toLowerCase()) && words[i + 1] !== undefined) named.set(w.slice(1).toLowerCase(), words[++i] as string);
+		else named.set(w.slice(1).toLowerCase(), "");
+	}
+	return { named, pos };
+}
+
+/** Files a PowerShell cmdlet writes: Out-File, Set-Content, Add-Content, New-Item, Copy-Item, Move-Item. */
+function psTargets(name: string, words: readonly string[]): string[] {
+	const { named, pos } = psArgs(words);
+	const path = named.get("path") ?? named.get("literalpath");
+	switch (name) {
+		case "out-file":
+			return [named.get("filepath") ?? path ?? pos[0]].filter((p): p is string => !!p);
+		case "set-content":
+		case "add-content":
+			return [path ?? pos[0]].filter((p): p is string => !!p);
+		case "new-item":
+		case "ni": {
+			const dir = path ?? pos[0];
+			const leaf = named.get("name");
+			const full = leaf ? (dir ? `${dir}/${leaf}` : leaf) : dir;
+			return full ? [full] : [];
+		}
+		case "copy-item":
+		case "cpi":
+		case "move-item":
+		case "mi": {
+			const dest = named.get("destination") ?? pos[1];
+			return dest ? [dest] : [];
+		}
+		default:
+			return [];
+	}
+}
+
 function targetsOf(cmd: Cmd): { writes: string[]; creates: string[] } {
 	const writes: string[] = [];
 	const creates: string[] = [];
@@ -36,7 +89,11 @@ function targetsOf(cmd: Cmd): { writes: string[]; creates: string[] } {
 	}
 	const name = nameOf(cmd);
 	const args = cmd.words.slice(1);
-	if (name === "tee") {
+	const ps = psTargets(name.toLowerCase(), cmd.words);
+	if (ps.length > 0) {
+		writes.push(...ps);
+		creates.push(...ps);
+	} else if (name === "tee") {
 		const files = positionals(cmd.words);
 		writes.push(...files);
 		creates.push(...files);
@@ -83,22 +140,65 @@ function deletesOf(cmd: Cmd): string[] {
 	return [];
 }
 
-/** Facts of a Bash event (cached); empty for other tools. */
+/**
+ * A path with `$VAR`, `${VAR}` and `$env:VAR` replaced from `vars`. `$HOME` stays (resolvePath knows it).
+ * Undefined when a variable (or a `$( )` / backtick expression) cannot be resolved.
+ */
+function expand(p: string, vars: ReadonlyMap<string, string>): string | undefined {
+	let unknown = false;
+	const out = p.replace(/\$\{(\w+)\}|\$env:(\w+)|\$(\w+)/gi, (m, a?: string, b?: string, c?: string) => {
+		const name = (a ?? b ?? c) as string;
+		if (b === undefined && name.toUpperCase() === "HOME") return m;
+		const v = vars.get(name);
+		if (v === undefined) {
+			unknown = true;
+			return m;
+		}
+		return v;
+	});
+	return unknown || /\$\(|`/.test(out) ? undefined : out;
+}
+
+/** `NAME=value` assignments of one command: leading ones, `export NAME=v`, PowerShell `$NAME = v` / `$env:NAME = v`. */
+function assignmentsOf(cmd: Cmd): [string, string][] {
+	const out: [string, string][] = [];
+	const pair = (s: string) => {
+		const m = /^([A-Za-z_]\w*)=(.*)$/s.exec(s);
+		if (m) out.push([m[1] as string, m[2] as string]);
+	};
+	cmd.assigns.forEach(pair);
+	if (["export", "declare", "local", "readonly", "typeset"].includes(cmd.words[0] ?? "")) cmd.words.slice(1).forEach(pair);
+	const ps = /^\$(?:env:)?(\w+)$/i.exec(cmd.words[0] ?? "");
+	if (ps && cmd.words[1] === "=" && cmd.words[2] !== undefined) out.push([ps[1] as string, cmd.words[2]]);
+	return out;
+}
+
+/** Facts of a Bash or PowerShell event (cached); empty for other tools. */
 export function factsOf(ev: ToolEv, cfg: Config): Facts {
 	const known = cache.get(ev);
 	if (known) return known;
 	const abs = (p: string) => resolvePath(p, ev.cwd, cfg.home);
-	const cmds = ev.tool === "Bash" && ev.command ? parseCommand(ev.command) : [];
+	const cmds = isShellTool(ev.tool) && ev.command ? parseCommand(ev.command, 0, ev.tool === "PowerShell") : [];
 	const writes: string[] = [];
 	const creates: string[] = [];
 	const deletes: string[] = [];
 	// A script in an interpreter (heredoc or -c) writes files the tokenizer cannot see.
 	if (ev.command && runsInterpreter(cmds)) writes.push(...scriptWrites(ev.command).map(abs));
+	// Variables: the session's scratch variables, then every assignment seen earlier in the same command.
+	const vars = new Map<string, string>(Object.entries(cfg.env));
 	for (const c of cmds) {
+		for (const [name, value] of assignmentsOf(c)) {
+			const v = expand(value, vars);
+			if (v === undefined) vars.delete(name);
+			else vars.set(name, v);
+		}
 		const t = targetsOf(c);
-		writes.push(...t.writes.map(abs));
-		creates.push(...t.creates.map(abs));
-		deletes.push(...deletesOf(c).map(abs));
+		// A write target that cannot be resolved is not counted; a resolved one is judged like a literal.
+		const resolved = (list: string[]) => list.flatMap((p) => expand(p, vars) ?? []).map(abs);
+		writes.push(...resolved(t.writes));
+		creates.push(...resolved(t.creates));
+		// A delete keeps its unresolved text: guessing "harmless" would loosen W08.
+		deletes.push(...deletesOf(c).map((p) => abs(expand(p, vars) ?? p)));
 	}
 	const facts = { cmds, writes, creates, deletes };
 	cache.set(ev, facts);
@@ -112,7 +212,12 @@ export function writtenPaths(ev: ToolEv, cfg: Config): string[] {
 }
 
 /** Scratch space for probes. The work tree itself never is: a project that lives under /tmp/claude-* is still the project. */
-export const isScratch = (path: string, cfg: Config): boolean => !under(path, cfg.workdir) && matchesAny(path, cfg.scratch, cfg.workdir, cfg.home);
+export const isScratch = (path: string, cfg: Config): boolean => !under(path, cfg.workdir) && (matchesAny(path, cfg.scratch, cfg.workdir, cfg.home) || sessionScratch(cfg).some((d) => under(path, d)));
+
+/** The scratchpad the session names in `$SCRATCH` / `$AGENT_SCRATCH`. */
+function sessionScratch(cfg: Config): string[] {
+	return SCRATCH_VARS.map((n) => canon(cfg.env[n] ?? "").replace(/\/+$/, "")).filter((d) => d !== "");
+}
 
 export const isAllowed = (path: string, cfg: Config): boolean => under(path, cfg.workdir) || isScratch(path, cfg) || matchesAny(path, cfg.allowed, cfg.workdir, cfg.home);
 

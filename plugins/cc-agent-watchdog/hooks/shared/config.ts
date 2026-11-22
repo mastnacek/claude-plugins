@@ -27,11 +27,11 @@ export const DEFAULT_PROTECTED = [
 
 export const DEFAULT_SCRATCH = ["/tmp/claude-*"];
 
-const strings = (v: unknown): string[] | undefined => (Array.isArray(v) && v.every((x) => typeof x === "string") ? (v as string[]) : undefined);
+const strings =(v: unknown): string[] | undefined => (Array.isArray(v) && v.every((x) => typeof x === "string") ? (v as string[]) : undefined);
 
 /** Defaults for a work tree at `workdir`. */
 export function defaultConfig(workdir: string, home: string): Config {
-	return { workdir: canon(workdir), home: canon(home), gate: [], allowed: [], protected: [...DEFAULT_PROTECTED], scratch: [...DEFAULT_SCRATCH], remoteAllow: [], profile: [], globalRules: {}, projectRules: {} };
+	return { workdir: canon(workdir), home: canon(home), gate: [], allowed: [], protected: [...DEFAULT_PROTECTED], scratch: [...DEFAULT_SCRATCH], env: {}, remoteAllow: [], profile: [], globalRules: {}, projectRules: {} };
 }
 
 /** Merges the parsed `watchdog.json` into the defaults; anything of the wrong type is ignored. */
@@ -65,6 +65,17 @@ export async function loadConfig($: $, workdir: string): Promise<Config> {
 	const base = defaultConfig(workdir, home);
 	// The user's own settings come from the store on every load (not from $.state, which is empty after /clear).
 	base.globalRules = await globalRules($);
+	// The engine wants literal variable names at `$.env.get`, so each scratch variable is read by name.
+	const named = async (name: string, read: () => Promise<unknown>): Promise<void> => {
+		try {
+			const v = await read();
+			if (typeof v === "string" && v.trim() !== "") base.env[name] = canon(v.trim());
+		} catch {
+			// no variable = nothing to resolve
+		}
+	};
+	await named("SCRATCH", () => $.env.get("SCRATCH"));
+	await named("AGENT_SCRATCH", () => $.env.get("AGENT_SCRATCH"));
 	const path = `${workdir}/.claude/watchdog.json`;
 	try {
 		if (!(await $.fs.exists(path))) return base;

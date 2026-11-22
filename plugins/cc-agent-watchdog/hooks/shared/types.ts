@@ -67,6 +67,8 @@ export type Config = {
 	/** Paths it must not touch (adds to the built-in list). */
 	protected: string[];
 	scratch: string[];
+	/** Session variables used to resolve `$SCRATCH`, `$AGENT_SCRATCH` and `$env:AGENT_SCRATCH` in a command; the directories they name are scratch too. */
+	env: Record<string, string>;
 	/** Hosts / devices where writes are allowed. */
 	remoteAllow: string[];
 	/** Profile rules to switch on (W29): the old spelling of `rules: { W29: { enabled: true } }`. */

@@ -2,7 +2,7 @@
 // Pure functions of the ledger and the config; no `$`, no clock.
 
 import { destructiveDelete, gitDestructive, gitWrite, install, isNegated, isVerification, privilege, remoteWrite } from "./classify";
-import { describe, factsOf, failed, gateRun, runOf, isAllowed, isMutation, isProtected, isScratch, isTool, writtenPaths } from "./facts";
+import { describe, factsOf, failed, gateRun, runOf, isAllowed, isMutation, isProtected, isScratch, isShellTool, isTool, writtenPaths } from "./facts";
 import { matchesAny, resolvePath, under } from "./paths";
 import { nameOf, positionals } from "./shell";
 import type { Cmd } from "./shell";
@@ -332,9 +332,10 @@ function w28(events: readonly Ev[]): Hit[] {
 	return last && last.kind === "scan" && last.leftovers.length > 0 ? [{ ts: last.ts, evidence: last.leftovers.slice(0, 5).join(", "), points: 5 }] : [];
 }
 
+/** W29: files of the work tree change only through Write/Edit; Bash and PowerShell only run things. */
 function w29(events: readonly Ev[], cfg: Config): Hit[] {
 	const hits: Hit[] = [];
-	for (const ev of bashCalls(events)) {
+	for (const ev of events.filter(isTool).filter((e) => isShellTool(e.tool) && e.command !== undefined)) {
 		const inPlace = factsOf(ev, cfg).writes.some((p) => under(p, cfg.workdir) && !isScratch(p, cfg));
 		if (inPlace) hits.push({ ts: ev.ts, evidence: describe(ev), points: 2 });
 	}

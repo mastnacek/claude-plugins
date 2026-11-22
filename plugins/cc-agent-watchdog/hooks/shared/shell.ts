@@ -1,4 +1,5 @@
 // shell.ts — a small shell tokenizer for judging Bash commands.
+// With `ps` it reads PowerShell: `\` is literal, the backtick escapes, `*>` redirects.
 // It understands quotes, escapes, `&&` `||` `;` `|` `&` newlines, `( )` / `$( )`,
 // redirects, leading VAR=value, wrappers (env, nohup, timeout N …) and `bash -c "…"`.
 // Heredoc bodies are dropped first, so text written to a file is never judged
@@ -41,7 +42,8 @@ export function stripHeredocs(src: string): string {
 
 const fresh = (pipeIn = false): Cmd => ({ words: [], redirects: [], assigns: [], pipeIn, pipeOut: false, after: "" });
 
-function tokenize(src: string): Cmd[] {
+/** `ps`: PowerShell spelling: a backslash is a path separator, not an escape; `*>` is a redirect. */
+function tokenize(src: string, ps = false): Cmd[] {
 	const cmds: Cmd[] = [];
 	let cur = fresh();
 	let word = "";
@@ -72,7 +74,10 @@ function tokenize(src: string): Cmd[] {
 	for (let i = 0; i < src.length; i++) {
 		const c = src[i] as string;
 		const next = src[i + 1];
-		if (c === "\\") {
+		if (c === "\\" && ps) {
+			word += c;
+			hasWord = true;
+		} else if (c === "\\") {
 			if (next === "\n") i++;
 			else if (next !== undefined) {
 				word += next;
@@ -88,7 +93,7 @@ function tokenize(src: string): Cmd[] {
 		} else if (c === '"') {
 			i++;
 			while (i < src.length && src[i] !== '"') {
-				if (src[i] === "\\" && i + 1 < src.length) i++;
+				if (src[i] === (ps ? "`" : "\\") && i + 1 < src.length) i++;
 				word += src[i];
 				i++;
 			}
@@ -122,7 +127,7 @@ function tokenize(src: string): Cmd[] {
 			endCmd(false);
 		} else if (c === ">" || c === "<") {
 			// `2>`, `1>>`: the digits are the file descriptor, not a word.
-			if (hasWord && /^\d+$/.test(word)) {
+			if (hasWord && (/^\d+$/.test(word) || (ps && word === "*"))) {
 				word = "";
 				hasWord = false;
 			} else endWord();
@@ -172,14 +177,14 @@ function unwrap(cmd: Cmd): Cmd {
 }
 
 /** Every simple command of a shell line, in order, with `bash -c "…"` opened up. */
-export function parseCommand(command: string, depth = 0): Cmd[] {
+export function parseCommand(command: string, depth = 0, ps = false): Cmd[] {
 	const result: Cmd[] = [];
-	for (const raw of tokenize(stripHeredocs(command))) {
+	for (const raw of tokenize(stripHeredocs(command), ps)) {
 		const cmd = unwrap(raw);
 		const shell = cmd.words[0];
 		const flag = cmd.words.findIndex((w, i) => i > 0 && /^-[a-z]*c$/.test(w));
 		if (shell !== undefined && SHELLS.has(shell.replace(/^.*\//, "")) && flag > 0 && cmd.words[flag + 1] !== undefined && depth < 3) {
-			result.push(...parseCommand(cmd.words[flag + 1] as string, depth + 1));
+			result.push(...parseCommand(cmd.words[flag + 1] as string, depth + 1, false));
 		} else result.push(cmd);
 	}
 	return result;
