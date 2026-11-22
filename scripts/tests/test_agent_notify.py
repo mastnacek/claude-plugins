@@ -142,6 +142,14 @@ class AgentNotify(unittest.TestCase):
             "agent prompt w:p1 WAITING coder w:p9: Claude needs your permission",
             "notification show coder --body WAITING coder w:p9: Claude needs your permission --sound done"])
 
+    def test_idle_notification_sends_nothing(self):
+        for payload in ({"hook_event_name": "Notification", "notification_type": "idle_prompt", "message": "x"},
+                        {"hook_event_name": "Notification", "message": "Claude is waiting for your input"}):
+            with self.subTest(payload=payload):
+                r, _ = self.run_hook(payload)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assertEqual(self.sent(), [])
+
     def test_notification_ignored_for_kolega(self):
         self.run_hook({"hook_event_name": "Notification", "message": "idle"}, role="kolega")
         self.assertEqual(self.sent(), [])

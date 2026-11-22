@@ -137,6 +137,10 @@ if event == "Stop":
     elif role == "kolega":
         stop_kolega()
 elif event == "Notification" and role in ("coder", "tester"):
+    # Jen výzva ke schválení; hlášení nečinnosti („waiting for your input“) po DONE je šum.
+    msg = data.get("message") or ""
+    if data.get("notification_type") == "idle_prompt" or "waiting for your input" in msg.lower():
+        sys.exit(0)
     emit("WAITING", "WAITING %s %s: %s" % (role, pane, one_line(data.get("message") or "")))
 PY
 
