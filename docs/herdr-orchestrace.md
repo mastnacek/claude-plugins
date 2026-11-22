@@ -81,7 +81,10 @@ Každé zadání agentovi je **záznam SPAI** v backlogu hlavního repa (ne work
 ## Čekání a kontrola
 
 - **Čekání: vždy `D:/01_programovani/claude/scripts/agent-wait.sh <panel>` na pozadí** hned po
-  odeslání zadání (herdr u agentů z `agent.sh` často hlásí `unknown`; skript čte i obsah panelu).
+  odeslání zadání. Konec tahu pozná z přepisu agenta (poslední zpráva asistenta `end_turn`, novější
+  než přepis při startu skriptu), ne jen z panelu; u agentů bez přepisu čte obsah panelu.
+  Vypíše jeden řádek: `done <panel> <přepis>:<řádek>` (exit 0), `blocked <panel>` (exit 2),
+  `timeout <panel>` (exit 1). Žádné `sleep` navíc.
 - `blocked` = agent čeká na dialog: přečti panel a **ukaž ho uživateli**, neodpovídej za něj.
 - Pokud `--wait` vyprší, prompt neposílej znovu naslepo — nejdřív `agent get` a `agent read`.
 - Závěrečnou zprávu čti z přepisu: nejnovější `~/.claude/projects/<cesta-cwd>/*.jsonl`.
