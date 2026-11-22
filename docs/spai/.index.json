@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastUpdated": "2026-11-22 22:12:53",
+  "lastUpdated": "2026-11-22 22:22:24",
   "lastId": "SPAI-029",
   "records": [
     {
@@ -426,8 +426,8 @@
       "id": "SPAI-029",
       "title": "cc-prompt-translate: skipPatterns config, prompts matching a regex are never translated (agent notifications)",
       "type": "Todo",
-      "status": "todo",
-      "symbol": ".",
+      "status": "done",
+      "symbol": "x",
       "timestamp": "2026-11-22 22:12:53",
       "tags": [
         "agent",
