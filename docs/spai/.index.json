@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastUpdated": "2026-11-22 19:47:32",
+  "lastUpdated": "2026-11-22 20:00:43",
   "lastId": "SPAI-025",
   "records": [
     {
@@ -357,8 +357,8 @@
       "id": "SPAI-025",
       "title": "workflow-grade --llm: wider, targeted excerpts so the Sonnet grader matches the Fable reference",
       "type": "Todo",
-      "status": "todo",
-      "symbol": ".",
+      "status": "done",
+      "symbol": "x",
       "timestamp": "2026-11-22 19:41:35",
       "tags": [
         "agent",
