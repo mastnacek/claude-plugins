@@ -1,0 +1,10 @@
+{"task": "SPAI-008", "row": "K01", "verdict": "met", "evidence": [{"transcript": "D:/01_programovani/claude/docs/spai/2026-11-20-SPAI-008-protect-git-in-the-herdr-monorepo-like-claude-and.md", "line": 1}], "note": "brief has ## SMOKE", "checker": "script", "key": "02c0468bd2e19b21f36c8ca03044dc669f8fd9af"}
+{"task": "SPAI-008", "row": "K02", "verdict": "unknown", "evidence": [], "note": "no orchestrator transcript", "checker": "script", "key": "02c0468bd2e19b21f36c8ca03044dc669f8fd9af"}
+{"task": "SPAI-008", "row": "K03", "verdict": "unknown", "evidence": [], "note": "needs llm/human", "checker": "script", "key": "02c0468bd2e19b21f36c8ca03044dc669f8fd9af"}
+{"task": "SPAI-008", "row": "K04", "verdict": "unknown", "evidence": [], "note": "no orchestrator transcript", "checker": "script", "key": "02c0468bd2e19b21f36c8ca03044dc669f8fd9af"}
+{"task": "SPAI-008", "row": "K05", "verdict": "unknown", "evidence": [], "note": "needs llm/human", "checker": "script", "key": "02c0468bd2e19b21f36c8ca03044dc669f8fd9af"}
+{"task": "SPAI-008", "row": "K06", "verdict": "unknown", "evidence": [], "note": "no orchestrator transcript", "checker": "script", "key": "02c0468bd2e19b21f36c8ca03044dc669f8fd9af"}
+{"task": "SPAI-008", "row": "K07", "verdict": "unknown", "evidence": [], "note": "needs llm/human", "checker": "script", "key": "02c0468bd2e19b21f36c8ca03044dc669f8fd9af"}
+{"task": "SPAI-008", "row": "K08", "verdict": "unknown", "evidence": [], "note": "no coder transcript linked", "checker": "script", "key": "02c0468bd2e19b21f36c8ca03044dc669f8fd9af"}
+{"task": "SPAI-008", "row": "K09", "verdict": "unknown", "evidence": [], "note": "needs llm/human", "checker": "script", "key": "02c0468bd2e19b21f36c8ca03044dc669f8fd9af"}
+{"task": "SPAI-008", "row": "K10", "verdict": "unknown", "evidence": [], "note": "no orchestrator transcript", "checker": "script", "key": "02c0468bd2e19b21f36c8ca03044dc669f8fd9af"}

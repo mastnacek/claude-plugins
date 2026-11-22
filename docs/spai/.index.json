@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastUpdated": "2026-11-22 18:06:19",
+  "lastUpdated": "2026-11-22 18:45:04",
   "lastId": "SPAI-019",
   "records": [
     {
@@ -91,15 +91,18 @@
       "id": "SPAI-008",
       "title": "Protect git in the herdr monorepo like claude and spai (watchdog or orchestrator-only hook)",
       "type": "Todo",
-      "status": "todo",
-      "symbol": ".",
+      "status": "done",
+      "symbol": "x",
       "timestamp": "2026-11-20 15:43:27",
       "tags": [
         "workflow"
       ],
       "project": "claude",
       "projectPath": "D:/01_programovani/claude",
-      "file": "2026-11-20-SPAI-008-protect-git-in-the-herdr-monorepo-like-claude-and.md"
+      "file": "2026-11-20-SPAI-008-protect-git-in-the-herdr-monorepo-like-claude-and.md",
+      "blockedBy": [
+        "SPAI-011"
+      ]
     },
     {
       "id": "SPAI-009",
@@ -134,8 +137,8 @@
       "id": "SPAI-011",
       "title": "agent-wait.sh decides 'done' from the worker's transcript (last assistant message with stop_reason end_turn), not only from the pane",
       "type": "Todo",
-      "status": "todo",
-      "symbol": ".",
+      "status": "done",
+      "symbol": "x",
       "timestamp": "2026-11-20 17:12:02",
       "tags": [
         "workflow"
