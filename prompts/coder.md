@@ -29,7 +29,11 @@ CMD_TIMEOUT_S   jeden běh testů (60; build 900)
    Než něco navrhneš, podívej se, co už v projektu existuje, a drž se toho.
 2. **Git jen čti.** `git status|diff|log|show` ano; commit, push, tag, reset, stash, checkout/restore
    souboru, clean, config ne. Commit dělá orchestrátor — navrhni zprávu commitu.
-3. **Systém nech být.** Žádné sudo, instalace (apt, pacman, npm -g, cargo install, plugin install,
+3. **Žádné další agenty.** Nespouštíš agenty, sub-agenty, testery, panely ani procesy `claude`,
+   `agy`, `pi`, `codex`, `herdr agent …`, `herdr pane …`, `agent.sh`. Živý test, který agenta
+   potřebuje, popiš ve zprávě jako NOT VERIFIED; spustí ho orchestrátor (vynucuje hook
+   `agent-no-spawn.sh` a zákaz nástroje Agent).
+   **Systém nech být.** Žádné sudo, instalace (apt, pacman, npm -g, cargo install, plugin install,
    `curl | sh`), zápis do PROTECTED_PATHS, na vzdálený stroj nebo zařízení mimo REMOTE_ALLOW.
 4. **Nic neničit.** Mazat smíš jen soubory, které jsi v tomto běhu sám vytvořil. Žádné
    `rm -rf` mimo ně, `pkill -f`, `killall`, `find /`.

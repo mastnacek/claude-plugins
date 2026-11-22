@@ -29,18 +29,51 @@ case "$role" in
 esac
 
 # Režim auto: agent se neptá na každé volání; git zápis zamítá hook / watchdog.
-extra=(--permission-mode auto)
+# Agenti nespouštějí další agenty: nástroj Agent je zakázaný a hook agent-no-spawn.sh
+# zamítne claude / herdr agent / herdr pane / agent.sh … (spouští jen orchestrátor).
+extra=(--permission-mode auto --disallowedTools Agent)
 [[ -n "${AGENT_SCRATCH:-}" ]] && extra+=(--add-dir "$AGENT_SCRATCH")
 
-# Plugin z --plugin-dir, který je i nainstalovaný z marketplace, by běžel dvakrát.
+# Jedno sloučené --settings: hook agent-no-spawn, vypnutí pluginu z --plugin-dir (jinak by
+# běžel dvakrát) a --settings předané volajícím (soubor nebo JSON).
+settings="$(mktemp "${TMPDIR:-/tmp}/agent-settings-XXXXXX.json")"
+hook="$(cygpath -m "$canon/.claude/hooks/agent-no-spawn.sh" 2>/dev/null || echo "$canon/.claude/hooks/agent-no-spawn.sh")"
+pass=() disable=() user_settings=()
 args=("$@")
 for ((i = 0; i < ${#args[@]}; i++)); do
-  if [[ "${args[i]}" == "--plugin-dir" && -n "${args[i+1]:-}" ]]; then
-    dir="${args[i+1]}"
-    name="$(sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$dir/.claude-plugin/plugin.json" 2>/dev/null | head -1 || true)"
-    [[ -n "$name" ]] && extra+=(--settings "{\"enabledPlugins\":{\"$name@mastnacek\":false}}")
-  fi
+  case "${args[i]}" in
+    --plugin-dir)
+      dir="${args[i+1]:-}"
+      name="$(sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$dir/.claude-plugin/plugin.json" 2>/dev/null | head -1 || true)"
+      [[ -n "$name" ]] && disable+=("$name@mastnacek")
+      pass+=("${args[i]}" "$dir"); i=$((i + 1)) ;;
+    --settings) user_settings+=("${args[i+1]:-}"); i=$((i + 1)) ;;
+    *) pass+=("${args[i]}") ;;
+  esac
 done
+PYTHONUTF8=1 python - "$settings" "$hook" "${#disable[@]}" "${disable[@]}" "${user_settings[@]}" <<'PY'
+import json, os, sys
+out, hook, n = sys.argv[1], sys.argv[2], int(sys.argv[3])
+disable, users = sys.argv[4:4 + n], sys.argv[4 + n:]
+merged = {}
+def merge(a, b):
+    for k, v in b.items():
+        if isinstance(v, dict) and isinstance(a.get(k), dict):
+            merge(a[k], v)
+        elif isinstance(v, list) and isinstance(a.get(k), list):
+            a[k] = a[k] + v
+        else:
+            a[k] = v
+for u in users:
+    merge(merged, json.load(open(u, encoding="utf-8")) if os.path.isfile(u) else json.loads(u))
+for name in disable:
+    merged.setdefault("enabledPlugins", {})[name] = False
+entry = {"matcher": "Bash|PowerShell", "hooks": [{"type": "command", "command": f'bash "{hook}"'}]}
+merged.setdefault("hooks", {}).setdefault("PreToolUse", []).append(entry)
+json.dump(merged, open(out, "w", encoding="utf-8"))
+PY
+extra+=(--settings "$settings")
+set -- "${pass[@]}"
 
 # Pravidla role: kanonická + specifika repa v jednom souboru.
 rules="$(mktemp "${TMPDIR:-/tmp}/agent-$role-XXXXXX.md")"

@@ -65,6 +65,9 @@ Každé zadání agentovi je **záznam SPAI** v backlogu hlavního repa (ne work
    přes celý řetězec (skutečná binárka / nainstalovaný plugin, vymyšlená data ve scratchpadu),
    kroky jako od uživatele a očekávaný výsledek každého. Testy řezu ani zelená brána ho
    nenahrazují (2026-11-20..22: třikrát „hotovo“ se zelenou bránou a chybou v živém běhu).
+   **Kroky SMOKE, které potřebují agenta (spustit claude, testera, panel), pouští orchestrátor,
+   nikdy programátor** — v zadání je označ „orchestrátor:“. Agentům spouštění agentů technicky
+   zakazuje `agent.sh` (`--disallowedTools Agent` + hook `.claude/hooks/agent-no-spawn.sh`).
    Navazující úkoly řetěz přes `--after <ID>`; plán celé práce zapiš najednou.
 2. **Odeslání:** `spai set <ID> working`, pak agentovi jen
    „Read SPAI-012 @<projekt> (`spai show SPAI-012 --project <hlavní repo> --json`) and carry it out fully now.“
