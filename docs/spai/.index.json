@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastUpdated": "2026-11-22 18:53:30",
+  "lastUpdated": "2026-11-22 19:24:54",
   "lastId": "SPAI-022",
   "records": [
     {
@@ -247,8 +247,8 @@
       "id": "SPAI-018",
       "title": "Workflow grading: one-shot Sonnet grader for the llm rows of the key (K03, K05, K07, K09)",
       "type": "Todo",
-      "status": "todo",
-      "symbol": ".",
+      "status": "done",
+      "symbol": "x",
       "timestamp": "2026-11-22 18:05:08",
       "tags": [
         "agent",
