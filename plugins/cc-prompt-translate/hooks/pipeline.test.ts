@@ -254,6 +254,78 @@ test("an answer already in Czech is not sent for translation", async ($, on) => 
 	expect(chatCalls, "no second call for an answer already in Czech").toBe(1);
 });
 
+/** A session with `config` stored, OpenRouter answered from memory; returns the chat calls made so far. */
+async function answerSession($: Parameters<TestBody>[0], on: On, config: Record<string, unknown>) {
+	mock.store(on, { config });
+	engineBottom(on);
+	mock.env(on, { OPENROUTER_API_KEY: "test-key" });
+	const clock = mock.clock(on);
+	const calls: string[] = [];
+	let drawn = "";
+	on("fs.exists", () => ({ value: false }));
+	on("session.cwd", () => ({ value: "/work" }));
+	on("session.start", (_$, e) => ({ cwd: e.cwd }));
+	on("command.register", () => ({ value: { command: "prompt-translate" } }));
+	on("ui.render", { component: "AssistantMessage" }, async (_$, e, next) => {
+		drawn = e.props.text;
+		return next(e);
+	});
+	on("http.fetch", async (_$, e) => {
+		if (!e.url.includes("chat/completions")) return { value: { status: 404, ok: false, headers: {}, text: "{}" } };
+		const body = JSON.parse(String(e.init?.body)) as { messages: Array<{ content: string }> };
+		const system = body.messages[0]?.content ?? "";
+		calls.push(system.includes("to Czech") ? "answer" : "prompt");
+		return { value: reply(system.includes("to Czech") ? CZ_ANSWER : EN_PROMPT) };
+	});
+	await $.session.start({ cwd: "/work", surface: "terminal", isInteractive: true });
+	const finish = async (answer: string) => {
+		await $.turn.complete({ answer, durationMs: 10, isAborted: false, turnId: "t", reason: "answer" });
+		await clock.advance(10);
+		for (let i = 0; i < 40; i++) await new Promise((r) => setTimeout(r, 5));
+	};
+	const draw = async (text: string) => {
+		await $.ui.mount({ plugin: "cc-prompt-translate", surface: "terminal", component: "AssistantMessage", props: { text, isFirstOfReply: true } });
+		return drawn;
+	};
+	return { calls, finish, draw };
+}
+
+test("a turn no prompt started (background-task notification): the answer is translated and drawn", async ($, on) => {
+	const s = await answerSession($, on, {});
+	await s.finish(EN_ANSWER);
+	expect(s.calls, "no prompt call, one answer call").toEqual(["answer"]);
+	expect(await s.draw(EN_ANSWER), "drawn in Czech").toBe(CZ_ANSWER);
+});
+
+test("a turn no prompt started: translateResponses off leaves the answer English", async ($, on) => {
+	const s = await answerSession($, on, { translateResponses: false });
+	await s.finish(EN_ANSWER);
+	expect(s.calls).toEqual([]);
+	expect(await s.draw(EN_ANSWER)).toBe(EN_ANSWER);
+});
+
+test("a turn with a pending prompt and translateResponses off is not translated", async ($, on) => {
+	const s = await answerSession($, on, { translateResponses: false });
+	await $.prompt.submit({ text: CZ_PROMPT, origin: { kind: "composer" }, wait: false });
+	expect(s.calls, "the prompt was translated").toEqual(["prompt"]);
+	await s.finish(EN_ANSWER);
+	expect(s.calls, "the answer was not").toEqual(["prompt"]);
+	expect(await s.draw(EN_ANSWER)).toBe(EN_ANSWER);
+});
+
+test("a turn no prompt started: an answer already in Czech is not translated", async ($, on) => {
+	const s = await answerSession($, on, {});
+	await s.finish(CZ_ANSWER + " Přihlášení teď funguje správně.");
+	expect(s.calls).toEqual([]);
+});
+
+test("a turn no prompt started: an answer with a translation is not sent again", async ($, on) => {
+	const s = await answerSession($, on, {});
+	await s.finish(EN_ANSWER);
+	await s.finish(EN_ANSWER);
+	expect(s.calls, "one call for two turns ending in the same answer").toEqual(["answer"]);
+});
+
 test("log folder: without HOME it is under USERPROFILE", async ($, on) => {
 	const files = await loggedFiles($, on, { HOME: "", USERPROFILE: "C:/Users/u" });
 	expect([...files.keys()].some((p) => p.startsWith("/Users/u/.claude/prompt-translate/log/"))).toBe(true);

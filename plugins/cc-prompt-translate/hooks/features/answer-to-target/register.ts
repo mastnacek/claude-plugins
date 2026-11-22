@@ -8,7 +8,8 @@
 //                                 translates an answer a reload cut off
 //
 // Takes `pending` in $.state from the prompt slice: set when this turn's prompt
-// was the person's; read and cleared here.
+// was the person's; read and cleared here. A turn with no `pending` (started by a
+// background-task notification) is translated by the configuration alone.
 
 import type { EngineInterface, On } from "claude-code";
 import { atom, read, update } from "claude-code";
@@ -30,6 +31,8 @@ const originalsAtom = atom({ plugin: "cc-prompt-translate", key: "originals" } a
 type $ = EngineInterface;
 
 async function translateAnswer($: $, answer: string, pending: PendingTranslation): Promise<void> {
+	// Never twice: an answer with a translation already drawn is left alone.
+	if ((await read($, finalsAtom))[textKey(answer)]) return;
 	// A model told to answer in Czech (Claude Code's `language` setting) already did:
 	// a translation would be a paid call returning the same text.
 	if (canCheck(pending.targetLanguage) && isAlreadyCzechOrSlovak(answer)) {
@@ -79,11 +82,21 @@ async function recoverMissedAnswer($: $): Promise<void> {
 export function registerAnswerToTarget(on: On): void {
 	on("turn.complete", async ($, e, next) => {
 		if (e.agentId !== undefined) return next(e);
-		const pending = await read($, pendingAtom);
-		if (!pending) return next(e);
-		await update($, pendingAtom, () => null);
+		const taken = await read($, pendingAtom);
+		if (taken) await update($, pendingAtom, () => null);
 		const answer = e.answer;
-		if (e.reason !== "answer" || !pending.translateResponses || !answer.trim()) return next(e);
+		if (e.reason !== "answer" || !answer.trim()) return next(e);
+		let pending: PendingTranslation;
+		if (taken) {
+			// A turn a translated prompt started: that prompt's own toggle wins.
+			if (!taken.translateResponses) return next(e);
+			pending = taken;
+		} else {
+			// No prompt started this turn (a background-task notification): the configuration decides.
+			const config = await getConfig($);
+			if (!config.enabled || !config.translateResponses) return next(e);
+			pending = { targetLanguage: config.targetLanguage, translateResponses: true };
+		}
 		// Outlives this dispatch: the turn ends now and the translation lands when ready.
 		$.clock.after(0, () => {
 			void translateAnswer($, answer, pending);
