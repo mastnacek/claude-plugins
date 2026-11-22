@@ -8,6 +8,7 @@
 import type { On } from "claude-code";
 import { atom, read, update } from "claude-code";
 import { getConfig } from "../../shared/config";
+import { matchingSkipPattern } from "../../shared/skip";
 import { capRecord } from "../../shared/state";
 import { withProgress } from "../../shared/progress";
 import { translate } from "../../shared/translation/translate";
@@ -47,6 +48,7 @@ export function registerCommandArguments(on: On): void {
 		if (!pending) return next(e);
 		await update($, pendingAtom, () => pending);
 		if (!e.args.trim()) return next(e);
+		if (await matchingSkipPattern($, e.args, config.skipPatterns)) return next(e);
 
 		let meta: CommandMeta | undefined;
 		try {

@@ -388,3 +388,64 @@ test("pi's key: found under USERPROFILE when HOME is missing", async ($, on) => 
 test("pi's key: no home, no key, the prompt goes on untranslated", async ($, on) => {
 	expect(await keyUsedWith($, on, {}, { "/Users/u/.pi/agent/auth.json": PI_AUTH })).toBeUndefined();
 });
+
+/** A session with `skipPatterns` stored and the log on; returns the chat calls made and the log lines written. */
+async function skipSession($: Parameters<TestBody>[0], on: On, skipPatterns: string[]) {
+	mock.store(on, { config: { log: true, skipPatterns } });
+	engineBottom(on);
+	mock.env(on, { OPENROUTER_API_KEY: "test-key", HOME: "/home/t" });
+	mock.clock(on);
+	const files = new Map<string, string>();
+	on("fs.exists", (_$, e) => ({ value: files.has(norm(e.path)) }));
+	on("fs.read", (_$, e) => ({ value: files.get(norm(e.path)) ?? "" }));
+	on("fs.write", (_$, e) => {
+		files.set(norm(e.path), e.text);
+		return { value: undefined };
+	});
+	on("session.cwd", () => ({ value: "/work" }));
+	on("session.start", (_$, e) => ({ cwd: e.cwd }));
+	on("command.register", () => ({ value: { command: "prompt-translate" } }));
+	let chatCalls = 0;
+	on("http.fetch", async (_$, e) => {
+		if (!e.url.includes("chat/completions")) return { value: { status: 404, ok: false, headers: {}, text: "{}" } };
+		chatCalls++;
+		return { value: reply(EN_PROMPT) };
+	});
+	await $.session.start({ cwd: "/work", surface: "terminal", isInteractive: true });
+	const lines = (): Array<Record<string, unknown>> => {
+		const log = [...files].find(([path]) => path.startsWith("/home/t/.claude/prompt-translate/log/"));
+		return (log?.[1] ?? "").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as Record<string, unknown>);
+	};
+	return { calls: () => chatCalls, lines };
+}
+
+const NOTICE = "DONE coder w2J:p2Q: OK";
+
+test("skipPatterns: a matching prompt is sent unchanged, not detected, not sent to the model", async ($, on) => {
+	const s = await skipSession($, on, ["^(DONE|BLOCKED|WAITING|INSIGHT) "]);
+	const submitted = await $.prompt.submit({ text: NOTICE, origin: { kind: "composer" }, wait: false });
+	for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
+	expect(submitted.text).toBe(NOTICE);
+	expect(s.calls()).toBe(0);
+	expect(s.lines()).toHaveLength(1);
+	expect(s.lines()[0]).toMatchObject({ kind: "detect", reason: "skip_pattern", skipped: true });
+});
+
+test("skipPatterns: a non-matching prompt is translated as before", async ($, on) => {
+	const s = await skipSession($, on, ["^(DONE|BLOCKED|WAITING|INSIGHT) "]);
+	const submitted = await $.prompt.submit({ text: CZ_PROMPT, origin: { kind: "composer" }, wait: false });
+	for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
+	expect(submitted.text).toBe(EN_PROMPT);
+	expect(s.calls()).toBe(1);
+	expect(s.lines()[0]).toMatchObject({ kind: "detect", reason: "diacritics", skipped: false });
+});
+
+test("skipPatterns: an invalid regex is ignored, the valid ones still apply", async ($, on) => {
+	const s = await skipSession($, on, ["(unclosed", "^DONE "]);
+	const translated = await $.prompt.submit({ text: CZ_PROMPT, origin: { kind: "composer" }, wait: false });
+	expect(translated.text).toBe(EN_PROMPT);
+	const skipped = await $.prompt.submit({ text: NOTICE, origin: { kind: "composer" }, wait: false });
+	for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
+	expect(skipped.text).toBe(NOTICE);
+	expect(s.calls()).toBe(1);
+});

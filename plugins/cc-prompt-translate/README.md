@@ -57,6 +57,14 @@ The default translation model runs on [OpenRouter](https://openrouter.ai) (`open
 
 Settings are saved to `.claude/prompt-translate.json` in the project; add `--global` to save them for every project.
 
+### Never translate some prompts: `skipPatterns`
+
+`skipPatterns` is a list of regular expressions (default `[]`). A prompt or command argument whose trimmed text matches any of them is sent as written: not detected, not translated. Use it for machine-written messages that the autodetection cannot tell from a short ASCII-only Czech prompt. Patterns are edited in the JSON file (`/prompt-translate help` shows how many are set); an invalid expression is ignored.
+
+```json
+{ "skipPatterns": ["^(DONE|BLOCKED|WAITING|INSIGHT) "] }
+```
+
 ## Limits
 
 - Only the final answer is translated; text between tool calls stays English.

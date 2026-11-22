@@ -13,6 +13,7 @@ nepřeložené, nic jiného se nerozbije.
 - Hook `command.describe` (bez matcheru; výsledek nikdy nemění, vždy `next(e)`) ukládá `{ description, argumentHint }` každého příkazu do `commandMeta`.
 - `command.run` bez matcheru (`register.ts`) — rozhodne, zda argumenty přeložit, a pustí příkaz dál s novými argumenty. **Nic nezná jménem**: ani plugin, ani příkaz, ani podpříkaz; rozhoduje jen to, co engine o příkazu hlásí.
 - Jen příkazy se zdrojem `plugin` nebo `user` (z `$.command.list()`), jen vstup z `composer`/`bridge`.
+- Argumenty, jejichž oříznutý text odpovídá `skipPatterns` (`shared/skip.ts`), se nepřekládají (`pending` se nastaví dál).
 - **Bez volání modelu** (`metadata.ts`, čisté funkce): z `argumentHint` se vytěží literály — slova oddělená `|` (i uvnitř `[...]`, `<...>`, `{...}`) a holá slova mimo závorky; slova v závorkách jsou zástupné názvy. Z popisu se berou jen alternativy `a|b`. Argumenty se nepřekládají, pokud po odebrání literálů, čísel a kódu/cest/flagů (`--x`, `a/b`, `a_b`, `a.b`, `camelCase`) zbytek nevypadá česky (`detectLanguageOrCode`: diakritika nebo běžná česká slova).
 - Jinak `translate(…, "arguments", kontext)`: kontext je jméno příkazu, popis a hint; systémový prompt (`ARGUMENTS_SYSTEM_PROMPT`, bez boostu) překládá jen přirozený jazyk.
 - **Kontrola výsledku** (`literalsSurvive`): každý literál z argumentů musí ve výstupu zůstat doslova (case, bez interpunkce, stejný počet); jinak jdou původní argumenty. Při `degraded` také.

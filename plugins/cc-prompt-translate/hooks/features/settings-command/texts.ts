@@ -50,6 +50,7 @@ export function buildHelpText(config: TranslateConfig): string {
 		`  /prompt-translate note on|off         — skrytá poznámka „pracuj anglicky“ u promptu (${choice(onOff, config.englishNote)})`,
 		`  /prompt-translate log on|off          — log pro vyhodnocení do ~/.claude/prompt-translate/log/ (${choice(onOff, config.log)})`,
 		`  /prompt-translate debug on|off        — podrobné logování (${choice(onOff, config.debug)})`,
+		`  skipPatterns: ${config.skipPatterns.length} (vzory, které se nikdy nepřekládají; upravují se v JSON souboru)`,
 		"  /prompt-translate stats               — cena, kredit, kurz, tokeny",
 		"  /prompt-translate global show|off     — globální konfigurace",
 		"  /prompt-translate reset               — výchozí nastavení",
