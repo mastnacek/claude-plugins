@@ -2,20 +2,21 @@
 type: Todo
 title: "Event-driven kolega: herdr plugin + watcher, near real time, agent-agnostic"
 timestamp: 2026-11-20 17:45:14
-status: working
+status: done
 source: orchestrator
 tags: [agent, coder, kolega, workflow]
 facets:
   project: claude
   project_path: D:/01_programovani/claude
-spai_symbol: '/'
+spai_symbol: 'x'
 lang: en
 title_cs: "Event-driven kolega: herdr plugin + watcher, téměř v reálném čase, agent-agnostic"
+done_evidence: "herdr-kolega merged and running (event watcher)"
 ---
 
 # SPAI-014: Event-driven kolega: herdr plugin + watcher, near real time, agent-agnostic
 
-/ Event-driven kolega: herdr plugin + watcher, near real time, agent-agnostic @claude :agent:coder:kolega:workflow:
+x Event-driven kolega: herdr plugin + watcher, near real time, agent-agnostic @claude :agent:coder:kolega:workflow:
 
 Design approved by the user 2026-11-20. Research: D:/01_programovani/claude/docs/research/2026-11-20-kolega-udalosti.md (read it first).
 
@@ -52,3 +53,4 @@ Commit proposals: feat(herdr-kolega): event-driven observer plugin / feat(orches
 
 ## Log
 - 2026-11-20 17:52 (orchestrator) User decision: agy hit its limit; default kolega agent = Claude Code with Haiku (read-only via permissions deny Write/Edit/NotebookEdit/Bash), agy and pi stay options.
+- 2026-11-22 18:06 (orchestrator) done: herdr-kolega merged and running (event watcher)
