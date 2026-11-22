@@ -22,6 +22,7 @@ import { translate } from "../../shared/translation/translate";
 import { logEvent } from "../../shared/usage-log";
 import type { OriginalRecord, PendingTranslation } from "../../shared/types";
 import { canCheck, isAlreadyCzechOrSlovak } from "./already-target";
+import { withLabel } from "./label";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const pendingAtom = atom({ plugin: "cc-prompt-translate", key: "pending" } as const, null as PendingTranslation | null);
@@ -108,7 +109,8 @@ export function registerAnswerToTarget(on: On): void {
 		if (e.props.isSummary) return next(e);
 		const translated = (await read($, finalsAtom))[textKey(e.props.text)];
 		if (!translated) return next(e);
-		return next({ ...e, props: { ...e.props, text: translated } });
+		const { targetLanguage } = await getConfig($);
+		return next({ ...e, props: { ...e.props, text: withLabel(translated, targetLanguage) } });
 	});
 
 	on("session.end", async ($, e, next) => {

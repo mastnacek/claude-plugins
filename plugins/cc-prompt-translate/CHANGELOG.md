@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.3
+
+### Added
+- A translated answer is drawn with a marker line above it (`🌐 *Přeloženo:*` in the target language, `Translated`
+  for languages without a label), so it is visible that the plugin translated it. Screen only; the stored message
+  stays English.
+
 ## 0.9.2
 
 ### Fixed
