@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1
+
+- `ANON_MASK_AGENT_STATE=1` v prostředí sezení: `Read` přepisů (`~/.claude/projects/**`) a dalších složek stavu agentů se maskuje jako každý jiný soubor. Bez proměnné beze změny (projdou nezamaskované). Zapíná ho pozorovatel (kolega), který čte přepisy cizích sezení.
+
 ## 0.9.0
 
 - Zamčený anon už nezastaví sezení. Když `anon` hlásí `locked: true` (trezor je zamčený), čtení a prompty se nezamítají: maskuje se jen podle pravidel (anon od téže verze), pod řádkem nástroje a pod zprávou uživatele je viditelná poznámka a jednou za sezení toast „anon je zamčený: maskuje se jen podle pravidel (trezor a mapa nejsou k dispozici). Spusť anon unlock.“. Hodnota, která je jen v trezoru, se při zamčení nemaskuje (poznámka to říká).

@@ -4,8 +4,8 @@ import type { TestBody } from "claude-code/testing";
 type On = Parameters<TestBody>[1];
 
 // A stand-in for the anon CLI: REAL <-> FAKE, scan finds REAL.
-const anonDouble = (on: On, options: { isMissing?: boolean; scanFound?: boolean } = {}) => {
-	on("env.get", () => ({ value: undefined }));
+const anonDouble = (on: On, options: { isMissing?: boolean; scanFound?: boolean; env?: Record<string, string> } = {}) => {
+	on("env.get", (_$, e) => ({ value: options.env?.[e.name] }));
 	on("fs.stat", () => ({ value: { kind: "file", size: 1, mtimeMs: 0, isLink: false } }));
 	on("process.run", (_$, e) => {
 		const [bin, command] = e.argv;
@@ -24,6 +24,23 @@ test("a Read result is masked", async ($, on) => {
 	anonDouble(on);
 	on("tool.call", () => ({ result: { type: "text", file: { content: "key REAL" } } }));
 	const out = await $.tool.call({ tool: "Read", file_path: "/p/a.txt" });
+	expect(JSON.stringify(out.result)).toContain("key FAKE");
+	expect(JSON.stringify(out.result)).not.toContain("REAL");
+});
+
+const TRANSCRIPT = "C:/Users/u/.claude/projects/D--p/abc.jsonl";
+
+test("a session transcript is read as it is by default", async ($, on) => {
+	anonDouble(on);
+	on("tool.call", () => ({ result: { type: "text", file: { content: "key REAL" } } }));
+	const out = await $.tool.call({ tool: "Read", file_path: TRANSCRIPT });
+	expect(JSON.stringify(out.result)).toContain("key REAL");
+});
+
+test("ANON_MASK_AGENT_STATE=1: a session transcript is masked", async ($, on) => {
+	anonDouble(on, { env: { ANON_MASK_AGENT_STATE: "1", CC_ROLE: "kolega" } });
+	on("tool.call", () => ({ result: { type: "text", file: { content: "key REAL" } } }));
+	const out = await $.tool.call({ tool: "Read", file_path: TRANSCRIPT });
 	expect(JSON.stringify(out.result)).toContain("key FAKE");
 	expect(JSON.stringify(out.result)).not.toContain("REAL");
 });

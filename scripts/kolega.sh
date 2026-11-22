@@ -3,7 +3,8 @@
 # „kolega“: agent jen ke čtení v malém panelu vpravo dole a pod ním hlídač, který mu posílá
 # pobídky se sezeními ostatních agentů (orchestrátor, programátor, tester, fable …).
 #   claude (výchozí) claude --model sonnet; zakázané Write, Edit, NotebookEdit, Bash; povolené Read, Grep, Glob;
-#          CC_ROLE=kolega (watchdog ho bere jako agenta), NO_KOLEGA=1 (nespustí dalšího kolegu)
+#          CC_ROLE=kolega (watchdog ho bere jako agenta), NO_KOLEGA=1 (nespustí dalšího kolegu),
+#          ANON_MASK_AGENT_STATE=1 (cc-data-anonymizer maskuje i čtené přepisy sezení)
 #   agy    agy --mode plan, příkazy zakázané
 #   pi     pi s modelem z KOLEGA_PI_MODEL (bez něj výchozí model pi), bez nástrojů bash/edit/write
 # Hlídač: je-li zapojen plugin kolega.observer (herdr plugin list) a existuje jeho binárka,
@@ -59,7 +60,7 @@ case "$agent" in
   pi)
     cmd="pi ${KOLEGA_PI_MODEL:+--model '$KOLEGA_PI_MODEL'} --exclude-tools bash,edit,write" ;;
   claude)
-    cmd="\$env:CC_ROLE='kolega'; \$env:NO_KOLEGA='1'; claude --model sonnet --append-system-prompt-file '$(cygpath -m "$canon")/prompts/kolega.md' --allowedTools 'Read,Grep,Glob' --disallowedTools 'Write,Edit,NotebookEdit,Bash,PowerShell,Agent,WebFetch' $dirs" ;;
+    cmd="\$env:CC_ROLE='kolega'; \$env:NO_KOLEGA='1'; \$env:ANON_MASK_AGENT_STATE='1'; claude --model sonnet --append-system-prompt-file '$(cygpath -m "$canon")/prompts/kolega.md' --allowedTools 'Read,Grep,Glob' --disallowedTools 'Write,Edit,NotebookEdit,Bash,PowerShell,Agent,WebFetch' $dirs" ;;
 esac
 herdr pane run "$kolega" "$cmd" >/dev/null
 if [[ "$agent" == agy ]]; then
