@@ -38,7 +38,9 @@ types/index.d.ts      kontrakt $.state — jediné místo, kde se řezy potkají
 
 Watchdog **ve výchozím stavu jen hlásí** („Just report back“): každé pravidlo je v režimu `report`, který nezamítá volání ani nemění vstup
 nástroje. Volání zamítne jen pravidlo, které někdo výslovně přepnul na `block` (řez `guard`), a výjimku z pravidla (bez instant failure) uděluje
-člověk v dialogu (řez `waiver`). Role z env `CC_ROLE` (`coder` | `tester`; bez ní orchestrátor, na kterého se pravidla nevztahují).
+člověk v dialogu (řez `waiver`). Pravidlo W29 (stejné jako pravidlo 10 v `prompts/coder.md`): soubory ve WORKDIR se mění jen nástroji Edit/Write; Bash a PowerShell jen spouštějí věci;
+přesměrování výstupu a `mkdir` jen do SCRATCH (`$SCRATCH`, `$AGENT_SCRATCH`, `$env:AGENT_SCRATCH` a proměnné přiřazené dřív ve stejném příkazu se rozloží; nerozložitelný cíl se nepočítá).
+Role z env `CC_ROLE` (`coder` | `tester`; bez ní orchestrátor, na kterého se pravidla nevztahují).
 
 - `ledger` — po každém volání nástroje zapíše řádek do deníku sezení (`<kořen>/<hlavní repo>/<datum>_<role>_<id8>.jsonl`, bez obsahů a výstupů, tajemství redigovaná); nikdy neblokuje.
 - `rules` — na konci tahu vyhodnotí deník podle pravidel W01–W29 (verze 1; zbytek viz „Verze 2“ v `features/rules/CLAUDE.md`), hledá ladicí zbytky a uloží skóre; `/watch rules` (stav, režim a zdroj každého pravidla, otevřené výjimky) a `/watch rule <id> on|off|report|block [--global]` (zápis do `.claude/watchdog.json` nebo `$.store`).

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.2
+
+### Fixed
+- **W29 resolves variables in a write target.** `$SCRATCH`, `$AGENT_SCRATCH`, `$env:AGENT_SCRATCH` (read from the session env) and any
+  variable assigned earlier in the same command (`S=/x; … > "$S/log"`, `export S=…`, PowerShell `$S = …`) are expanded; a directory they
+  name counts as scratch. A target that still cannot be resolved is not counted (it was read as a path inside the work tree).
+  `mkdir` / `New-Item -ItemType Directory` inside scratch is no hit.
+- **W29 checks PowerShell like Bash.** `>`, `>>`, `*>`, `Out-File`, `Set-Content`, `Add-Content`, `New-Item`, `Copy-Item`, `Move-Item`
+  into the work tree are a hit; the PowerShell tokenizer keeps `\` as a path separator. The shell facts also reach W04, W05, W14 and W21 for PowerShell calls.
+
+### Changed
+- W29 / coder rule 10 wording: files of the work tree change only through Write/Edit; Bash and PowerShell only run things; redirects and `mkdir` only into scratch.
+
 ## 0.3.1
 
 ### Fixed

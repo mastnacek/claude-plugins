@@ -38,6 +38,17 @@ class AgentNoSpawn(unittest.TestCase):
         "agy --mode plan",
         "codex exec 'x'",
         "pi --model x",
+        "bash scripts/agent.sh coder",
+        "cd x && bash scripts/kolega.sh",
+        "& 'C:\\Program Files\\Git\\bin\\bash.exe' scripts/agent.sh coder",
+        "ls; claude -p x",
+        "FOO=1 env BAR=2 timeout 5 claude -p x",
+        "exec claude --model haiku",
+        "bash -c 'claude -p x'",
+        "./scripts/agent.sh tester",
+        "echo $(claude -p x)",
+        "git status\nherdr pane split --current",
+        "herdr agent send-keys w1:p2 Enter",
     ]
     allowed = [
         "claude plugin validate .",
@@ -49,6 +60,16 @@ class AgentNoSpawn(unittest.TestCase):
         "cargo test --workspace",
         "grep -n claude README.md",
         "echo pipeline",
+        "cat scripts/kolega.sh",
+        "wc -l scripts/agent.sh scripts/kolega.sh",
+        "bash -n scripts/agent.sh",
+        "bash -n scripts/kolega.sh",
+        "rg kolega.sh scripts",
+        "ls scripts",
+        "cd scripts && cat agent.sh | head -n 5",
+        "claude --help",
+        "echo claude -p x",
+        "grep -rn 'herdr pane split' docs",
     ]
 
     def test_denied_for_agents(self):

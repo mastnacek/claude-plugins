@@ -2,6 +2,9 @@
 // Everything is brought to `/` separators with the drive letter dropped before
 // it is compared; symlinks are not resolved (no realpath inside the engine).
 
+/** Session variables that name the agent's scratchpad. */
+export const SCRATCH_VARS = ["SCRATCH", "AGENT_SCRATCH"];
+
 /** `C:\a\b` → `/a/b`. */
 export const canon = (p: string): string => p.replace(/\\/g, "/").replace(/^[A-Za-z]:(?=\/|$)/, "");
 

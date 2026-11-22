@@ -11,7 +11,10 @@ const base = (role: Role) => ({ ts: (clock += 1000), session: "s1", role, cwd: "
 
 export const bash = (command: string, over: Partial<ToolEv> = {}, role: Role = "coder"): ToolEv => ({ kind: "tool", ...base(role), tool: "Bash", command, exitCode: 0, isError: false, denied: false, durationMs: 10, ...over });
 
-export const file = (tool: string, path: string, over: Partial<ToolEv> = {}, role: Role = "coder"): ToolEv => ({ kind: "tool", ...base(role), tool, path, isError: false, denied: false, durationMs: 5, ...over });
+/** A PowerShell call (same shape as `bash`). */
+export const ps = (command: string, over: Partial<ToolEv> = {}, role: Role = "coder"): ToolEv => bash(command, { tool: "PowerShell", ...over }, role);
+
+export const file =(tool: string, path: string, over: Partial<ToolEv> = {}, role: Role = "coder"): ToolEv => ({ kind: "tool", ...base(role), tool, path, isError: false, denied: false, durationMs: 5, ...over });
 
 export const turn = (answer: string, role: Role = "coder"): TurnEv => ({ kind: "turn", ...base(role), answer });
 

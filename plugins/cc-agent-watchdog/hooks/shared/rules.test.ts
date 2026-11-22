@@ -1,7 +1,7 @@
 // Every implemented rule: it fires on what it should and stays quiet on what only looks similar.
 
 import { expect, test } from "claude-code/testing";
-import { bash, CFG, denied, failing, file, scan, turn } from "./fixture";
+import { bash, CFG, denied, failing, file, ps, scan, turn } from "./fixture";
 import { RULES } from "./rules";
 import type { Config, Ev, Hit } from "./types";
 
@@ -257,6 +257,39 @@ test("W29 python / node / ruby scripts that write files (heredoc or -c); a scrip
 test("a script write is a change of the work: W04 sees a target outside, W14 sees the mutation", () => {
 	expect(check("W04", [bash(`python3 -c "open('/home/t/other/f','w').write('x')"`)]).length).toBe(1);
 	expect(check("W14", [bash(`python3 -c "open('src/a.ts','w').write('x')"`), turn("Hotovo.")]).length).toBe(1);
+});
+
+test("W29 resolves $SCRATCH, $AGENT_SCRATCH, $env:AGENT_SCRATCH and variables assigned earlier; an unresolved target is no hit", () => {
+	const cfg: Config = { ...CFG, env: { SCRATCH: "/var/s1/scratch", AGENT_SCRATCH: "/var/s1/scratch" } };
+	const quiet = [
+		bash('npx -y -p typescript tsc -p . --noEmit > "$AGENT_SCRATCH/tsc.log" 2>&1'),
+		bash("make > $SCRATCH/make.log"),
+		bash('SCR=/var/s1/scratch; npx tsc -p . > "$SCR/tsc.log" 2>&1'),
+		bash('S=/tmp/claude-1/x\nclaude plugin test . > "$S/test.log"'),
+		bash('export S=/var/s1/scratch && mkdir -p "$S/smoke"'),
+		bash("make > $UNKNOWN/out.log"),
+		ps('npx tsc -p . *> "$env:AGENT_SCRATCH\\tsc.log"'),
+		ps('$S = "/var/s1/scratch"; New-Item -ItemType Directory -Path "$S/smoke" -Force'),
+		ps('"x" | Out-File -FilePath "$env:AGENT_SCRATCH\\x.txt"'),
+		ps("npx tsc > $env:NOPE\\x.log"),
+	];
+	expect(quiet.map((e) => check("W29", [e], cfg).length)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+	const hits = [
+		bash("echo x > src/a.ts"),
+		bash("sed -i s/a/b/ src/a.ts"),
+		bash('W=/work/repo/src; echo x > "$W/a.ts"'),
+		bash("mkdir -p src/new"),
+		ps("Set-Content src/a.ts x"),
+		ps('"x" *> src/a.ts'),
+		ps("'x' > src\\a.ts"),
+		ps("Add-Content -Path src\\a.ts -Value x"),
+		ps("Out-File -FilePath src/a.ts -InputObject x"),
+		ps("New-Item -ItemType File -Path src/b.ts"),
+		ps("New-Item -ItemType Directory -Path src/d"),
+		ps("Copy-Item $env:AGENT_SCRATCH\\a.ts -Destination src\\a.ts"),
+		ps("Move-Item x.ts src/x.ts"),
+	];
+	expect(hits.map((e) => check("W29", [e], cfg).length)).toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
 });
 
 test("W29 (profile) editing a work-tree file through the shell", () => {
