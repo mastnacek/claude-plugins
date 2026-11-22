@@ -45,9 +45,6 @@ target="$(find_pane programátor)"
 kolega="$(herdr pane split --pane "$target" --direction down --ratio 0.7 --cwd "D:/01_programovani" --no-focus \
   | python -c "import sys,json;print(json.load(sys.stdin)['result']['pane']['pane_id'])")"
 herdr pane rename "$kolega" "kolega ($agent)" >/dev/null
-watch="$(herdr pane split --pane "$kolega" --direction down --ratio 0.85 --cwd "D:/01_programovani" --no-focus \
-  | python -c "import sys,json;print(json.load(sys.stdin)['result']['pane']['pane_id'])")"
-herdr pane rename "$watch" "kolega-hlídač" >/dev/null
 
 home="${USERPROFILE:-$HOME}"; home="${home//\\//}"
 dirs="--add-dir '$home/.claude/projects' --add-dir 'D:/01_programovani' --add-dir '$scratch'"
@@ -80,13 +77,17 @@ else
   fi
 fi
 
-# Hlídač: plugin (události) když je zapojen a postavený, jinak záložní polling.
+# Hlídač: běží skrytě na pozadí bez vlastního panelu (je to program bez rozhraní);
+# výpis jde do logu ve stavové složce pluginu. Plugin (události), když je zapojen a postavený,
+# jinak záložní polling. Starý hlídač pro jiný panel kolegy se nejdřív ukončí.
 state="${HERDR_PLUGIN_STATE_DIR:-}"
 [[ -z "$state" && -n "${LOCALAPPDATA:-}" ]] && state="${LOCALAPPDATA//\\//}/herdr/plugins/$plugin_id"
+log="${state:-$scratch}/watch.log"
+taskkill //F //IM herdr-kolega.exe >/dev/null 2>&1 || true
 if [[ -n "$state" && -f "$plugin_bin" ]] && herdr plugin list 2>/dev/null | grep -q "$plugin_id"; then
-  herdr pane run "$watch" "\$env:HERDR_PLUGIN_STATE_DIR='$state'; & '$plugin_bin' watch --pane '$kolega' --debounce-s $debounce" >/dev/null
-  echo "kolega ($agent): $kolega, hlídač (události): $watch, debounce ${debounce} s"
+  powershell -NoProfile -Command "\$env:HERDR_PLUGIN_STATE_DIR='$state'; Start-Process -WindowStyle Hidden -FilePath '$plugin_bin' -ArgumentList 'watch','--pane','$kolega','--debounce-s','$debounce' -RedirectStandardOutput '$log' -RedirectStandardError '$log.err'" >/dev/null
+  echo "kolega ($agent): $kolega, hlídač (události) skrytě na pozadí, log $log, debounce ${debounce} s"
 else
-  herdr pane run "$watch" "& 'C:\Program Files\Git\bin\bash.exe' '$canon/scripts/kolega-watch.sh' '$kolega' $interval" >/dev/null
-  echo "kolega ($agent): $kolega, hlídač (záložní, polling): $watch (pobídka nejvýš jednou za ${interval} s)"
+  powershell -NoProfile -Command "Start-Process -WindowStyle Hidden -FilePath 'C:\Program Files\Git\bin\bash.exe' -ArgumentList '$canon/scripts/kolega-watch.sh','$kolega','$interval' -RedirectStandardOutput '$log' -RedirectStandardError '$log.err'" >/dev/null
+  echo "kolega ($agent): $kolega, hlídač (záložní, polling) skrytě na pozadí, log $log"
 fi

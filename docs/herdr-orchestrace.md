@@ -10,7 +10,7 @@ data). Platí, kdykoli sezení běží v herdr (`HERDR_ENV=1`). Uživatel mluví
 | **orchestrátor** | vlevo, celá výška | — | rozpad práce na zadání (SPAI), kontrola výsledku a brány, **jediný commit, sloučení a push**, komunikace s uživatelem |
 | **programátor** | vpravo nahoře | `scripts/agent.sh coder` (Sonnet, `CODE_MODE=1` volitelně) | píše kód ve svém worktree; zprávu commitu jen navrhne |
 | **tester** | vpravo pod programátorem | `scripts/agent.sh tester` (Haiku) | ověřuje podle scénáře nad testovacími daty; kód nemění |
-| **kolega** | vpravo dole, malý (+ hlídač) | `scripts/kolega.sh`, startuje sám s agenty (§ Kolega) | čte přepisy všech sezení, hodnotí postup, hlásí postřehy |
+| **kolega** | vpravo dole, malý (hlídač skrytě na pozadí) | `scripts/kolega.sh`, startuje sám s agenty (§ Kolega) | čte přepisy všech sezení, hodnotí postup, hlásí postřehy |
 
 Najednou nejvýš jeden programátor, jeden tester a jeden revizor.
 
@@ -111,12 +111,13 @@ tester, fable) a hlásí postřehy. Zadání role: `prompts/kolega.md`.
   `CC_ROLE=kolega` (watchdog ho bere jako agenta), `NO_KOLEGA=1` (nespustí dalšího kolegu).
   `agy`: `--dangerously-skip-permissions --mode plan`, `deny command(*)` (agy narazil na limit).
   `pi`: model z `KOLEGA_PI_MODEL` (bez něj výchozí model pi), `--exclude-tools bash,edit,write`. Všichni čtou `~/.claude/projects`,
-  `D:/01_programovani` a scratchpad. Panel se jmenuje „kolega (<agent>)“ a pod ním je malý panel
-  „kolega-hlídač“.
+  `D:/01_programovani` a scratchpad. Panel se jmenuje „kolega (<agent>)“; hlídač nemá panel,
+  běží skrytě na pozadí (`Start-Process -WindowStyle Hidden`), výpis v `watch.log` stavové
+  složky pluginu.
 - **Hlídač řízený událostmi** (plugin `kolega.observer`, repo herdr, `plugins/herdr-kolega`):
   herdr při změně stavu agenta (`pane.agent_status_changed`: blocked, done, idle), nálezu agenta
   (`pane.agent_detected`) a konci panelu (`pane.exited`) spustí `herdr-kolega event`, který připíše
-  řádek do fronty ve `HERDR_PLUGIN_STATE_DIR`. V panelu hlídače běží `herdr-kolega watch --pane
+  řádek do fronty ve `HERDR_PLUGIN_STATE_DIR`. Na pozadí běží `herdr-kolega watch --pane
   <kolega> --debounce-s 4`: shluky událostí sloučí (4 s klidu, nejvýš 16 s), `blocked` pošle hned,
   počká na `herdr agent wait <kolega> --until idle --until done` a pošle jednu pobídku. Pobídka
   říká u každého sezení roli, panel, **důvod** (blokováno, tah dokončen, nové sezení, sezení
