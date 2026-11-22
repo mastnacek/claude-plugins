@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "lastUpdated": "2026-11-22 17:54:29",
-  "lastId": "SPAI-017",
+  "lastUpdated": "2026-11-22 18:05:23",
+  "lastId": "SPAI-019",
   "records": [
     {
       "id": "SPAI-002",
@@ -239,6 +239,41 @@
       "project": "claude",
       "projectPath": "D:/01_programovani/claude",
       "file": "2026-11-22-SPAI-017-workflow-grading-link-tasks-to-transcripts-and-a.md"
+    },
+    {
+      "id": "SPAI-018",
+      "title": "Workflow grading: one-shot Sonnet grader for the llm rows of the key (K03, K05, K07, K09)",
+      "type": "Todo",
+      "status": "todo",
+      "symbol": ".",
+      "timestamp": "2026-11-22 18:05:08",
+      "tags": [
+        "agent",
+        "coder",
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-22-SPAI-018-workflow-grading-one-shot-sonnet-grader-for-the.md"
+    },
+    {
+      "id": "SPAI-019",
+      "title": "Workflow coach: on-demand role that proposes ONE change to prompts/docs from the graded not_met rows",
+      "type": "Todo",
+      "status": "todo",
+      "symbol": ".",
+      "timestamp": "2026-11-22 18:05:17",
+      "tags": [
+        "agent",
+        "coder",
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-22-SPAI-019-workflow-coach-on-demand-role-that-proposes-one.md",
+      "blockedBy": [
+        "SPAI-018"
+      ]
     }
   ]
 }
