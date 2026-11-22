@@ -68,6 +68,12 @@ Každé zadání agentovi je **záznam SPAI** v backlogu hlavního repa (ne work
    **Kroky SMOKE, které potřebují agenta (spustit claude, testera, panel), pouští orchestrátor,
    nikdy programátor** — v zadání je označ „orchestrátor:“. Agentům spouštění agentů technicky
    zakazuje `agent.sh` (`--disallowedTools Agent` + hook `.claude/hooks/agent-no-spawn.sh`).
+   **Vypínač guardu:** `NO_AGENT_GUARD=1 agent.sh coder` vypne hook `agent-no-spawn.sh` v tom
+   sezení. Použij jen pro sezení, které opravuje samotný guard (jinak guard blokuje vlastní
+   opravu). Nastavuje ho výhradně orchestrátor při startu agenta; hook ho čte z prostředí
+   svého procesu, ne z textu příkazu, takže `NO_AGENT_GUARD=1 claude -p x` napsané agentem
+   zůstane zamítnuté. Výchozí stav: nikdy nenastaveno. Totéž pro git guard v repu herdr:
+   `NO_GIT_GUARD=1` (viz AGENTS.md tam).
    Navazující úkoly řetěz přes `--after <ID>`; plán celé práce zapiš najednou.
 2. **Odeslání:** `spai set <ID> working`, pak agentovi jen
    „Read SPAI-012 @<projekt> (`spai show SPAI-012 --project <hlavní repo> --json`) and carry it out fully now.“

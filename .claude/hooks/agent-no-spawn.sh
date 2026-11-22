@@ -6,7 +6,13 @@
 # Sezení bez CC_ROLE (orchestrátor, uživatel) hook nijak neomezuje.
 # Zapojuje ho scripts/agent.sh (--settings pro každého agenta v každém repu).
 # Nástroj Agent (sub-agenti) zakazuje agent.sh přes --disallowedTools.
+# Vypínač: NO_AGENT_GUARD=1 v prostředí procesu hooku (nastaví orchestrátor při startu
+# agenta: `NO_AGENT_GUARD=1 agent.sh coder`) hook vypne. Jen pro sezení, které opravuje
+# samotný guard. Čte se z prostředí, nikdy z textu příkazu, takže si ho agent nezapne ani
+# nevypne sám. Výchozí stav: nenastaveno.
 set -euo pipefail
+
+[[ "${NO_AGENT_GUARD:-}" == "1" ]] && exit 0
 
 role="${CC_ROLE:-}"
 [[ -z "$role" || "$role" == "orchestrator" ]] && exit 0

@@ -12,6 +12,8 @@
 # prompts/<role>.local.md repa, ve kterém agent běží (jeho specifika). Konstanty dává
 # hlavička zadání (záznam SPAI).
 #
+# NO_AGENT_GUARD=1 agent.sh coder      vypne hook agent-no-spawn.sh pro toto sezení (proměnná se
+#                                      dědí do claude i do procesu hooku); jen pro opravu guardu.
 # Prostředí: AGENT_SCRATCH = scratchpad orchestrátora (přístup bez dotazu);
 #            CODE_MODE=1 = Code Mode Claude Code (jen agenti; vypíná Remote Control).
 # Windows: spouštěj přes Git Bash (& 'C:\Program Files\Git\bin\bash.exe' scripts/agent.sh coder).
