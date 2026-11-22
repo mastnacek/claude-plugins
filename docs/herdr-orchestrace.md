@@ -57,8 +57,14 @@ Najednou nejvýš jeden programátor, jeden tester a jeden revizor.
 
 - Programátor pracuje ve vlastním worktree: `git worktree add -b agent/<úkol> ../<repo>-<úkol>`
   (v Git Bash cesta `D:/…`, ne `/d/…`).
-- Po sloučení `git worktree remove --force` + `git worktree prune` + `git branch -d`; na Windows
-  bývá složka chvíli zamčená běžícím procesem — smaž ji, až agent skončí.
+- Agenta spouštěj **ve worktree** (`cd <worktree>` v `pane run`), ne v hlavním checkoutu:
+  `agent.sh` bere hooky ze složky, ve které běží.
+- **Sloučení a úklid jsou dva kroky** (SPAI-020, kolegův poznatek SPAI-004 @jaroslav):
+  1. Sloučení: commit ve worktree, `git merge --no-ff`, brána v hlavním checkoutu, `git log`.
+  2. Úklid až potom a v tomto pořadí: **nejdřív ukonči sezení agenta ve worktree** (`/exit` přes
+     `MSYS_NO_PATHCONV=1 herdr pane send-text`, nebo ho rovnou spusť znovu v jiném worktree),
+     pak `git worktree remove` + `git worktree prune` + `git branch -d`. Běžící sezení drží
+     složku a Windows ji nesmaže („Permission denied“); zbytek smaž `rm -rf`, až proces skončí.
 - Sdílený `CARGO_TARGET_DIR` klame bránu (přeskočí překlad jiného stromu): ve worktree vlastní target.
 
 ## Zadání = záznam SPAI
