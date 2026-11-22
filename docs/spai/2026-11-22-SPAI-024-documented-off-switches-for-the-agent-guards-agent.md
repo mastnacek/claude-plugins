@@ -2,20 +2,21 @@
 type: Todo
 title: "Documented off-switches for the agent guards (agent-no-spawn, herdr git guard)"
 timestamp: 2026-11-22 19:41:20
-status: todo
+status: done
 source: orchestrator
 tags: [agent, coder, workflow]
 facets:
   project: claude
   project_path: D:/01_programovani/claude
-spai_symbol: '.'
+spai_symbol: 'x'
 lang: en
 title_cs: "Zdokumentovány vypínače pro ochranné mechanismy agenta (agent-no-spawn, herdr git guard)"
+done_evidence: "claude+herdr merged, live smoke: switch allows, default denies"
 ---
 
 # SPAI-024: Documented off-switches for the agent guards (agent-no-spawn, herdr git guard)
 
-. Documented off-switches for the agent guards (agent-no-spawn, herdr git guard) @claude :agent:coder:workflow:
+x Documented off-switches for the agent guards (agent-no-spawn, herdr git guard) @claude :agent:coder:workflow:
 
 Fix for key row K07 (Fable reference grading SPAI-023): both new guards lack a documented way to disable them for a fix session, which is how SPAI-025 @anon (a guard blocking its own fix) happened.
 
@@ -36,3 +37,8 @@ HARD_CONSTRAINTS git read-only; you must not start agents or panes; the switch m
 - coder: unit tests above.
 - orchestrator: start a coder with NO_AGENT_GUARD=1 agent.sh coder -> `herdr pane list` allowed and `claude -p hi` allowed (then not executed further); start a normal coder -> denied; in the normal coder `NO_AGENT_GUARD=1 claude -p hi` -> denied.
 Commit proposal: feat(orchestrace): documented off-switches for the agent guards
+
+## Log
+- 2026-11-22 19:42 (orchestrator) session ccae8e2f-e57d-47b3-aa5e-7959977a6d90 pane w2J:p2D transcript C:/Users/jaroslav/.claude/projects/D--01-programovani/ccae8e2f-e57d-47b3-aa5e-7959977a6d90.jsonl
+- 2026-11-22 19:42 (orchestrator) orchestrator session ffe01966-1e2f-4b82-b29b-28c254f3953e transcript C:/Users/jaroslav/.claude/projects/D--01-programovani-claude/ffe01966-1e2f-4b82-b29b-28c254f3953e.jsonl
+- 2026-11-22 19:47 (orchestrator) done: claude+herdr merged, live smoke: switch allows, default denies
