@@ -2,7 +2,9 @@
 # kolega.sh [--agent agy|pi|claude] [--interval s] [--debounce-s s] — spustí (nebo jen ověří) roli
 # „kolega“: agent jen ke čtení v malém panelu vpravo dole a pod ním hlídač, který mu posílá
 # pobídky se sezeními ostatních agentů (orchestrátor, programátor, tester, fable …).
-#   claude (výchozí) claude --model sonnet; zakázané Write, Edit, NotebookEdit, Bash; povolené Read, Grep, Glob;
+#   claude (výchozí) claude --model sonnet; nástroje Read, Grep, Glob, Bash; hook kolega-guard.sh
+#          (jen čtení ~/.claude/projects a ~/.pi/agent/sessions, jen povolené příkazy; vypínač
+#          NO_KOLEGA_GUARD=1 v prostředí hooku); cwd ~/.claude/projects; bez MCP serverů;
 #          CC_ROLE=kolega (watchdog ho bere jako agenta), NO_KOLEGA=1 (nespustí dalšího kolegu),
 #          ANON_MASK_AGENT_STATE=1 (cc-data-anonymizer maskuje i čtené přepisy sezení)
 #   agy    agy --mode plan, příkazy zakázané
@@ -46,11 +48,13 @@ if [[ -n "$kolega" ]]; then echo "kolega už běží: $kolega"; exit 0; fi
 # Umístění: pod programátorem, jinak pod nejpravějším panelem; orchestrátor zůstává na celou výšku.
 target="$(find_pane programátor)"
 [[ -z "$target" ]] && target="$(panes | python -c "import sys,json;P=json.load(sys.stdin)['result']['panes'];print(P[-1]['pane_id'])")"
-kolega="$(herdr pane split --pane "$target" --direction down --ratio 0.7 --cwd "D:/01_programovani" --no-focus \
+home="${USERPROFILE:-$HOME}"; home="${home//\\//}"
+# Kolega claude čte jen kořeny sezení (~/.claude/projects, ~/.pi/agent/sessions) a startuje v prvním z nich.
+cwd0="D:/01_programovani"; [[ "$agent" == claude ]] && cwd0="$home/.claude/projects"
+kolega="$(herdr pane split --pane "$target" --direction down --ratio 0.7 --cwd "$cwd0" --no-focus \
   | python -c "import sys,json;print(json.load(sys.stdin)['result']['pane']['pane_id'])")"
 herdr pane rename "$kolega" "kolega ($agent)" >/dev/null
 
-home="${USERPROFILE:-$HOME}"; home="${home//\\//}"
 dirs="--add-dir '$home/.claude/projects' --add-dir 'D:/01_programovani'"
 [[ -n "$scratch" ]] && dirs+=" --add-dir '$scratch'"
 case "$agent" in
@@ -60,7 +64,14 @@ case "$agent" in
   pi)
     cmd="pi ${KOLEGA_PI_MODEL:+--model '$KOLEGA_PI_MODEL'} --exclude-tools bash,edit,write" ;;
   claude)
-    cmd="\$env:CC_ROLE='kolega'; \$env:NO_KOLEGA='1'; \$env:ANON_MASK_AGENT_STATE='1'; claude --model sonnet --append-system-prompt-file '$(cygpath -m "$canon")/prompts/kolega.md' --allowedTools 'Read,Grep,Glob' --disallowedTools 'Write,Edit,NotebookEdit,Bash,PowerShell,Agent,WebFetch' $dirs" ;;
+    # Jedno sloučené --settings (vzor scripts/agent.sh): hook kolega-guard.sh na všechny nástroje.
+    # Hook pustí jen čtení kořenů sezení a povolené příkazy; bez MCP serverů (prázdná konfigurace).
+    hook="$(cygpath -m "$canon/.claude/hooks/kolega-guard.sh")"
+    csettings="$work/kolega-claude-settings.json"; cmcp="$work/kolega-mcp.json"
+    printf '{"hooks":{"PreToolUse":[{"matcher":".*","hooks":[{"type":"command","command":"bash \\"%s\\""}]}]}}' "$hook" > "$csettings"
+    printf '{"mcpServers":{}}' > "$cmcp"
+    cdirs="--add-dir '$home/.claude/projects' --add-dir '$home/.pi/agent/sessions'"
+    cmd="\$env:CC_ROLE='kolega'; \$env:NO_KOLEGA='1'; \$env:ANON_MASK_AGENT_STATE='1'; claude --model sonnet --append-system-prompt-file '$(cygpath -m "$canon")/prompts/kolega.md' --settings '$(cygpath -m "$csettings")' --strict-mcp-config --mcp-config '$(cygpath -m "$cmcp")' --tools 'Read,Grep,Glob,Bash' --allowedTools 'Read,Grep,Glob,Bash' $cdirs" ;;
 esac
 herdr pane run "$kolega" "$cmd" >/dev/null
 if [[ "$agent" == agy ]]; then
@@ -88,7 +99,7 @@ else
   # Úvodní pobídka: role je v systémovém promptu; první záznam hned, ať je vidět, že běží.
   if [[ "$agent" == claude ]]; then
     live="$(bash "$canon/scripts/kolega-sessions.sh" 2>/dev/null | grep -v '^kolega|' | awk -F'|' '{printf "%s | %s | %s | řádků %s; ", $1, $2, $3, $4}')"
-    herdr agent prompt "$kolega" "Začni: přečti souvislosti (postup orchestrace, prompty rolí, zadání SPAI) a konec přepisů právě běžících sezení: ${live:-žádné nenalezeno}. Napiš první záznam podle své role. Jiné přepisy v ~/.claude/projects nehodnoť." >/dev/null || true
+    herdr agent prompt "$kolega" "Start: read the tail of the transcripts of the sessions running now: ${live:-none found}. Record insights per your role (SPAI notes in the home backlog); reply only with the SPAI IDs or 'no change'." >/dev/null || true
   fi
 fi
 

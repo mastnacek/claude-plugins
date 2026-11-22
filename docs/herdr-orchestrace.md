@@ -124,11 +124,12 @@ tester, fable) a hlásí postřehy. Zadání role: `prompts/kolega.md`.
 - **Spouští se sám:** `scripts/agent.sh` při startu každého agenta zavolá `scripts/kolega.sh`
   (idempotentní; `NO_KOLEGA=1` ho vypne). Orchestrátor ho může spustit i ručně na začátku práce.
 - **Agent kolegy:** `scripts/kolega.sh --agent agy|pi|claude` (výchozí `claude`, nebo `KOLEGA_AGENT`).
-  `claude`: `--model sonnet`, povolené Read, Grep, Glob, zakázané Write, Edit, NotebookEdit, Bash,
-  `CC_ROLE=kolega` (watchdog ho bere jako agenta), `NO_KOLEGA=1` (nespustí dalšího kolegu).
+  `claude`: `--model sonnet`, nástroje Read, Grep, Glob, Bash pod hookem `kolega-guard.sh` (viz
+  níž), cwd `~/.claude/projects`, bez MCP serverů, `CC_ROLE=kolega` (watchdog ho bere jako
+  agenta), `NO_KOLEGA=1` (nespustí dalšího kolegu).
   `agy`: `--dangerously-skip-permissions --mode plan`, `deny command(*)` (agy narazil na limit).
-  `pi`: model z `KOLEGA_PI_MODEL` (bez něj výchozí model pi), `--exclude-tools bash,edit,write`. Všichni čtou `~/.claude/projects`,
-  `D:/01_programovani` a scratchpad. Panel se jmenuje „kolega (<agent>)“; hlídač nemá panel,
+  `pi`: model z `KOLEGA_PI_MODEL` (bez něj výchozí model pi), `--exclude-tools bash,edit,write`;
+  `agy` a `pi` čtou dál `~/.claude/projects`, `D:/01_programovani` a scratchpad. Panel se jmenuje „kolega (<agent>)“; hlídač nemá panel,
   běží skrytě na pozadí (`Start-Process -WindowStyle Hidden`), výpis v `watch.log` stavové
   složky pluginu.
 - **Hlídač řízený událostmi** (plugin `kolega.observer`, repo herdr, `plugins/herdr-kolega`):
@@ -145,6 +146,24 @@ tester, fable) a hlásí postřehy. Zadání role: `prompts/kolega.md`.
   `cargo build --release`) a binárka existuje (`KOLEGA_PLUGIN_BIN`); jinak spustí záložní
   `scripts/kolega-watch.sh` (polling po `--interval`, výchozí 10 min). Akce pluginu `start` volá
   `kolega.sh` (`KOLEGA_SCRIPT`).
+- **Jen čtení, vynucené hookem (`claude`):** `.claude/hooks/kolega-guard.sh` (PreToolUse,
+  matcher `.*`, aktivní jen při `CC_ROLE=kolega`; `kolega.sh` ho předává jedním `--settings`).
+  - *Čtené kořeny:* `~/.claude/projects/**` a `~/.pi/agent/sessions/**`. Read, Grep, Glob (včetně
+    `path` a absolutního vzoru) a každá cesta v příkazu musí být uvnitř; repozitáře, docs ani prompty ne.
+  - *Bash/PowerShell:* jen pipeline (`|`, `&&`, `||`, `;`) z `rg grep jq head tail wc ls sed -n cat
+    sort uniq cut`, `python <repo>/scripts/kolega-read.py <přepis> <od> <do> [--chars N]`
+    (čtečka řádků JSONL, které Read ani Grep neukážou) a `spai add|log|similar|show|list|search`
+    s `--project` = domovský backlog (`C:/Users/jaroslav`). Zamítá přesměrování, `tee`, `-exec`,
+    `-delete`, substituce, `$`, zpětný apostrof, `..` v cestách, neznámé volby a vše ostatní (git,
+    rm, mv, curl, jiný python). Zpráva o zamítnutí říká, co je povoleno.
+  - *Ostatní nástroje* (Write, Edit, NotebookEdit, Agent, WebFetch, WebSearch, `mcp__*`): zamítnuty.
+    Chyba hooku nebo nečitelný vstup = zamítnutí.
+  - *Vypínač:* `NO_KOLEGA_GUARD=1` v prostředí procesu hooku (stejný princip jako `NO_AGENT_GUARD`;
+    nikdy z textu příkazu), jen pro opravu guardu.
+- **Kde jsou poznatky:** kolega zapisuje přes `spai` do **domovského backlogu**
+  (`C:/Users/jaroslav`), anglicky, štítek `:kolega:insight:` + druh, úroveň a jistota; každý důkaz
+  má řádek `session <id> <cesta>:<řádek> "citace"`. Orchestrátor je prochází:
+  `spai list --project C:/Users/jaroslav --tag insight`, ověří proti přepisům a schválené zapracuje.
 - **Je to kolega, ne autorita:** každý postřeh ověř v přepisu a podle konvencí; uživateli řekni,
   co platí, co jen zčásti a co ne. Platné zapiš do SPAI `:workflow:`. Agy posílá přepisy Googlu.
 
