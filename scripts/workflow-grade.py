@@ -4,8 +4,10 @@
   workflow-grade.py <ID> --project <repo> [--orchestrator-transcript <jsonl>] [--key <toml>] [--out-dir <dir>]
                     [--llm [--hand <jsonl>]]
 
---llm: řádky check="llm" ohodnotí jedno volání `claude -p --model sonnet --allowedTools Read,Grep,Glob`
+--llm: řádky check="llm" ohodnotí jedno volání `claude -p --model sonnet --tools ""` (bez nástrojů)
 (binárka z env WORKFLOW_GRADE_CLAUDE); not_met bez řádku důkazu se mění na unknown; výstup píše tento skript.
+Výňatky jsou ukotvené: merge, poslední GATE, živé běhy po "done", soubory hooků/guardu, spai log úkolu (±15 řádků).
+Bez řádku se sezením kodéra v logu se kodér hledá v ~/.claude/projects/<slug WORKDIR ze zadání>/ (env WORKFLOW_GRADE_PROJECTS).
 
 Čte klíč (docs/workflow-klic.toml), úkol (spai show --json) a přepisy JSONL (jen ke čtení):
 přepisy agenta a orchestrátora z logu úkolu (řádky z task-link.sh), orchestrátora lze dát i volbou.
@@ -55,7 +57,11 @@ def load(path):
                 elif ev.get("type") == "assistant" and c.get("type") == "text":
                     final = c.get("text") or final
                 elif ev.get("type") == "user" and c.get("type") == "tool_result":
-                    results[c.get("tool_use_id")] = {"line": n, "error": bool(c.get("is_error"))}
+                    body = c.get("content")
+                    if isinstance(body, list):
+                        body = " ".join(str(b.get("text") or "") for b in body if isinstance(b, dict))
+                    results[c.get("tool_use_id")] = {"line": n, "error": bool(c.get("is_error")),
+                                                     "text": str(body or "")[:4000]}
     return calls, results, final
 
 
@@ -244,34 +250,112 @@ def git_sha(path):
 EXCERPT_CAP = 60000   # znaků výňatků na úkol (všechny llm řádky dohromady)
 CALL_CAP = 300        # znaků jednoho volání ve výňatku
 VERDICTS = {"met", "not_met", "na", "unknown"}
-# co z přepisu je pro řádek relevantní: (zdroj: orch|coder, regex nad textem volání nebo None = vše v rozsahu)
+WINDOW = 15           # řádků přepisu kolem každé kotvy
+RESULT_CAPS = (600, 150, 0)  # znaků těla tool_result; při překročení limitu se zkracuje jako první
+# co z přepisu je pro řádek relevantní: (zdroje: orch/coder, regex volání, které je navíc kotvou, nebo None)
 LLM_SELECT = {
-    "K03": ("orch", re.compile(r"(?i)smoke|scenario|--help|\.exe|plugin\s+(test|validate)|herdr|agent-wait|git\s+merge")),
-    "K05": ("orch", re.compile(r"(?i)spai\s+log|agent\s+prompt|git\s+(diff|status)|agent-wait|git\s+merge")),
-    "K07": ("orch", re.compile(r"(?i)hook|guard|permission|settings|allow|deny|live|disable|off-switch|git\s+merge")),
-    "K09": ("coder", None),
+    "K03": (("orch", "coder"), re.compile(r"(?i)smoke|scenario|--help|plugin\s+(test|validate)")),
+    "K05": (("orch",), re.compile(r"(?i)spai\s+log|agent\s+prompt|git\s+(diff|status)")),
+    "K07": (("orch", "coder"), re.compile(r"(?i)hook|permission|settings|allow|deny|disable|off-switch")),
+    "K09": (("coder",), None),
 }
+# živý běh: příkaz herdr, binárka, nápověda, scénář
+LIVE_RE = re.compile(
+    r"(?i)herdr\s+(agent\s+(prompt|wait|read|get)|pane\s+(run|split|send-text|wait-output|read))"
+    r"|agent-wait|\.exe\b|--help|smoke|claude\s+plugin\s+(test|validate)|cargo\s+run|target/(debug|release)/")
+DONE_RE = re.compile(r"agent-wait|herdr\s+agent\s+(get|read)")
+HOOK_RE = re.compile(r"(?i)\.claude/+hooks/+|guard")
+DIFF_RE = re.compile(r"\bgit\b[^;&|\n]*\b(diff|status|show)\b")
 
 
 def claude_bin():
     return os.environ.get("WORKFLOW_GRADE_CLAUDE") or "claude"
 
 
-def excerpt_lines(label, calls, lo, hi, rx, results):
-    """Řádky výňatku: '<label>:<řádek> <nástroj>[!] <text>'; jen volání v rozsahu lo..hi, která sedí na rx."""
-    out = []
+def norm(text):
+    return text.replace("\\", "/")
+
+
+def render_events(label, calls, results, cap):
+    """{řádek přepisu: text} pro volání i jejich výsledky; tělo výsledku se krátí na cap znaků (0 = jen příznak chyby)."""
+    events = {}
     for c in calls:
-        if not (lo <= c["line"] <= hi):
-            continue
         text = c["text"] if c["name"] in SHELL_TOOLS else c["all"]
-        if rx and not rx.search(c["all"]):
-            continue
         text = " ".join(text.split())
         if len(text) > CALL_CAP:
             text = text[:CALL_CAP] + "…"
-        err = "!" if (results.get(c["id"]) or {}).get("error") else ""
-        out.append(f"{label}:{c['line']} {c['name']}{err} {text}")
+        r = results.get(c["id"]) or {}
+        events[c["line"]] = f"{label}:{c['line']} {c['name']}{'!' if r.get('error') else ''} {text}"
+        body = " ".join((r.get("text") or "").split())
+        if r and cap > 0 and body:
+            events[r["line"]] = f"{label}:{r['line']} result{'!' if r.get('error') else ''} {body[:cap]}"
+        elif r.get("error"):
+            events[r["line"]] = f"{label}:{r['line']} result! (body omitted)"
+    return events
+
+
+def hook_touch(c, results):
+    """Volání, které mění nebo ukazuje soubor pod .claude/hooks či ochranný kód (Edit/Write, nebo git diff/status s ním ve výsledku)."""
+    if c["name"] in EDIT_TOOLS:
+        return bool(HOOK_RE.search(norm(c["all"])))
+    if c["name"] in SHELL_TOOLS and DIFF_RE.search(c["text"]):
+        return bool(HOOK_RE.search(norm((results.get(c["id"]) or {}).get("text", ""))))
+    return False
+
+
+def find_anchors(calls, results, lo, hi, merge=None, row_rx=None, task_rx=None):
+    """[(priorita, řádek, okolí)]; nižší priorita se vybírá dřív: merge, poslední GATE, soubory hooků/guardu,
+    spai log úkolu, živé běhy po 'done' (nejnovější první), samotné 'done', řádky podle regexu řádku klíče."""
+    rng = [c for c in calls if lo <= c["line"] <= hi]
+    shell = [c for c in rng if c["name"] in SHELL_TOOLS]
+    out = []
+    if merge:
+        out.append((0, merge["line"], WINDOW))
+    gates = [c for c in shell if GATE_RE.search(c["text"])]
+    if gates:
+        out.append((1, gates[-1]["line"], WINDOW))
+    out += [(2, c["line"], WINDOW) for c in rng if hook_touch(c, results)]
+    if task_rx:
+        out += [(3, c["line"], WINDOW) for c in shell
+                if re.search(r"(?i)\bspai(?:\.exe)?\s+log\b", c["text"]) and task_rx.search(c["all"])]
+    done = next((c for c in shell if DONE_RE.search(c["text"])), None)
+    after = done["line"] if done else lo
+    live = [c for c in shell if c["line"] > after and LIVE_RE.search(c["text"])]
+    out += [(4, c["line"], WINDOW) for c in reversed(live)]
+    if done:
+        out.append((5, done["line"], WINDOW))
+    if row_rx:
+        out += [(6, c["line"], 1) for c in rng if row_rx.search(c["all"])]
     return out
+
+
+def pick_lines(events, anchors, lo, hi, budget):
+    """Řádky v oknech kotev podle priority, dokud se vejdou do budget; -> (seřazené řádky, něco vypadlo?)."""
+    chosen, used, dropped = {}, 0, False
+    for _prio, line, margin in sorted(anchors):
+        for ln in sorted(k for k in events if line - margin <= k <= line + margin and lo <= k <= hi):
+            if ln in chosen:
+                continue
+            if used + len(events[ln]) + 1 > budget:
+                dropped = True
+                continue
+            chosen[ln] = events[ln]
+            used += len(events[ln]) + 1
+    return [chosen[k] for k in sorted(chosen)], dropped
+
+
+def section_excerpt(label, calls, results, anchors, lo, hi, budget, final=""):
+    """Výňatek jednoho přepisu: nejdřív se zkracují těla tool_result, teprve potom se vyřazují okna s nízkou prioritou."""
+    for cap in RESULT_CAPS:
+        events = render_events(label, calls, results, cap)
+        pool = list(anchors)
+        if final:
+            events[0] = f"{label}:final-report " + " ".join(final.split())[:1500]
+            pool.append((-1, 0, 0))
+        lines, dropped = pick_lines(events, pool, lo, hi, budget)
+        if not dropped:
+            break
+    return lines + (["[... excerpt truncated ...]"] if dropped else [])
 
 
 def build_excerpts(ctx, llm_ids):
@@ -284,47 +368,115 @@ def build_excerpts(ctx, llm_ids):
     for i, (path, _c, _r, _f) in enumerate(ctx["coders"], 1):
         labels[f"C{i}"] = path
     lo = ctx["start"]["line"] if ctx["start"] else 0
-    hi = ctx["merge"]["line"] if ctx["merge"] else float("inf")
+    merge = ctx["merge"]
+    hi = merge["line"] if merge else float("inf")
     per_row = EXCERPT_CAP // max(1, len(llm_ids))
+    task_rx = task_re(ctx["num"]) if ctx.get("num") else None
     out = {}
     for rid in llm_ids:
-        who, rx = LLM_SELECT.get(rid, ("orch", None))
-        lines = []
-        if who == "orch" and orch_label:
-            lines = excerpt_lines(orch_label, ctx["orch"], lo, hi, rx, ctx["orch_results"])
-        elif who == "coder":
+        who, row_rx = LLM_SELECT.get(rid, (("orch",), None))
+        sections = []   # (label, calls, results, anchors, lo, hi, final)
+        if "orch" in who and orch_label:
+            anchors = find_anchors(ctx["orch"], ctx["orch_results"], lo, hi, merge, row_rx, task_rx)
+            sections.append((orch_label, ctx["orch"], ctx["orch_results"], anchors, lo, hi + WINDOW, ""))
+        if "coder" in who:
             for i, (_p, calls, results, final) in enumerate(ctx["coders"], 1):
-                lines += excerpt_lines(f"C{i}", calls, 0, float("inf"), rx, results)
-                if final:
-                    lines.append(f"C{i}:final-report " + " ".join(final.split())[:1500])
-        text, used = [], 0
-        for ln in lines:
-            if used + len(ln) + 1 > per_row:
-                text.append("[... excerpt truncated ...]")
-                break
-            text.append(ln)
-            used += len(ln) + 1
+                if rid == "K09":  # řetěz hooků: kodérovy volání celá
+                    anchors = [(1, c["line"], 1) for c in calls]
+                else:
+                    anchors = find_anchors(calls, results, 0, float("inf"), None, row_rx)
+                sections.append((f"C{i}", calls, results, anchors, 0, float("inf"), final))
+        text = []
+        for label, calls, results, anchors, a, b, final in sections:
+            text += section_excerpt(label, calls, results, anchors, a, b, per_row // len(sections), final)
         out[rid] = "\n".join(text) or "(no relevant transcript lines found)"
     return out, labels
 
 
+def first_user_text(path):
+    """Text první zprávy uživatele v přepisu (pro hledání úkolu)."""
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        for raw in fh:
+            try:
+                e = json.loads(raw)
+            except ValueError:
+                continue
+            if e.get("type") != "user" or e.get("isMeta"):
+                continue
+            c = (e.get("message") or {}).get("content")
+            if isinstance(c, list):
+                c = " ".join(str(b.get("text") or "") for b in c if isinstance(b, dict))
+            if isinstance(c, str) and c.strip():
+                return c
+    return ""
+
+
+def projects_dir(path_text):
+    """~/.claude/projects/<slug cesty> (slug: nealfanumerické znaky -> '-'); kořen lze přepsat WORKFLOW_GRADE_PROJECTS."""
+    root = os.environ.get("WORKFLOW_GRADE_PROJECTS") or str(Path.home() / ".claude" / "projects")
+    return Path(root) / re.sub(r"[^A-Za-z0-9]", "-", path_text)
+
+
+def fallback_orch(project, exclude):
+    """Úkol bez řádku s přepisem orchestrátora: přepisy v projects/<slug repa>/, nejnovější první."""
+    base = projects_dir(project)
+    if not base.is_dir():
+        return []
+    skip = {Path(p).resolve() for p in exclude}
+    return [str(p) for p in sorted(base.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+            if p.resolve() not in skip]
+
+
+def fallback_coder(task, exclude):
+    """Úkol bez řádku se sezením kodéra: nejnovější přepis v <projects>/<slug WORKDIR ze zadání>/, jehož první zpráva zmiňuje ID."""
+    m = re.search(r"(?m)^\s*WORKDIR\s+(\S+)", task.get("body") or "")
+    if not m:
+        return []
+    base = projects_dir(m.group(1))
+    if not base.is_dir():
+        return []
+    skip = {Path(p).resolve() for p in exclude}
+    tid = re.compile(rf"(?i)\b{re.escape(task['id'])}\b")
+    for p in sorted(base.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True):
+        if p.resolve() not in skip and tid.search(first_user_text(p)):
+            return [str(p)]
+    return []
+
+
+def smoke_steps(body):
+    """Kroky z oddílu '## SMOKE' zadání (neprázdné řádky, bez číslování) -> seznam textů."""
+    m = re.search(r"(?ms)^[ \t]*##\s*SMOKE[^\n]*\n(.*?)(?=^[ \t]*##\s|^[ \t]*Commit proposal|^- \d{4}-\d\d-\d\d|\Z)", body or "")
+    if not m:
+        return []
+    return [re.sub(r"^\s*(?:\d+[.)]|[-*])\s*", "", ln).strip() for ln in m.group(1).splitlines() if ln.strip()]
+
+
 def build_prompt(task, key_rows, excerpts, labels):
-    rows = "\n\n".join(
+    steps = smoke_steps(task.get("body"))
+    smoke = ""
+    if steps and any(r["id"] == "K03" for r in key_rows):
+        smoke = ("\nK03 SMOKE steps of the brief (numbered). For K03 write in the note one entry per step: the excerpt line "
+                 "(<label>:<line>) that shows it run live, or 'not run'. If any functional step is 'not run' -> not_met "
+                 "(cite the line of the merge or of the last related run).\n"
+                 + "\n".join(f"{i}. {s}" for i, s in enumerate(steps, 1)) + "\n")
+    rows ="\n\n".join(
         f"### {r['id']} ({r['who']})\ntrigger: {r['trigger']}\nrequired: {r['required']}\nevidence: {r['evidence']}\n"
         f"transcript excerpt (format <label>:<line> <tool> <call>; '!' = the call failed):\n{excerpts[r['id']]}"
         for r in key_rows)
     lab = "\n".join(f"{k} = {v}" for k, v in labels.items()) or "(none)"
     return (
-        "You grade how an orchestrator and a coder agent followed a workflow key. Judge each row below only from the "
-        "excerpts (you may use Read/Grep/Glob on the transcript files, read-only). Do not guess: if the excerpt does not "
-        "decide it, answer unknown.\n"
+        "You grade how an orchestrator and a coder agent followed a workflow key. You have no tools. Judge each row "
+        "below only from the excerpts; the repository today may differ from the state at task time, so never judge "
+        "from what you believe the repository contains now. Do not guess: if the excerpt does not decide it, answer unknown.\n"
         "Verdicts: met (trigger happened and the required behaviour is evidenced), not_met (trigger happened and the "
         "behaviour is missing), na (trigger did not happen), unknown.\n"
         "not_met MUST cite at least one evidence line.\n"
+        "K05: if the excerpts show the orchestrator's review (gate run, live smoke) and no spai log entry reporting a "
+        "defect of the agent's result, the trigger did not happen -> na, not unknown.\n"
         "Reply with ONLY a JSON array, no prose, no code fence, one object per row:\n"
         '[{"row":"K03","verdict":"met|not_met|na|unknown","evidence":[{"transcript":"<label>","line":<int>}],"note":"<one sentence>"}]\n\n'
         f"Task {task['id']}: {task.get('title', '')}\nBrief:\n{(task.get('body') or '')[:6000]}\n\n"
-        f"Transcript labels:\n{lab}\n\n{rows}\n")
+        f"Transcript labels:\n{lab}\n{smoke}\n{rows}\n")
 
 
 def parse_grader(raw, key_rows, labels):
@@ -365,8 +517,8 @@ def parse_grader(raw, key_rows, labels):
 
 
 def run_grader(prompt):
-    """Jedno volání claude -p (Sonnet, jen čtení); prompt jde na stdin. Vrací stdout nebo None při selhání."""
-    cmd = [claude_bin(), "-p", "--model", "sonnet", "--allowedTools", "Read,Grep,Glob", "--output-format", "json"]
+    """Jedno volání claude -p (Sonnet, bez nástrojů: soudí jen z výňatků); prompt jde na stdin. Vrací stdout nebo None při selhání."""
+    cmd = [claude_bin(), "-p", "--model", "sonnet", "--tools", "", "--output-format", "json"]
     try:
         r = subprocess.run(cmd, input=prompt, capture_output=True, text=True, encoding="utf-8", timeout=900)
     except (OSError, subprocess.SubprocessError):
@@ -383,7 +535,7 @@ def grade(task_id, project, orch_transcript=None, key_path=None, llm=False):
     if orch_transcript:
         orch_paths.insert(0, orch_transcript)
     orch_paths = [p for p in orch_paths if Path(p).exists()]
-    agent_paths = [p for p in agent_paths if Path(p).exists()]
+    agent_paths = [p for p in agent_paths if Path(p).exists()] or fallback_coder(task, orch_paths)
     ctx = {"task": task, "num": num, "orch": None, "orch_path": None, "project": Path(project).name, "first": None, "send": None, "start": None, "merge": None, "coders": []}
     rx = task_re(num)
     for p in orch_paths:
@@ -393,6 +545,19 @@ def grade(task_id, project, orch_transcript=None, key_path=None, llm=False):
             ctx.update(orch=calls, orch_results=results, orch_path=p, first=first, send=send, merge=merge,
                        start=send or first)
             break
+    if not ctx["orch"]:  # záloha: přepisy repa; první s merge úkolu, jinak první, kde je úkol zmíněn
+        found = []
+        for p in fallback_orch(project, orch_paths):
+            calls, results, _ = load(p)
+            first, send, merge = task_window(calls, rx, num, Path(project).name)
+            if first:
+                found.append((calls, results, p, first, send, merge))
+                if merge:
+                    break
+        if found:
+            calls, results, p, first, send, merge = next((f for f in found if f[5]), found[0])
+            ctx.update(orch=calls, orch_results=results, orch_path=p, first=first, send=send, merge=merge,
+                       start=send or first)
     if not ctx["orch"] and orch_paths:  # úkol v přepisu nenalezen
         calls, results, _ = load(orch_paths[0])
         ctx.update(orch=calls, orch_results=results, orch_path=orch_paths[0])
