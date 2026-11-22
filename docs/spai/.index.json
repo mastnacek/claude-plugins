@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "lastUpdated": "2026-11-22 18:45:04",
-  "lastId": "SPAI-019",
+  "lastUpdated": "2026-11-22 18:49:51",
+  "lastId": "SPAI-022",
   "records": [
     {
       "id": "SPAI-002",
@@ -277,6 +277,49 @@
       "blockedBy": [
         "SPAI-018"
       ]
+    },
+    {
+      "id": "SPAI-020",
+      "title": "Orchestrator: merge and cleanup are separate steps; check the merge result (git status, log) before worktree remove --force and branch -d",
+      "type": "Note",
+      "status": "note",
+      "symbol": "-",
+      "timestamp": "2026-11-22 18:48:52",
+      "tags": [
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-22-SPAI-020-orchestrator-merge-and-cleanup-are-separate-steps.md"
+    },
+    {
+      "id": "SPAI-021",
+      "title": "Scripts changed by the orchestrator get a live run before commit (kolega.sh dialog loop committed after bash -n only)",
+      "type": "Todo",
+      "status": "todo",
+      "symbol": ".",
+      "timestamp": "2026-11-22 18:49:21",
+      "tags": [
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-22-SPAI-021-scripts-changed-by-the-orchestrator-get-a-live-run.md"
+    },
+    {
+      "id": "SPAI-022",
+      "title": "task-link.sh recorded a stale coder transcript for SPAI-008 (claude-wait session instead of the herdr-git one)",
+      "type": "Todo",
+      "status": "todo",
+      "symbol": ".",
+      "timestamp": "2026-11-22 18:49:51",
+      "tags": [
+        "workflow",
+        "bug"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-22-SPAI-022-task-linksh-recorded-a-stale-coder-transcript-for.md"
     }
   ]
 }
