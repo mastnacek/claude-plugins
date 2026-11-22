@@ -59,7 +59,7 @@ case "$agent" in
   pi)
     cmd="pi ${KOLEGA_PI_MODEL:+--model '$KOLEGA_PI_MODEL'} --exclude-tools bash,edit,write" ;;
   claude)
-    cmd="\$env:CC_ROLE='kolega'; \$env:NO_KOLEGA='1'; claude --model sonnet --append-system-prompt-file '$(cygpath -m "$canon")/prompts/kolega.md' --allowedTools 'Read,Grep,Glob' --disallowedTools 'Write,Edit,NotebookEdit,Bash,PowerShell,Agent,WebFetch' --settings '{\"enabledPlugins\":{\"cc-data-anonymizer@mastnacek\":false}}' $dirs" ;;
+    cmd="\$env:CC_ROLE='kolega'; \$env:NO_KOLEGA='1'; claude --model sonnet --append-system-prompt-file '$(cygpath -m "$canon")/prompts/kolega.md' --allowedTools 'Read,Grep,Glob' --disallowedTools 'Write,Edit,NotebookEdit,Bash,PowerShell,Agent,WebFetch' $dirs" ;;
 esac
 herdr pane run "$kolega" "$cmd" >/dev/null
 if [[ "$agent" == agy ]]; then
