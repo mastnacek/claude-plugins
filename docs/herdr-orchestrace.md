@@ -113,7 +113,7 @@ tester, fable) a hlásí postřehy. Zadání role: `prompts/kolega.md`.
 - **Spouští se sám:** `scripts/agent.sh` při startu každého agenta zavolá `scripts/kolega.sh`
   (idempotentní; `NO_KOLEGA=1` ho vypne). Orchestrátor ho může spustit i ručně na začátku práce.
 - **Agent kolegy:** `scripts/kolega.sh --agent agy|pi|claude` (výchozí `claude`, nebo `KOLEGA_AGENT`).
-  `claude`: `--model haiku`, povolené Read, Grep, Glob, zakázané Write, Edit, NotebookEdit, Bash,
+  `claude`: `--model sonnet`, povolené Read, Grep, Glob, zakázané Write, Edit, NotebookEdit, Bash,
   `CC_ROLE=kolega` (watchdog ho bere jako agenta), `NO_KOLEGA=1` (nespustí dalšího kolegu).
   `agy`: `--dangerously-skip-permissions --mode plan`, `deny command(*)` (agy narazil na limit).
   `pi`: model z `KOLEGA_PI_MODEL` (bez něj výchozí model pi), `--exclude-tools bash,edit,write`. Všichni čtou `~/.claude/projects`,
