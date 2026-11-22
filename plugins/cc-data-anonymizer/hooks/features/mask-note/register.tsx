@@ -1,5 +1,6 @@
 import type { EngineInterface, Register } from "claude-code";
 import { atom, read } from "claude-code";
+import { LOCKED_NOTE } from "../../shared/anon";
 import { kindColor } from "../../shared/findings";
 import { textKey } from "../../shared/notes";
 import type { MaskNote } from "../../../types";
@@ -25,9 +26,12 @@ function frame(note: MaskNote, { Box, Text }: Els) {
 	const hidden = note.values.length - shownValues.length;
 	return (
 		<Box flexDirection="column" borderStyle="round" borderColor="warning" paddingX={1}>
-			<Text color="warning">
-				🔒 anon: zamaskováno {note.count} hodnot ({kindList(note)}), styl {note.style || "výchozí"}
-			</Text>
+			{note.count > 0 && (
+				<Text color="warning">
+					🔒 anon: zamaskováno {note.count} hodnot ({kindList(note)}), styl {note.style || "výchozí"}
+				</Text>
+			)}
+			{note.isLocked === true && <Text color="error">⚠ {LOCKED_NOTE} Hodnoty jen z trezoru se nemaskují.</Text>}
 			{shownValues.map((v, i) => (
 				<Text key={String(i)}>
 					{"  "}

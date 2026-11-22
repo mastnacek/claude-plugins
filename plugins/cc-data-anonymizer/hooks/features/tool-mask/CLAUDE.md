@@ -16,6 +16,7 @@ zpět na originály. Bez něj by agent četl originály nebo by Edit nenašel te
 - volba `style` (`default|fake|redact|tag`) se předává `anon mask --style`; `default` příznak nepošle (rozhodne `rules.toml` anonu). `unmask` styl nepotřebuje (fake i tag jdou vrátit).
 - značky (`shared/tags.ts`): vstupní úplná značka, kterou anon v tomto sezení nevydal (`issuedTags`), se zamítne před `anon unmask`; `anon unmask --strict` vypíše značky, které nezná (částečná, jiná velikost, HTML/JSON escape); zamítne se zprávou „Neznámá nebo poškozená značka …“. Značka je jen s číslicemi: obecný zápis v dokumentaci (`druh`, `n` písmeny) je text.
 - zápis `REDACTED` jako hodnoty (styl `redact`) se zamítne: Edit/Write/NotebookEdit jako hodnota v uvozovkách nebo za `=`/`:`, Bash/PowerShell jen u příkazu zapisujícího soubor; čtení a hledání projde; vstup `mcp__*` se značkou se zamítne (MCP značky neodmaskuje).
+- zamčený anon (`locked: true`) čtení nezastaví (maskuje podle pravidel); vstup se značkou z hlavní mapy `anon unmask` odmítne a plugin ho zamítne zprávou „anon je zamčený: tuto značku vrátí až anon unlock“.
 - `anon` chybí nebo selže → `deny` s jasnou zprávou (fail-closed).
 
 ## Kontrakt

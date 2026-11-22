@@ -21,6 +21,28 @@ export class UnknownTagsError extends AnonError {
 	}
 }
 
+/** Shown once per session as a toast and under every row masked while anon is locked. */
+export const LOCKED_NOTE =
+	"anon je zamčený: maskuje se jen podle pravidel (trezor a mapa nejsou k dispozici). Spusť anon unlock.";
+
+/** `anon unmask` while locked met a tag only the main map knows (anon's own wording). */
+export const LOCKED_TAG = "anon je zamčený: tuto značku vrátí až anon unlock. Spusť anon unlock ve vlastním terminálu.";
+
+export class LockedTagError extends AnonError {
+	constructor() {
+		super(LOCKED_TAG);
+	}
+}
+
+let isToasted = false;
+
+/** The toast of the locked state, once per session (a reload starts over). */
+function toastLocked($: $): void {
+	if (isToasted) return;
+	isToasted = true;
+	$.ui.toast(LOCKED_NOTE);
+}
+
 export type Style = "fake" | "redact" | "tag";
 
 /** The `style` option as an `anon mask --style` value; unset or "default" leaves it to anon (its rules.toml). */
@@ -51,7 +73,8 @@ export function mergeNotes(a: MaskNote | undefined, b: MaskNote): MaskNote {
 	for (const [kind, n] of Object.entries(b.kinds)) kinds[kind] = (kinds[kind] ?? 0) + n;
 	const seen = new Set(a.values.map((v) => `${v.kind}\0${v.text}`));
 	const values = [...a.values, ...b.values.filter((v) => !seen.has(`${v.kind}\0${v.text}`))];
-	return { count: a.count + b.count, kinds, style: b.style || a.style, values };
+	const isLocked = a.isLocked === true || b.isLocked === true;
+	return { count: a.count + b.count, kinds, style: b.style || a.style, values, ...(isLocked ? { isLocked } : {}) };
 }
 export type ScanResult = { isFound: boolean; findings: Finding[] };
 
@@ -94,14 +117,20 @@ function firstLine(text: string): string {
 type Replacement = { kind?: unknown; count?: unknown };
 
 /** What the screen may learn from one `anon mask --json`: counts per kind and the style, never a value. */
-function noteOf(parsed: { style?: unknown; replacements?: unknown }): MaskNote {
+function noteOf(parsed: { style?: unknown; replacements?: unknown; locked?: unknown }): MaskNote {
 	const kinds: Record<string, number> = {};
 	const list = Array.isArray(parsed.replacements) ? (parsed.replacements as Replacement[]) : [];
 	for (const r of list) {
 		if (typeof r.kind === "string" && typeof r.count === "number") kinds[r.kind] = (kinds[r.kind] ?? 0) + r.count;
 	}
 	const count = Object.values(kinds).reduce((sum, n) => sum + n, 0);
-	return { count, kinds, style: typeof parsed.style === "string" ? parsed.style : "", values: [] };
+	return {
+		count,
+		kinds,
+		style: typeof parsed.style === "string" ? parsed.style : "",
+		values: [],
+		...(parsed.locked === true ? { isLocked: true } : {}),
+	};
 }
 
 /**
@@ -144,9 +173,10 @@ async function transform(
 		}
 	}
 	if (run.exitCode !== 0) {
+		if (command === "unmask" && /tuto značku vrátí až anon unlock/.test(run.stderr + run.stdout)) throw new LockedTagError();
 		throw new AnonError(`anon ${command} failed (exit ${run.exitCode}): ${firstLine(run.stderr || run.stdout)}`);
 	}
-	let parsed: { ok?: boolean; text?: unknown; style?: unknown; replacements?: unknown };
+	let parsed: { ok?: boolean; text?: unknown; style?: unknown; replacements?: unknown; locked?: unknown };
 	try {
 		parsed = JSON.parse(run.stdout);
 	} catch {
@@ -157,9 +187,11 @@ async function transform(
 	}
 	// Every tag the model gets to see is one this session was issued; unmask accepts no other.
 	if (command === "mask") await rememberTags($, parsed.text);
+	// A locked anon still masks by its rules: the session goes on, the screen says what is missing.
+	if (parsed.locked === true) toastLocked($);
 	if (command === "mask" && sink !== undefined) {
 		const note = noteOf(parsed);
-		if (note.count > 0) {
+		if (note.count > 0 || note.isLocked) {
 			note.values = await detected($, text, sink.reveal);
 			sink.note = mergeNotes(sink.note, note);
 		}

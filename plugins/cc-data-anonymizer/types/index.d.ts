@@ -20,6 +20,8 @@ export type MaskNote = {
 	kinds: Record<string, number>;
 	style: string;
 	values: { kind: string; text: string }[];
+	/** anon was locked: masked by rules only, vault values and the main map were not used. */
+	isLocked?: boolean;
 };
 
 declare module "claude-code" {

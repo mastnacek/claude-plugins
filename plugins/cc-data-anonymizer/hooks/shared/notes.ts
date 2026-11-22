@@ -28,7 +28,7 @@ export function textKey(text: string): string {
 
 /** Adds this tool call's masking outcome to the note under its row. */
 export function recordToolNote($: $, toolUseId: string, note: MaskNote | undefined) {
-	if (note === undefined || note.count === 0) return Promise.resolve();
+	if (note === undefined || (note.count === 0 && !note.isLocked)) return Promise.resolve();
 	return update($, notes, (all) => ({ ...newest(all), [toolUseId]: mergeNotes(all?.[toolUseId], note) }));
 }
 
@@ -40,7 +40,7 @@ export function recordPromptImages($: $, text: string, count: number) {
 
 /** Adds a masking outcome to the note under a user message (the prompt, then its @ files). */
 export function recordPromptNote($: $, text: string, note: MaskNote | undefined) {
-	if (note === undefined || note.count === 0) return Promise.resolve();
+	if (note === undefined || (note.count === 0 && !note.isLocked)) return Promise.resolve();
 	const key = textKey(text);
 	return update($, promptNotes, (all) => ({ ...newest(all), [key]: mergeNotes(all?.[key], note) }));
 }

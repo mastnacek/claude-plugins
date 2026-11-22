@@ -37,7 +37,7 @@ anon now treats the vault as the main source; rules that only guess are suggesti
 
 - First run `anon unlock` **in your own terminal window** (never through `!` in a Claude Code session: the password would end up in the transcript). The first unlock sets the master password and converts the vault; the map and fake values stay the same. Until then the old vault without a password keeps working.
 - The key is protected by Argon2id (about 0.5 s on this PC) and XChaCha20-Poly1305, plus DPAPI on top.
-- After 30 minutes without use the vault locks (`[anon] lock_minutes`). While locked, the plugin denies every read and write in all sessions, agents included, until you run `anon unlock` again or press `Ctrl+K` in `anon tui` (`Ctrl+L` locks).
+- After 30 minutes without use the vault locks (`[anon] lock_minutes`; `0` = never lock on idle, only `anon lock` locks). Locked does **not** stop the session: `anon` keeps masking by its rules only, a warning shows under the row (and once per session as a toast) and values that are only in the vault are **not masked** until you run `anon unlock` (or press `Ctrl+K` in `anon tui`; `Ctrl+L` locks). Tags issued while locked go to a temporary map that `anon unlock` merges. A write or command holding a tag issued before the lock is denied: "anon je zamčený: tuto značku vrátí až anon unlock". Needs an anon with the locked mode (SPAI-038).
 - `anon lock` locks now, `anon passwd` changes the password, `anon vault rekey` makes a new data key (crash-safe).
 - **If you forget the master password, the vault and the map cannot be recovered.** Keep it in your password manager.
 

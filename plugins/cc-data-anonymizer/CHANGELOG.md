@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0
+
+- Zamčený anon už nezastaví sezení. Když `anon` hlásí `locked: true` (trezor je zamčený), čtení a prompty se nezamítají: maskuje se jen podle pravidel (anon od téže verze), pod řádkem nástroje a pod zprávou uživatele je viditelná poznámka a jednou za sezení toast „anon je zamčený: maskuje se jen podle pravidel (trezor a mapa nejsou k dispozici). Spusť anon unlock.“. Hodnota, která je jen v trezoru, se při zamčení nemaskuje (poznámka to říká).
+- Zápis nebo příkaz se značkou z hlavní mapy (vydanou před zamčením) se při zamčení zamítne zprávou „anon je zamčený: tuto značku vrátí až anon unlock“; značky vydané během zamčení (dočasná mapa anonu, čísla od 100001) se odmaskují normálně.
+- Kontrakt `$.state`: `MaskNote.isLocked`.
+- Vyžaduje anon se zamčeným režimem (SPAI-038); starší anon při zamčení dál zamítá, jako dřív.
+
 ## 0.8.1
 
 - Obrázky a PDF řeší jen `media-guard`: `tool-mask` a skenování souhlasu je podle přípony (bez ohledu na velikost písmen) přeskočí. Čtení `.png` se už nezastaví na „anon scan failed … soubor není UTF-8 text“, ale dojde k dialogu „Obrázek nejde zamaskovat. Poslat ho modelu?“; povolený obrázek projde beze změny.

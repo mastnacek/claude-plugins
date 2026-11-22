@@ -1,5 +1,5 @@
 import type { Register } from "claude-code";
-import { AnonError, UnknownTagsError, convert, noteSink, styleOf } from "../../shared/anon";
+import { AnonError, LockedTagError, UnknownTagsError, convert, noteSink, styleOf } from "../../shared/anon";
 import { isFileAllowed, policyOf } from "../../shared/consent";
 import { recordToolNote } from "../../shared/notes";
 import { isAgentState, isMedia } from "../../shared/paths";
@@ -53,6 +53,7 @@ export const registerToolMask = ((on, options) => {
 			await recordToolNote($, e.tool_use_id, sink.note);
 			return masked;
 		} catch (error) {
+			if (error instanceof LockedTagError) return { deny: error.message };
 			if (error instanceof UnknownTagsError) return { deny: unknownTagMessage(error.tags[0] ?? "") };
 			// anon refuses a file that is not UTF-8 text: say so plainly instead of its raw error.
 			if (e.tool === "Read" && error instanceof AnonError && /UTF-8/i.test(error.message)) return { deny: BINARY };
