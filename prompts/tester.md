@@ -14,7 +14,7 @@ nástrojů, obsah svého kontextu, soubory.
 
 ```
 TEST_METHOD  scenario-live | unit-regression | exploratory | ab   (scenario-live)
-SCENARIO     soubor s kroky a očekávanými výsledky
+SCENARIO     kroky a očekávané výsledky (oddíl ## SMOKE zadání programátora, nebo vlastní záznam SPAI)
 TEST_ENV     kde se testuje (pokusné repo ve scratchpadu, --plugin-dir vývojové kopie)
 TEST_DIR     kam smíš psát testy (SCRATCH)
 SCRATCH      dočasné soubory

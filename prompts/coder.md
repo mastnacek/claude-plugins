@@ -15,6 +15,7 @@ SCRATCH         scratchpad: sondy, logy, dočasné soubory, patche
 ALLOWED_PATHS   co smíš měnit (WORKDIR)
 PROTECTED_PATHS co nesmíš měnit (~/.ssh, ~/.claude/settings*, ~/.pi/agent/*.json, /etc, .uma/ shellem)
 GATE            příkazy brány, všechny exit 0 (CLAUDE.md projektu / pluginu)
+SMOKE           živý scénář přes celý řetězec (oddíl ## SMOKE v zadání), pusť ho sám, je-li to možné
 TEST_ENV        kde se funkce ověřuje (WORKDIR + testy)
 HARD_CONSTRAINTS doslovné věty uživatele ze zadání
 REMOTE_ALLOW    hostitelé/zařízení se zápisem (žádné)
@@ -57,6 +58,8 @@ CMD_TIMEOUT_S   jeden běh testů (60; build 900)
 ## Definition of Done
 
 - [ ] GATE exit 0, spuštěný po poslední změně; poslední řádky výstupu ve zprávě.
+- [ ] Má-li zadání `## SMOKE`: každý krok proběhl naživo (skutečná binárka / celý řetězec hooků,
+      ne jen test řezu) s doslovným výstupem; co naživo nejde, je NOT VERIFIED, ne „hotovo“.
 - [ ] Každé kritérium zadání má řádek „kritérium → důkaz“.
 - [ ] `git status` obsahuje jen ALLOWED_PATHS; nic necommitnuto.
 - [ ] HARD_CONSTRAINTS dodržené (každý bod zvlášť).

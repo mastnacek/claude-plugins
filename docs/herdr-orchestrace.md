@@ -61,6 +61,10 @@ Každé zadání agentovi je **záznam SPAI** v backlogu hlavního repa (ne work
    Řádek `. <cíl jednou větou> :agent:coder:` (`:tester:`, `:review:`), anglicky. Tělo:
    hlavička konstant (`WORKDIR`, `SCRATCH`, `ALLOWED_PATHS`, `GATE`, `HARD_CONSTRAINTS`,
    `REMOTE_ALLOW`), cíl, rozsah a co je mimo, testy, kritérium hotovo, návrh commitu.
+   **Každé zadání, které mění chování viditelné uživateli, má oddíl `## SMOKE`:** živý scénář
+   přes celý řetězec (skutečná binárka / nainstalovaný plugin, vymyšlená data ve scratchpadu),
+   kroky jako od uživatele a očekávaný výsledek každého. Testy řezu ani zelená brána ho
+   nenahrazují (2026-11-20..22: třikrát „hotovo“ se zelenou bránou a chybou v živém běhu).
    Navazující úkoly řetěz přes `--after <ID>`; plán celé práce zapiš najednou.
 2. **Odeslání:** `spai set <ID> working`, pak agentovi jen
    „Read SPAI-012 @<projekt> (`spai show SPAI-012 --project <hlavní repo> --json`) and carry it out fully now.“
@@ -79,6 +83,9 @@ Každé zadání agentovi je **záznam SPAI** v backlogu hlavního repa (ne work
 - **Výsledek ověř sám:** `git status` a `git diff --stat` ve worktree (soubory jen z
   `ALLOWED_PATHS`), celou bránu pusť sám, tvrzení zprávy ověř v datech. Vadný výsledek vrať
   s konkrétní výtkou (`spai log`), neopravuj ho potichu.
+- **Před sloučením projde `SMOKE`:** scénář pusť ty nebo tester (tabulka krok → výsledek →
+  OK/FAIL). Výstup, který by čtení orchestrátora zkreslil (vlastní plugin maskuje), zakóduj
+  (rot13) nebo čti z testerova panelu. Bez `SMOKE` OK se neslučuje.
 - Po sloučení release build a instalace, uklidit worktree, větev a panel.
 
 ## Zadání testerovi
