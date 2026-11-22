@@ -68,10 +68,17 @@ case "$agent" in
     # Hook pustí jen čtení kořenů sezení a povolené příkazy; bez MCP serverů (prázdná konfigurace).
     hook="$(cygpath -m "$canon/.claude/hooks/kolega-guard.sh")"
     csettings="$work/kolega-claude-settings.json"; cmcp="$work/kolega-mcp.json"
-    printf '{"hooks":{"PreToolUse":[{"matcher":".*","hooks":[{"type":"command","command":"bash \\"%s\\""}]}]}}' "$hook" > "$csettings"
+    # Stop: hook agent-notify.sh ohlásí jen zásadní zjištění (:fundamental:) do panelu orchestrátora.
+    nhook="$(cygpath -m "$canon/.claude/hooks/agent-notify.sh")"
+    printf '{"hooks":{"PreToolUse":[{"matcher":".*","hooks":[{"type":"command","command":"bash \\"%s\\""}]}],"Stop":[{"hooks":[{"type":"command","command":"bash \\"%s\\"","timeout":15}]}]}}' "$hook" "$nhook" > "$csettings"
+    # Panel orchestrátora: ORCH_PANE volajícího; jinak HERDR_PANE_ID, ale jen když neběží uvnitř
+    # agenta (CC_ROLE prázdné = volá orchestrátor). Z agent.sh v panelu programátora jen ORCH_PANE.
+    orch="${ORCH_PANE:-}"
+    [[ -z "$orch" && -z "${CC_ROLE:-}" ]] && orch="${HERDR_PANE_ID:-}"
+    orch_env=""; [[ -n "$orch" ]] && orch_env="\$env:ORCH_PANE='$orch'; "
     printf '{"mcpServers":{}}' > "$cmcp"
     cdirs="--add-dir '$home/.claude/projects' --add-dir '$home/.pi/agent/sessions'"
-    cmd="\$env:CC_ROLE='kolega'; \$env:NO_KOLEGA='1'; \$env:ANON_MASK_AGENT_STATE='1'; claude --model sonnet --append-system-prompt-file '$(cygpath -m "$canon")/prompts/kolega.md' --settings '$(cygpath -m "$csettings")' --strict-mcp-config --mcp-config '$(cygpath -m "$cmcp")' --tools 'Read,Grep,Glob,Bash' --allowedTools 'Read,Grep,Glob,Bash' $cdirs" ;;
+    cmd="${orch_env}\$env:CC_ROLE='kolega'; \$env:NO_KOLEGA='1'; \$env:ANON_MASK_AGENT_STATE='1'; claude --model sonnet --append-system-prompt-file '$(cygpath -m "$canon")/prompts/kolega.md' --settings '$(cygpath -m "$csettings")' --strict-mcp-config --mcp-config '$(cygpath -m "$cmcp")' --tools 'Read,Grep,Glob,Bash' --allowedTools 'Read,Grep,Glob,Bash' $cdirs" ;;
 esac
 herdr pane run "$kolega" "$cmd" >/dev/null
 if [[ "$agent" == agy ]]; then

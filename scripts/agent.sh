@@ -15,6 +15,8 @@
 #
 # NO_AGENT_GUARD=1 agent.sh coder      vypne hook agent-no-spawn.sh pro toto sezení (proměnná se
 #                                      dědí do claude i do procesu hooku); jen pro opravu guardu.
+# ORCH_PANE=<panel orchestrátora> agent.sh coder   agent po každém tahu pošle orchestrátorovi
+#                                      DONE / BLOCKED / WAITING (hook agent-notify.sh); bez ní mlčí.
 # Prostředí: AGENT_SCRATCH = scratchpad orchestrátora (přístup bez dotazu);
 #            CODE_MODE=1 = Code Mode Claude Code (jen agenti; vypíná Remote Control).
 # Windows: spouštěj přes Git Bash (& 'C:\Program Files\Git\bin\bash.exe' scripts/agent.sh coder).
@@ -54,10 +56,11 @@ for ((i = 0; i < ${#args[@]}; i++)); do
     *) pass+=("${args[i]}") ;;
   esac
 done
-PYTHONUTF8=1 python - "$settings" "$hook" "${#disable[@]}" "${disable[@]}" "${user_settings[@]}" <<'PY'
+notify_hook="$(cygpath -m "$canon/.claude/hooks/agent-notify.sh" 2>/dev/null || echo "$canon/.claude/hooks/agent-notify.sh")"
+PYTHONUTF8=1 python - "$settings" "$hook" "$notify_hook" "${#disable[@]}" "${disable[@]}" "${user_settings[@]}" <<'PY'
 import json, os, sys
-out, hook, n = sys.argv[1], sys.argv[2], int(sys.argv[3])
-disable, users = sys.argv[4:4 + n], sys.argv[4 + n:]
+out, hook, notify_hook, n = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
+disable, users = sys.argv[5:5 + n], sys.argv[5 + n:]
 # Agenti pracují anglicky a uživateli je tlumočí orchestrátor: překlad odpovědí by jen
 # stál peníze a `herdr pane read` by vracel češtinu. --settings volajícího to může zapnout.
 merged = {"enabledPlugins": {"cc-prompt-translate@mastnacek": False}}
@@ -75,6 +78,10 @@ for name in disable:
     merged.setdefault("enabledPlugins", {})[name] = False
 entry = {"matcher": "Bash|PowerShell", "hooks": [{"type": "command", "command": f'bash "{hook}"'}]}
 merged.setdefault("hooks", {}).setdefault("PreToolUse", []).append(entry)
+# Agent sám ohlásí orchestrátorovi dokončení / blokaci / čekání (tichý bez ORCH_PANE).
+notify = {"hooks": [{"type": "command", "command": f'bash "{notify_hook}"', "timeout": 15}]}
+for ev in ("Stop", "Notification"):
+    merged["hooks"].setdefault(ev, []).append(notify)
 json.dump(merged, open(out, "w", encoding="utf-8"))
 PY
 extra+=(--settings "$settings")

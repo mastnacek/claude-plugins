@@ -19,6 +19,14 @@ Najednou nejvýš jeden programátor, jeden tester a jeden revizor.
 - **Windows:** shell panelu je PowerShell a holý `bash` spustí WSL. Agenta spouštěj přes Git Bash
   a předej mu scratchpad:
   `herdr pane run <pane> "$env:AGENT_SCRATCH='<scratchpad>'; & 'C:\Program Files\Git\bin\bash.exe' scripts/agent.sh coder"`.
+- **Agent ohlásí konec sám:** nastav při startu `$env:ORCH_PANE='<panel orchestrátora>'` (do téhož
+  příkazu jako `AGENT_SCRATCH`). Hook `agent-notify.sh` (Stop + Notification) pak pošle do toho
+  panelu zprávu a ukáže toast; bez `ORCH_PANE` mlčí. Formáty zpráv: `DONE <role> <panel>: <první řádek
+  odpovědi>`, `BLOCKED <role> <panel>: BLOCKED: …` (agent napsal řádek `BLOCKED:`), `WAITING <role>
+  <panel>: <zpráva>` (čeká na schválení / nečinnost); u BLOCKED, WAITING a INSIGHT i zvuk. Kolega pošle
+  jen `INSIGHT <SPAI-ID> @jaroslav: <název>`, když v tahu zapsal poznámku se štítkem `:fundamental:`
+  (`ORCH_PANE` bere z volajícího, jinak z jeho `HERDR_PANE_ID`, běží-li `kolega.sh` v panelu orchestrátora).
+  Hook nikdy neblokuje tah (vždy exit 0, volání herdr max. 5 s, chyby v `$TEMP/agent-notify.log`).
 - `scripts/agent.sh` dá agentovi `CC_ROLE`, model a pravidla role z **`D:/01_programovani/claude/prompts/<role>.md`**
   (jedna sada pro všechna repa) + `prompts/<role>.local.md` repa, je-li. Agenty spouštěj vždy
   přes něj, nikdy holým `claude`. Git zápis agentům zakazuje hook / watchdog repa.
@@ -94,7 +102,9 @@ Každé zadání agentovi je **záznam SPAI** v backlogu hlavního repa (ne work
 
 ## Čekání a kontrola
 
-- **Čekání: vždy `D:/01_programovani/claude/scripts/agent-wait.sh <panel>` na pozadí** hned po
+- **Agent s hookem (coder, tester) se ohlásí sám** (viz Spouštění agentů, `ORCH_PANE`). Pro agenty
+  bez hooku (pi, agy) a když `ORCH_PANE` chybí zůstává záloha:
+- **Čekání: `D:/01_programovani/claude/scripts/agent-wait.sh <panel>` na pozadí** hned po
   odeslání zadání. Konec tahu pozná z přepisu agenta (poslední zpráva asistenta `end_turn`, novější
   než přepis při startu skriptu), ne jen z panelu; u agentů bez přepisu čte obsah panelu.
   Vypíše jeden řádek: `done <panel> <přepis>:<řádek>` (exit 0), `blocked <panel>` (exit 2),
