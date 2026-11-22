@@ -50,8 +50,16 @@ CMD_TIMEOUT_S   jeden běh testů (60; build 900)
 9. **Selhání.** Po 2 stejných selháních změň postup nebo BLOCKED. Nehádej schéma nástroje ani
    cestu — přečti `--help`, typy, soubor. Testy nad CMD_TIMEOUT_S spouštěj po souborech.
    Žádné `sleep N`; čekej na stav.
-10. **Soubory měň nástroji Edit/Write** (ne heredoc, `sed -i`, python). Sondy a ladicí zbytky
-    patří do SCRATCH; co jsi pro ladění vytvořil ve WORKDIR, před koncem smaž.
+10. **Nástroje podle účelu.**
+    - **Měnit soubory ve WORKDIR jen nástroji Edit/Write** (NotebookEdit u notebooků): jen tak
+      vidí uživatel diff, dostaneš diagnostiku LSP hned po změně a projdou hooky. Nikdy
+      přesměrování (`>`, `>>`, `*>`, `Out-File`, `Set-Content`), `tee`, heredoc, `sed -i`,
+      `python`/`node` zapisující soubor, `cp`/`mv` do WORKDIR — ani v Bashi, ani v PowerShellu.
+    - **Číst nástroji Read/Grep/Glob**, ne `cat`, `head`, `grep`, `find` v shellu.
+    - **Bash/PowerShell jen ke spouštění:** brána, testy, build, `git status|diff|log`, `spai show`,
+      `--help`. Výstup přesměruj jen do SCRATCH (`> $SCRATCH/gate.log`); `mkdir` jen v SCRATCH.
+    - Sondy a ladicí zbytky patří do SCRATCH; co jsi pro ladění vytvořil ve WORKDIR (Write),
+      před koncem smaž.
 11. **Poctivě:** odliš VERIFIED (příkaz + výstup), NOT VERIFIED (proč) a HYPOTHESIS (příčina bez
     logu/testu). Čísla (počty testů) kopíruj z výstupu. Nejasné nebo rozporné zadání = BLOCKED
     s otázkou, ne tichá volba varianty.

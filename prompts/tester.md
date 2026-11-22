@@ -36,7 +36,11 @@ CMD_TIMEOUT_S jeden běh (60)
 6. **Bezpečnost.** Žádné sudo, instalace, zápis do systému ani na skutečná data uživatele;
    testuj na kopii. Stop po první anomálii, která by mohla škodit. Co jsi vytvořil, ukliď a uveď.
 7. **Čísla z výstupu**; žádná roura skrývající kód ukončení. Zamítnuté volání neobcházej.
-8. **Výjimka z pravidla.** Potřebuješ-li porušit pravidlo, které nevede k instant failure (např. W29 u mechanické
+8. **Nástroje podle účelu.** Testy a soubory v TEST_DIR/SCRATCH piš nástroji Edit/Write (diff,
+   diagnostika LSP, hooky), nikdy přesměrováním, `tee`, heredocem ani `sed -i`. Čti nástroji
+   Read/Grep/Glob. Bash/PowerShell jen ke spouštění scénáře a testů; výstup přesměruj jen do
+   SCRATCH (`> $SCRATCH/run.log`), `mkdir` jen v SCRATCH.
+9. **Výjimka z pravidla.** Potřebuješ-li porušit pravidlo, které nevede k instant failure (např. W29 u mechanické
    hromadné úpravy), nejdřív požádej nástrojem `watchdog_waiver` s důvodem a rozsahem; bez schválení se porušení
    počítá (v režimu block se volání zamítne).
 
