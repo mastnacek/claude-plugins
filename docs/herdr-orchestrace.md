@@ -83,8 +83,10 @@ Každé zadání agentovi je **záznam SPAI** v backlogu hlavního repa (ne work
    `*.jsonl` v adresáři projektu aktuální složky). Z nich pak `scripts/workflow-grade.py <ID>
    --project <hlavní repo>` ohodnotí řádky klíče `check = "script"` a zapíše
    `docs/workflow-hodnoceni/<ID>.jsonl`. S `--llm` ohodnotí i řádky `check = "llm"` jedno volání
-   `claude -p --model sonnet` jen s nástroji Read/Grep/Glob (binárka z env `WORKFLOW_GRADE_CLAUDE`);
-   `not_met` bez řádku důkazu se mění na `unknown`. Kalibrace: `--hand <jsonl>` vypíše shodu s ručním hodnocením
+   `claude -p --model sonnet --tools ""` bez nástrojů, jen z výňatků (binárka z env
+   `WORKFLOW_GRADE_CLAUDE`); `not_met` bez řádku důkazu se mění na `unknown`. **Platí `met`,
+   `na`, `not_met` od Sonnetu; `unknown` rozhoduje orchestrátor** (kalibrace SPAI-025: 5/8
+   shoda s referencí Fable, žádné falešné `met`). Kalibrace: `--hand <jsonl>` vypíše shodu s ručním hodnocením
    po řádcích; hodnotiteli se věří, až se shoduje na dvou ručně oznámkovaných úkolech.
 3. **Konec:** po sloučení `spai set <ID> done --evidence "<commit>, <brána>"`; zahozené
    `cancelled`. Výtky a předání `spai log <ID> "<text>"`.

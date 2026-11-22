@@ -22,7 +22,7 @@ PROJECT = "D:/x/demo"
 
 
 def write_transcript(path, events):
-    """events: (nástroj, vstup, chyba?) volání | ("text", "...") závěrečná zpráva. Volání = 2 řádky."""
+    """events: (nástroj, vstup, chyba?, text výsledku?) volání | ("text", "...") závěrečná zpráva. Volání = 2 řádky."""
     lines = []
     for i, e in enumerate(events):
         if e[0] == "text":
@@ -31,13 +31,14 @@ def write_transcript(path, events):
         uid = f"u{i}"
         lines.append({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": uid, "name": e[0], "input": e[1]}]}})
         lines.append({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": uid,
-                                                            "is_error": bool(len(e) > 2 and e[2]), "content": "x"}]}})
+                                                            "is_error": bool(len(e) > 2 and e[2]),
+                                                            "content": e[3] if len(e) > 3 else "x"}]}})
     path.write_text("".join(json.dumps(x) + "\n" for x in lines), encoding="utf-8")
     return str(path)
 
 
-def bash(cmd, err=False):
-    return ("Bash", {"command": cmd}, err)
+def bash(cmd, err=False, result="x"):
+    return ("Bash", {"command": cmd}, err, result)
 
 
 SEND = bash("spai set 7 working --project D:/x/demo; herdr agent prompt p 'Read SPAI-007 @demo and carry it out fully now.'")
@@ -208,8 +209,10 @@ class LlmGrade(Base):
         self.assertTrue(all(rows[r]["checker"] == "llm" for r in ("K03", "K05", "K07", "K09")))
         self.assertEqual(rows["K01"]["checker"], "script")
         call = json.loads((self.tmp / "stub.json").read_text(encoding="utf-8"))
-        self.assertEqual(call["args"], ["-p", "--model", "sonnet", "--allowedTools", "Read,Grep,Glob",
-                                        "--output-format", "json"])
+        self.assertEqual(call["args"], ["-p", "--model", "sonnet", "--tools", "", "--output-format", "json"])
+        self.assertIn("You have no tools", call["prompt"])
+        self.assertIn("repository today may differ", call["prompt"])
+        self.assertIn("the trigger did not happen -> na, not unknown", call["prompt"])
         self.assertIn("O:7 Bash", call["prompt"])  # řádky přepisu jsou citovatelné
         self.assertLess(len(call["prompt"]), 70000)
 
@@ -263,6 +266,168 @@ class LlmGrade(Base):
         self.assertRegex(out, r"K03 .*AGREE")
         self.assertRegex(out, r"K05 .*DIFFER")
         self.assertRegex(out, r"K07 .*no hand verdict")
+
+
+def section(prompt, row):
+    """Text výňatku jednoho řádku z promptu grader (od '### Kxx' po další '### ')."""
+    return prompt.split(f"### {row} ", 1)[1].split("### K", 1)[0]
+
+
+class Excerpts(LlmGrade):
+    def prompt_for(self, orch, coder=CODER_OK):
+        self.stub("[]")
+        self.grade_llm(orch, coder)
+        return json.loads((self.tmp / "stub.json").read_text(encoding="utf-8"))["prompt"]
+
+    def test_merge_and_last_gate_windows_of_15_lines(self):
+        fill = lambda i: bash(f"echo fill-{i:02d}")
+        orch = [BRIEF, SEND] + [fill(i) for i in range(40)] + [GATE] + [fill(i) for i in range(40, 80)] + [MERGE]
+        sec = section(self.prompt_for(orch), "K03")
+        # GATE na řádku 85, merge na 167: okna ±15 řádků (volání + výsledek = 2 řádky)
+        for token in ("fill-40", "fill-46", "fill-73", "fill-79", "O:167 Bash", "O:85 Bash"):
+            self.assertIn(token, sec)
+        for token in ("fill-00", "fill-20", "fill-60"):
+            self.assertNotIn(token, sec)
+
+    def test_live_runs_after_done_only(self):
+        fill = lambda i: bash(f"echo fill-{i:02d}")
+        orch = ([BRIEF, SEND, bash("run early.exe --go")] + [fill(i) for i in range(40)] + [bash("agent-wait.sh w1:p1")]
+                + [fill(i) for i in range(40, 80)] + [bash("D:/x/demo/target/app.exe --scenario 2")]
+                + [fill(i) for i in range(80, 120)] + [GATE] + [MERGE])
+        sec = section(self.prompt_for(orch), "K03")
+        self.assertIn("app.exe --scenario 2", sec)
+        self.assertIn("fill-79", sec)           # těsně před živým během
+        self.assertIn("fill-85", sec)           # těsně za ním
+        self.assertNotIn("early.exe", sec)      # před 'done' to živý běh není
+        self.assertNotIn("fill-60", sec)
+
+    def test_hook_edit_in_coder_and_hook_in_diff_result(self):
+        fill = lambda i: bash(f"echo cfill-{i:02d}")
+        coder = ([fill(i) for i in range(40)] + [("Edit", {"file_path": "/d/x/demo-wt/.claude/hooks/block.sh"})]
+                 + [fill(i) for i in range(40, 80)] + [("text", "done")])
+        diff = bash("cd /d/x/demo-wt && git diff --stat", False, " .claude/hooks/block.sh | 9 +")
+        ofill = lambda i: bash(f"echo ofill-{i:02d}")
+        orch = [BRIEF, SEND] + [ofill(i) for i in range(40)] + [diff] + [ofill(i) for i in range(40, 80)] + [GATE, MERGE]
+        sec = section(self.prompt_for(orch, coder), "K07")
+        self.assertIn("block.sh", sec)
+        self.assertIn("cfill-39", sec)
+        self.assertIn("cfill-40", sec)
+        self.assertNotIn("cfill-00", sec)
+        self.assertIn(".claude/hooks/block.sh | 9 +", sec)   # tělo výsledku git diff
+        self.assertIn("ofill-39", sec)
+        self.assertNotIn("ofill-00", sec)
+        self.assertIn("C1:final-report done", sec)
+
+    def test_spai_log_entries_of_the_task(self):
+        log = bash("spai log 7 --project D:/x/demo 'defect: repro'")
+        other = bash("spai log 99 --project D:/x/demo 'other task'")
+        fill = lambda i: bash(f"echo fill-{i:02d}")
+        orch = ([BRIEF, SEND, other] + [fill(i) for i in range(40)] + [log] + [fill(i) for i in range(40, 80)]
+                + [GATE, MERGE])
+        sec = section(self.prompt_for(orch), "K03")
+        self.assertIn("defect: repro", sec)
+        self.assertIn("fill-39", sec)
+        self.assertIn("fill-45", sec)
+        self.assertNotIn("fill-10", sec)
+        self.assertNotIn("other task", sec)
+
+    def test_result_bodies_are_trimmed_before_calls_are_dropped(self):
+        # každé volání je živý běh po 'done' = kotva; těla po 600 znacích se do 7500 znaků nevejdou, po 150 ano
+        calls = [bash(f"echo smoke-{i:02d}", False, "y" * 1000) for i in range(20)]
+        sec = section(self.prompt_for([BRIEF, SEND, bash("agent-wait.sh w1:p1")] + calls + [GATE, MERGE]), "K03")
+        self.assertNotIn("excerpt truncated", sec)
+        self.assertIn("y" * 150, sec)
+        self.assertNotIn("y" * 151, sec)
+        for i in range(20):
+            self.assertIn(f"echo smoke-{i:02d}", sec)
+
+
+class SmokeList(Excerpts):
+    def test_smoke_steps_numbered_in_prompt(self):
+        body = "x\n\n  ## SMOKE\n  1. run the binary live\n  2. dialog case -> blocked\n  Commit proposal: fix(x)\n- 2026-11-22 18:10 (o) log"
+        self.assertEqual(wg.smoke_steps(body), ["run the binary live", "dialog case -> blocked"])
+        self.assertEqual(wg.smoke_steps("no section"), [])
+        self.stub("[]")
+        op = write_transcript(self.tmp / "orch.jsonl", GOOD_ORCH)
+        task = {"id": "SPAI-007", "title": "demo", "body": body, "tags": ["agent"], "path": "r.md",
+                "log": [{"text": f"orchestrator session s transcript {op}"}]}
+        with mock.patch.object(wg, "spai_show", lambda i, p: task):
+            wg.grade("SPAI-007", PROJECT, llm=True)
+        prompt = json.loads((self.tmp / "stub.json").read_text(encoding="utf-8"))["prompt"]
+        self.assertIn("1. run the binary live\n2. dialog case -> blocked", prompt)
+        self.assertIn("'not run'", prompt)
+
+
+class TranscriptFiles(Base):
+    def transcript(self, d, name, first, events, mtime):
+        path = d / name
+        write_transcript(path, events)
+        path.write_text(json.dumps({"type": "user", "message": {"content": first}}) + "\n" + path.read_text(encoding="utf-8"),
+                        encoding="utf-8")
+        os.utime(path, (mtime, mtime))
+
+
+class OrchFallback(TranscriptFiles):
+    def orch_dir(self):
+        d = self.tmp / "proj" / "D--x-demo"
+        d.mkdir(parents=True)
+        patcher = mock.patch.dict(os.environ, {"WORKFLOW_GRADE_PROJECTS": str(self.tmp / "proj")})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return d
+
+    def run_grade(self, body="x\n## SMOKE\n1. run"):
+        task = {"id": "SPAI-007", "body": body, "tags": ["agent"], "log": [], "path": str(self.tmp / "rec.md")}
+        with mock.patch.object(wg, "spai_show", lambda i, p: task):
+            return {r["row"]: r for r in wg.grade("SPAI-007", PROJECT)}
+
+    def test_orchestrator_found_in_repo_transcripts_when_not_linked(self):
+        d = self.orch_dir()
+        self.transcript(d, "other.jsonl", "hi", [bash("ls")], 3000)
+        self.transcript(d, "mine.jsonl", "hi", GOOD_ORCH, 2000)
+        rows = self.run_grade()
+        self.assertEqual(rows["K02"]["verdict"], "met")
+        self.assertTrue(rows["K02"]["evidence"][0]["transcript"].endswith("mine.jsonl"))
+
+    def test_unlinked_and_not_found_stays_unknown(self):
+        d = self.orch_dir()
+        self.transcript(d, "other.jsonl", "hi", [bash("ls")], 3000)
+        self.assertEqual(self.run_grade()["K02"]["verdict"], "unknown")
+
+
+class CoderFallback(TranscriptFiles):
+    BODY = "WORKDIR D:/x/demo-wt (repo)\n## SMOKE\n1. run"
+
+    def proj(self):
+        d = self.tmp / "proj" / "D--x-demo-wt"
+        d.mkdir(parents=True)
+        patcher = mock.patch.dict(os.environ, {"WORKFLOW_GRADE_PROJECTS": str(self.tmp / "proj")})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return d
+
+    def test_newest_transcript_mentioning_the_task_id(self):
+        d = self.proj()
+        bad = [("Edit", {"file_path": "/a.py"}), ("text", "done")]
+        self.transcript(d, "old.jsonl", "Read SPAI-007 @demo and carry it out", bad, 1000)
+        self.transcript(d, "new.jsonl", "Read SPAI-007 @demo and carry it out", CODER_OK, 2000)
+        self.transcript(d, "newest-other.jsonl", "Read SPAI-099 @demo", bad, 3000)
+        r = self.grade(GOOD_ORCH, body=self.BODY)["K08"]
+        self.assertEqual(r["verdict"], "met")
+        self.assertTrue(r["evidence"][0]["transcript"].endswith("new.jsonl"))
+
+    def test_no_match_or_no_workdir_stays_unknown(self):
+        d = self.proj()
+        self.transcript(d, "o.jsonl", "Read SPAI-099", CODER_OK, 1000)
+        self.assertEqual(self.grade(GOOD_ORCH, body=self.BODY)["K08"]["verdict"], "unknown")
+        self.assertEqual(self.grade(GOOD_ORCH)["K08"]["verdict"], "unknown")
+
+    def test_session_line_in_log_wins(self):
+        d = self.proj()
+        self.transcript(d, "fb.jsonl", "Read SPAI-007", [bash("ls"), ("text", "hi")], 3000)
+        r = self.grade(GOOD_ORCH, CODER_OK, body=self.BODY)["K08"]
+        self.assertEqual(r["verdict"], "met")
+        self.assertTrue(r["evidence"][0]["transcript"].endswith("coder.jsonl"))
 
 
 class SpaiBinary(unittest.TestCase):
