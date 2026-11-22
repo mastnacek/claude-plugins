@@ -6,6 +6,7 @@
 #   agent.sh tester [--plugin-dir <p>]   tester: Haiku; nainstalovanou kopii téhož pluginu
 #                                        vypne jen pro sezení
 #
+# Agenti běží bez cc-prompt-translate (odpovědi zůstávají anglicky, tlumočí orchestrátor).
 # Role jde do CC_ROLE: hook nebo watchdog repa pak agentovi zamítne git zápis — commit,
 # push a úklid dělá jen orchestrátor.
 # Pravidla role: prompts/<role>.md TOHOTO repa (jedna sada pro všechna repa) + volitelně
@@ -57,7 +58,9 @@ PYTHONUTF8=1 python - "$settings" "$hook" "${#disable[@]}" "${disable[@]}" "${us
 import json, os, sys
 out, hook, n = sys.argv[1], sys.argv[2], int(sys.argv[3])
 disable, users = sys.argv[4:4 + n], sys.argv[4 + n:]
-merged = {}
+# Agenti pracují anglicky a uživateli je tlumočí orchestrátor: překlad odpovědí by jen
+# stál peníze a `herdr pane read` by vracel češtinu. --settings volajícího to může zapnout.
+merged = {"enabledPlugins": {"cc-prompt-translate@mastnacek": False}}
 def merge(a, b):
     for k, v in b.items():
         if isinstance(v, dict) and isinstance(a.get(k), dict):
