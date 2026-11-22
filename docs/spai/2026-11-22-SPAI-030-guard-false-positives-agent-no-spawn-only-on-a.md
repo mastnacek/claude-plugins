@@ -2,21 +2,22 @@
 type: Todo
 title: "Guard false positives: agent-no-spawn only on a real agent start; W29 resolves scratchpad variables and also checks PowerShell"
 timestamp: 2026-11-22 23:14:07
-status: working
+status: done
 source: claude-code
 tags: [agent, coder, workflow, hooks]
 facets:
   project: claude
   project_path: D:/01_programovani/claude
-spai_symbol: '/'
+spai_symbol: 'x'
 lang: en
 title_cs: "Ošetření falešných pozitiv: agent-no-spawn pouze při skutečném spuštění agenta; W29 vyřeší proměnné ve scratchpadu a také zkontroluje PowerShell"
 pending: [embed]
+done_evidence: "a86be51; agent-no-spawn 6 OK, watchdog 130 pass; SMOKE fresh coder: bash -n kolega.sh, cat agent.sh, redirect and mkdir in SCRATCH allowed, bash scripts/agent.sh coder denied"
 ---
 
 # SPAI-030: Guard false positives: agent-no-spawn only on a real agent start; W29 resolves scratchpad variables and also checks PowerShell
 
-/ Guard false positives: agent-no-spawn only on a real agent start; W29 resolves scratchpad variables and also checks PowerShell @claude :agent:coder:workflow:hooks:
+x Guard false positives: agent-no-spawn only on a real agent start; W29 resolves scratchpad variables and also checks PowerShell @claude :agent:coder:workflow:hooks:
 
 From kolega insights SPAI-002 and SPAI-003 @jaroslav (home backlog), verified by the orchestrator 2026-11-22. Rule decided with the user (prompts/coder.md rule 10, commit 7217de0): files in WORKDIR change only via Edit/Write; Bash/PowerShell only run things; output redirects and mkdir only inside SCRATCH.
 
@@ -46,3 +47,4 @@ Commit proposal: fix(guards): agent-no-spawn only on real starts, W29 resolves s
 ## Log
 - 2026-11-22 23:15 (orchestrator) session 8a4ce1fc-cc97-4634-af2d-c305bb4b49a7 pane w2J:p2Q transcript C:/Users/jaroslav/.claude/projects/D--01-programovani-claude/8a4ce1fc-cc97-4634-af2d-c305bb4b49a7.jsonl
 - 2026-11-22 23:15 (orchestrator) orchestrator session 8a4ce1fc-cc97-4634-af2d-c305bb4b49a7 transcript C:/Users/jaroslav/.claude/projects/D--01-programovani-claude/8a4ce1fc-cc97-4634-af2d-c305bb4b49a7.jsonl
+- 2026-11-22 23:28 (spai) done: a86be51; agent-no-spawn 6 OK, watchdog 130 pass; SMOKE fresh coder: bash -n kolega.sh, cat agent.sh, redirect and mkdir in SCRATCH allowed, bash scripts/agent.sh coder denied
