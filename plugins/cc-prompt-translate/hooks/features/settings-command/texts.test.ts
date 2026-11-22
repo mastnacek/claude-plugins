@@ -34,4 +34,9 @@ describe("help", () => {
 		expect(text).toContain("off|low|[medium]|high");
 		for (const gone of ["status", "balance", "detect", "until"]) expect(text).not.toContain(gone);
 	});
+
+	test("ukazuje počet skipPatterns", () => {
+		expect(buildHelpText(DEFAULT_CONFIG)).toContain("skipPatterns: 0");
+		expect(buildHelpText({ ...DEFAULT_CONFIG, skipPatterns: ["^a", "^b"] })).toContain("skipPatterns: 2");
+	});
 });

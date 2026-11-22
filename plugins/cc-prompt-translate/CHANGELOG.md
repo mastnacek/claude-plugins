@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.5
+
+### Added
+- `skipPatterns` setting (list of regex sources, default `[]`, global or project JSON): a prompt or command
+  argument whose trimmed text matches one is never detected or translated. The log line is
+  `kind: "detect", reason: "skip_pattern", skipped: true`. An invalid regex is ignored with a debug line.
+  `/prompt-translate help` shows how many patterns are set.
+
 ## 0.9.4
 
 ### Changed

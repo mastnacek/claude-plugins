@@ -11,6 +11,7 @@ Kdyby řez zmizel, plugin prompty přestane překládat, ostatní řezy se neroz
 
 - `prompt.submit` (`register.tsx`) — přeloží prompt (`translate(…, "English", "prompt")`), na přání se zeptá na potvrzení (`confirm`), uloží záznam originálu a předá odpovědi `pending`.
 - Přeskočí slash příkazy, meta zprávy, prompty s obrázkem a vstupy mimo `composer`/`bridge`.
+- `skipPatterns` (`shared/skip.ts`): text, jehož oříznutá podoba odpovídá některému regexu z konfigurace, jde ven tak, jak je — bez detekce a bez překladu (log `reason: "skip_pattern"`); `pending` se nastaví jako u angličtiny. Neplatný regex se přeskočí.
 - Autodetekce (vždy, i s boostem): angličtina nebo kód se nepřekládá ani neboostuje, jen se nastaví `pending`.
 - Prompt začínající `/` přeskočí (řez `command-arguments` tam sám nastaví `pending`).
 - `ui.render UserMessage` — rámeček originál (`-`) / angličtina (`+`) se štítky `boost` a `s historií`; text se v rámečku zalamuje na jeho šířku a vložené bloky `<pasted_content>` se sbalí na 3 řádky (`collapse.ts`, jen zobrazení — model dostane text celý).

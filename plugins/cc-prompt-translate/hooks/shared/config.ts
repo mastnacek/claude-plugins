@@ -12,7 +12,7 @@ import { DEFAULT_CONFIG } from "./types";
 import type { BoostLevel, HistoryMode, ModelBackend, ThinkLevel, TranslateConfig } from "./types";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
-const configAtom = atom({ plugin: "cc-prompt-translate", key: "config" } as const, DEFAULT_CONFIG as TranslateConfig, { shape: "config-4" });
+const configAtom = atom({ plugin: "cc-prompt-translate", key: "config" } as const, DEFAULT_CONFIG as TranslateConfig, { shape: "config-5" });
 
 
 type $ = EngineInterface;
@@ -51,6 +51,9 @@ export function normalizeConfig(value: Partial<TranslateConfig> | Record<string,
 		showOriginal: bool("showOriginal"),
 		translateToolUi: bool("translateToolUi"),
 		englishNote: bool("englishNote"),
+		skipPatterns: Array.isArray(v.skipPatterns)
+			? v.skipPatterns.filter((p): p is string => typeof p === "string" && p !== "")
+			: [...DEFAULT_CONFIG.skipPatterns],
 		log: bool("log"),
 		debug: bool("debug"),
 	};

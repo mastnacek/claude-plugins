@@ -15,6 +15,7 @@ import { warn, debug } from "../../shared/log";
 import { withProgress } from "../../shared/progress";
 import { archiveField, restoreField } from "../../shared/session-archive";
 import { clip, logEvent } from "../../shared/usage-log";
+import { matchingSkipPattern } from "../../shared/skip";
 import { capRecord, textKey } from "../../shared/state";
 import { detectLanguageOrCode } from "../../shared/translation/detect";
 import { translate } from "../../shared/translation/translate";
@@ -45,6 +46,14 @@ export function registerPromptToEnglish(on: On): void {
 			targetLanguage: config.targetLanguage,
 			translateResponses: config.translateResponses,
 		};
+
+		// An explicit opt-out: the text goes as written, not even detected.
+		if (await matchingSkipPattern($, source, config.skipPatterns)) {
+			void logEvent($, { kind: "detect", reason: "skip_pattern", skipped: true, text: clip(source) });
+			await debug($, "prompt matches a skip pattern; not translated");
+			await update($, pendingAtom, () => pending);
+			return next(withNote(e, config.englishNote, englishOnlyNote(pending, false)));
+		}
 
 		// Holds with boost on too: an English prompt or plain code is sent as
 		// written (no rewrite of what the person wrote in English, no paid call).
