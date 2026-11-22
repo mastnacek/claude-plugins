@@ -153,6 +153,118 @@ class GradeRows(Base):
         self.assertIn("K01", buf.getvalue())
 
 
+STUB_PY = """import json, os, sys
+prompt = sys.stdin.read()
+open(os.environ["STUB_LOG"], "w", encoding="utf-8").write(json.dumps({"args": sys.argv[1:], "prompt": prompt}))
+if os.environ.get("STUB_FAIL"):
+    sys.exit(3)
+print(json.dumps({"type": "result", "result": open(os.environ["STUB_REPLY"], encoding="utf-8").read()}))
+"""
+
+
+class LlmGrade(Base):
+    def stub(self, reply, fail=False):
+        py = self.tmp / "stub.py"
+        py.write_text(STUB_PY, encoding="utf-8")
+        if os.name == "nt":
+            exe = self.tmp / "claude-stub.cmd"
+            exe.write_text(f'@"{sys.executable}" "{py}" %*\n', encoding="utf-8")
+        else:
+            exe = self.tmp / "claude-stub"
+            exe.write_text(f'#!/bin/sh\nexec "{sys.executable}" "{py}" "$@"\n', encoding="utf-8")
+            exe.chmod(0o755)
+        (self.tmp / "reply.txt").write_text(reply, encoding="utf-8")
+        env = {"WORKFLOW_GRADE_CLAUDE": str(exe), "STUB_LOG": str(self.tmp / "stub.json"),
+               "STUB_REPLY": str(self.tmp / "reply.txt")}
+        if fail:
+            env["STUB_FAIL"] = "1"
+        patcher = mock.patch.dict(os.environ, env)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def grade_llm(self, orch=GOOD_ORCH, coder=CODER_OK):
+        op = write_transcript(self.tmp / "orch.jsonl", orch)
+        log = [{"text": f"orchestrator session s transcript {op}"},
+               {"text": f"session c pane w1:p1 transcript {write_transcript(self.tmp / 'coder.jsonl', coder)}"}]
+        task = {"id": "SPAI-007", "title": "demo", "body": "x\n## SMOKE\n1. run", "tags": ["agent"], "log": log,
+                "path": str(self.tmp / "rec.md")}
+        patcher = mock.patch.object(wg, "spai_show", lambda i, p: task)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return {r["row"]: r for r in wg.grade("SPAI-007", PROJECT, llm=True)}
+
+    def test_verdicts_evidence_and_readonly_call(self):
+        reply = json.dumps([
+            {"row": "K03", "verdict": "not_met", "evidence": [{"transcript": "O", "line": 7}], "note": "no live run"},
+            {"row": "K05", "verdict": "na", "evidence": [], "note": "no defect"},
+            {"row": "K07", "verdict": "na", "evidence": [], "note": "no hook"},
+            {"row": "K09", "verdict": "met", "evidence": [{"transcript": str(self.tmp / "coder.jsonl"), "line": 1}],
+             "note": "chain test"}])
+        self.stub(reply)
+        rows = self.grade_llm()
+        self.assertEqual(rows["K03"]["verdict"], "not_met")
+        self.assertEqual(rows["K03"]["evidence"], [{"transcript": str(self.tmp / "orch.jsonl"), "line": 7}])
+        self.assertEqual((rows["K05"]["verdict"], rows["K07"]["verdict"], rows["K09"]["verdict"]), ("na", "na", "met"))
+        self.assertTrue(all(rows[r]["checker"] == "llm" for r in ("K03", "K05", "K07", "K09")))
+        self.assertEqual(rows["K01"]["checker"], "script")
+        call = json.loads((self.tmp / "stub.json").read_text(encoding="utf-8"))
+        self.assertEqual(call["args"], ["-p", "--model", "sonnet", "--allowedTools", "Read,Grep,Glob",
+                                        "--output-format", "json"])
+        self.assertIn("O:7 Bash", call["prompt"])  # řádky přepisu jsou citovatelné
+        self.assertLess(len(call["prompt"]), 70000)
+
+    def test_not_met_without_evidence_becomes_unknown(self):
+        reply = json.dumps([
+            {"row": "K03", "verdict": "not_met", "evidence": [], "note": "claims missing"},
+            {"row": "K05", "verdict": "not_met", "evidence": [{"transcript": "nope", "line": 3}], "note": "bad label"},
+            {"row": "K07", "verdict": "wat", "evidence": [], "note": ""}])
+        self.stub(reply)
+        rows = self.grade_llm()
+        self.assertEqual(rows["K03"]["verdict"], "unknown")
+        self.assertIn("without evidence", rows["K03"]["note"])
+        self.assertEqual(rows["K05"]["verdict"], "unknown")
+        self.assertEqual(rows["K07"]["verdict"], "unknown")
+        self.assertIn("invalid verdict", rows["K07"]["note"])
+        self.assertIn("no verdict", rows["K09"]["note"])
+        self.assertFalse(any(r["verdict"] == "not_met" and not r["evidence"] for r in rows.values()))
+
+    def test_not_json_or_failed_call_is_unknown(self):
+        self.stub("sorry, here is prose")
+        rows = self.grade_llm()
+        for r in ("K03", "K05", "K07", "K09"):
+            self.assertEqual((rows[r]["verdict"], rows[r]["note"]), ("unknown", "grader output not JSON"))
+        self.stub("[]", fail=True)
+        self.assertEqual(self.grade_llm()["K03"]["note"], "grader call failed")
+
+    def test_excerpt_is_capped(self):
+        many = [BRIEF, SEND] + [bash("echo smoke " + "x" * 400) for _ in range(400)] + [MERGE]
+        self.stub("[]")
+        self.grade_llm(many)
+        call = json.loads((self.tmp / "stub.json").read_text(encoding="utf-8"))
+        self.assertLess(len(call["prompt"]), 70000)
+        self.assertIn("excerpt truncated", call["prompt"])
+
+    def test_no_llm_flag_makes_no_call(self):
+        self.stub("[]")
+        self.grade([BRIEF, SEND, GATE, MERGE])
+        self.assertFalse((self.tmp / "stub.json").exists())
+
+    def test_main_hand_agreement(self):
+        reply = json.dumps([{"row": r, "verdict": "na", "evidence": [], "note": ""} for r in ("K03", "K05", "K07", "K09")])
+        self.stub(reply)
+        self.grade_llm()
+        hand = self.tmp / "hand.jsonl"
+        hand.write_text(json.dumps({"task": "SPAI-007", "row": "K03", "verdict": "na"}) + "\n"
+                        + json.dumps({"task": "SPAI-007", "row": "K05", "verdict": "met"}) + "\n", encoding="utf-8")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            wg.main(["SPAI-007", "--project", PROJECT, "--llm", "--hand", str(hand), "--out-dir", str(self.tmp / "o")])
+        out = buf.getvalue()
+        self.assertRegex(out, r"K03 .*AGREE")
+        self.assertRegex(out, r"K05 .*DIFFER")
+        self.assertRegex(out, r"K07 .*no hand verdict")
+
+
 class SpaiBinary(unittest.TestCase):
     def test_spai_bin_env_wins(self):
         with mock.patch.dict(os.environ, {"SPAI_BIN": "C:/fake/spai.exe"}):

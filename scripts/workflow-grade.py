@@ -2,6 +2,10 @@
 """workflow-grade.py — mechanicky ohodnotí úkol SPAI podle řádků klíče s check="script".
 
   workflow-grade.py <ID> --project <repo> [--orchestrator-transcript <jsonl>] [--key <toml>] [--out-dir <dir>]
+                    [--llm [--hand <jsonl>]]
+
+--llm: řádky check="llm" ohodnotí jedno volání `claude -p --model sonnet --allowedTools Read,Grep,Glob`
+(binárka z env WORKFLOW_GRADE_CLAUDE); not_met bez řádku důkazu se mění na unknown; výstup píše tento skript.
 
 Čte klíč (docs/workflow-klic.toml), úkol (spai show --json) a přepisy JSONL (jen ke čtení):
 přepisy agenta a orchestrátora z logu úkolu (řádky z task-link.sh), orchestrátora lze dát i volbou.
@@ -237,7 +241,140 @@ def git_sha(path):
     return r.stdout.strip() or "unknown"
 
 
-def grade(task_id, project, orch_transcript=None, key_path=None):
+EXCERPT_CAP = 60000   # znaků výňatků na úkol (všechny llm řádky dohromady)
+CALL_CAP = 300        # znaků jednoho volání ve výňatku
+VERDICTS = {"met", "not_met", "na", "unknown"}
+# co z přepisu je pro řádek relevantní: (zdroj: orch|coder, regex nad textem volání nebo None = vše v rozsahu)
+LLM_SELECT = {
+    "K03": ("orch", re.compile(r"(?i)smoke|scenario|--help|\.exe|plugin\s+(test|validate)|herdr|agent-wait|git\s+merge")),
+    "K05": ("orch", re.compile(r"(?i)spai\s+log|agent\s+prompt|git\s+(diff|status)|agent-wait|git\s+merge")),
+    "K07": ("orch", re.compile(r"(?i)hook|guard|permission|settings|allow|deny|live|disable|off-switch|git\s+merge")),
+    "K09": ("coder", None),
+}
+
+
+def claude_bin():
+    return os.environ.get("WORKFLOW_GRADE_CLAUDE") or "claude"
+
+
+def excerpt_lines(label, calls, lo, hi, rx, results):
+    """Řádky výňatku: '<label>:<řádek> <nástroj>[!] <text>'; jen volání v rozsahu lo..hi, která sedí na rx."""
+    out = []
+    for c in calls:
+        if not (lo <= c["line"] <= hi):
+            continue
+        text = c["text"] if c["name"] in SHELL_TOOLS else c["all"]
+        if rx and not rx.search(c["all"]):
+            continue
+        text = " ".join(text.split())
+        if len(text) > CALL_CAP:
+            text = text[:CALL_CAP] + "…"
+        err = "!" if (results.get(c["id"]) or {}).get("error") else ""
+        out.append(f"{label}:{c['line']} {c['name']}{err} {text}")
+    return out
+
+
+def build_excerpts(ctx, llm_ids):
+    """({řádek: text výňatku}, {label: cesta přepisu}); text je omezen tak, aby celek nepřesáhl EXCERPT_CAP."""
+    labels = {}
+    orch_label = None
+    if ctx["orch"] and ctx["orch_path"]:
+        orch_label = "O"
+        labels[orch_label] = ctx["orch_path"]
+    for i, (path, _c, _r, _f) in enumerate(ctx["coders"], 1):
+        labels[f"C{i}"] = path
+    lo = ctx["start"]["line"] if ctx["start"] else 0
+    hi = ctx["merge"]["line"] if ctx["merge"] else float("inf")
+    per_row = EXCERPT_CAP // max(1, len(llm_ids))
+    out = {}
+    for rid in llm_ids:
+        who, rx = LLM_SELECT.get(rid, ("orch", None))
+        lines = []
+        if who == "orch" and orch_label:
+            lines = excerpt_lines(orch_label, ctx["orch"], lo, hi, rx, ctx["orch_results"])
+        elif who == "coder":
+            for i, (_p, calls, results, final) in enumerate(ctx["coders"], 1):
+                lines += excerpt_lines(f"C{i}", calls, 0, float("inf"), rx, results)
+                if final:
+                    lines.append(f"C{i}:final-report " + " ".join(final.split())[:1500])
+        text, used = [], 0
+        for ln in lines:
+            if used + len(ln) + 1 > per_row:
+                text.append("[... excerpt truncated ...]")
+                break
+            text.append(ln)
+            used += len(ln) + 1
+        out[rid] = "\n".join(text) or "(no relevant transcript lines found)"
+    return out, labels
+
+
+def build_prompt(task, key_rows, excerpts, labels):
+    rows = "\n\n".join(
+        f"### {r['id']} ({r['who']})\ntrigger: {r['trigger']}\nrequired: {r['required']}\nevidence: {r['evidence']}\n"
+        f"transcript excerpt (format <label>:<line> <tool> <call>; '!' = the call failed):\n{excerpts[r['id']]}"
+        for r in key_rows)
+    lab = "\n".join(f"{k} = {v}" for k, v in labels.items()) or "(none)"
+    return (
+        "You grade how an orchestrator and a coder agent followed a workflow key. Judge each row below only from the "
+        "excerpts (you may use Read/Grep/Glob on the transcript files, read-only). Do not guess: if the excerpt does not "
+        "decide it, answer unknown.\n"
+        "Verdicts: met (trigger happened and the required behaviour is evidenced), not_met (trigger happened and the "
+        "behaviour is missing), na (trigger did not happen), unknown.\n"
+        "not_met MUST cite at least one evidence line.\n"
+        "Reply with ONLY a JSON array, no prose, no code fence, one object per row:\n"
+        '[{"row":"K03","verdict":"met|not_met|na|unknown","evidence":[{"transcript":"<label>","line":<int>}],"note":"<one sentence>"}]\n\n'
+        f"Task {task['id']}: {task.get('title', '')}\nBrief:\n{(task.get('body') or '')[:6000]}\n\n"
+        f"Transcript labels:\n{lab}\n\n{rows}\n")
+
+
+def parse_grader(raw, key_rows, labels):
+    """Výstup `claude -p --output-format json` -> {řádek: (verdict, evidence, note)}; selhání -> vše unknown."""
+    fail = {r["id"]: ("unknown", [], "grader output not JSON") for r in key_rows}
+    try:
+        text = json.loads(raw)["result"]
+        arr = json.loads(text.strip())
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return fail
+    if not isinstance(arr, list):
+        return fail
+    by_id = {a.get("row"): a for a in arr if isinstance(a, dict)}
+    by_path = {Path(p).name: p for p in labels.values()} | {p: p for p in labels.values()}
+    res = {}
+    for r in key_rows:
+        a = by_id.get(r["id"])
+        if not a:
+            res[r["id"]] = ("unknown", [], "grader gave no verdict for this row")
+            continue
+        verdict, note = a.get("verdict"), str(a.get("note") or "")
+        if verdict not in VERDICTS:
+            res[r["id"]] = ("unknown", [], f"grader gave invalid verdict {verdict!r}")
+            continue
+        evidence = []
+        for e in a.get("evidence") or []:
+            if not isinstance(e, dict) or not isinstance(e.get("line"), int) or isinstance(e.get("line"), bool):
+                continue
+            t = str(e.get("transcript"))
+            path = labels.get(t) or by_path.get(t) or by_path.get(Path(t).name)
+            if path:
+                evidence.append(ev(path, e["line"]))
+        if verdict == "not_met" and not evidence:
+            res[r["id"]] = ("unknown", [], "grader said not_met without evidence line: " + note)
+            continue
+        res[r["id"]] = (verdict, evidence, note)
+    return res
+
+
+def run_grader(prompt):
+    """Jedno volání claude -p (Sonnet, jen čtení); prompt jde na stdin. Vrací stdout nebo None při selhání."""
+    cmd = [claude_bin(), "-p", "--model", "sonnet", "--allowedTools", "Read,Grep,Glob", "--output-format", "json"]
+    try:
+        r = subprocess.run(cmd, input=prompt, capture_output=True, text=True, encoding="utf-8", timeout=900)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout if r.returncode == 0 else None
+
+
+def grade(task_id, project, orch_transcript=None, key_path=None, llm=False):
     key_path = Path(key_path or ROOT / "docs" / "workflow-klic.toml")
     rows = tomllib.loads(key_path.read_text(encoding="utf-8"))["row"]
     task = spai_show(task_id, project)
@@ -261,17 +398,44 @@ def grade(task_id, project, orch_transcript=None, key_path=None):
         ctx.update(orch=calls, orch_results=results, orch_path=orch_paths[0])
     ctx["coders"] = [(p, *load(p)) for p in agent_paths]
     sha = git_sha(key_path)
+    llm_rows = [r for r in rows if r.get("check") == "llm"]
+    llm_res = {}
+    if llm and llm_rows:
+        excerpts, labels = build_excerpts(ctx, [r["id"] for r in llm_rows])
+        raw = run_grader(build_prompt(task, llm_rows, excerpts, labels))
+        llm_res = parse_grader(raw, llm_rows, labels) if raw is not None else {
+            r["id"]: ("unknown", [], "grader call failed") for r in llm_rows}
     out = []
     for r in rows:
+        checker = "script"
         if r.get("check") == "script" and r["id"] in CHECKS:
             verdict, evidence, note = CHECKS[r["id"]](ctx)
+        elif r["id"] in llm_res:
+            (verdict, evidence, note), checker = llm_res[r["id"]], "llm"
         else:
             verdict, evidence, note = "unknown", [], "needs llm/human"
         if verdict == "not_met" and not evidence:
             raise SystemExit(f"BUG: {r['id']} not_met without evidence")
         out.append({"task": task["id"], "row": r["id"], "verdict": verdict, "evidence": evidence,
-                    "note": note, "checker": "script", "key": sha})
+                    "note": note, "checker": checker, "key": sha})
     return out
+
+
+def agreement(rows, hand_path):
+    """Shoda verdiktů llm řádků s ručním hodnocením (jsonl {task,row,verdict}); vrací řádky tabulky."""
+    hand = {}
+    for ln in Path(hand_path).read_text(encoding="utf-8").splitlines():
+        if ln.strip():
+            h = json.loads(ln)
+            hand[(h["task"], h["row"])] = h["verdict"]
+    lines = []
+    for r in rows:
+        if r["checker"] != "llm":
+            continue
+        h = hand.get((r["task"], r["row"]))
+        state = "no hand verdict" if h is None else ("AGREE" if h == r["verdict"] else "DIFFER")
+        lines.append(f"{r['row']:<4} llm={r['verdict']:<8} hand={h or '-':<8} {state}")
+    return lines
 
 
 def main(argv=None):
@@ -281,8 +445,10 @@ def main(argv=None):
     ap.add_argument("--orchestrator-transcript")
     ap.add_argument("--key")
     ap.add_argument("--out-dir", default=str(ROOT / "docs" / "workflow-hodnoceni"))
+    ap.add_argument("--llm", action="store_true", help="llm rows: one read-only Sonnet call (claude -p)")
+    ap.add_argument("--hand", help="jsonl with hand verdicts {task,row,verdict}: print llm agreement per row")
     a = ap.parse_args(argv)
-    rows = grade(a.id, a.project, a.orchestrator_transcript, a.key)
+    rows = grade(a.id, a.project, a.orchestrator_transcript, a.key, llm=a.llm)
     out = Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     target = out / f"{rows[0]['task']}.jsonl"
@@ -290,6 +456,10 @@ def main(argv=None):
     for r in rows:
         refs = ",".join(f"{Path(e['transcript']).name[:8]}:{e['line']}" for e in r["evidence"]) or "-"
         print(f"{r['row']:<4} {r['verdict']:<8} {refs:<24} {r['note']}")
+    if a.hand:
+        print("calibration vs hand:")
+        for ln in agreement(rows, a.hand):
+            print(ln)
     print(f"-> {target}")
 
 
