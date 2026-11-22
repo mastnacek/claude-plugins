@@ -1,4 +1,4 @@
-// label.ts — the marker drawn above a translated answer, so the person can see
+// label.ts — the badge drawn above a translated answer, so the person can see
 // the plugin translated it (the model wrote English).
 
 const LABELS: Record<string, string> = {
@@ -8,12 +8,10 @@ const LABELS: Record<string, string> = {
 	polish: "Przetłumaczono",
 };
 
-/** The marker line for `targetLanguage`; English "Translated" for languages without one. */
+/**
+ * The badge text for `targetLanguage`; English "Translated" for languages without one.
+ * U+FE0F asks the terminal for the coloured emoji, not the monochrome glyph.
+ */
 export function translatedLabel(targetLanguage: string): string {
-	return `🌐 *${LABELS[targetLanguage.trim().toLowerCase()] ?? "Translated"}:*`;
-}
-
-/** `translation` with the marker on its own line above it. */
-export function withLabel(translation: string, targetLanguage: string): string {
-	return `${translatedLabel(targetLanguage)}\n\n${translation}`;
+	return `🌐️ ${LABELS[targetLanguage.trim().toLowerCase()] ?? "Translated"}`;
 }

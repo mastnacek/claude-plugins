@@ -97,7 +97,7 @@ test("prompt → EN, answer → CZ, both drawn", async ($, on) => {
 	});
 	void answer;
 	// The props the engine is handed to draw, after the mod rewrote them.
-	expect(drawnAnswer, "answer drawn in Czech with the marker").toBe(`🌐 *Přeloženo:*\n\n${CZ_ANSWER}`);
+	expect(drawnAnswer, "answer drawn in Czech").toBe(CZ_ANSWER);
 
 	const user = await $.ui.mount({
 		plugin: "cc-prompt-translate",
@@ -287,14 +287,27 @@ async function answerSession($: Parameters<TestBody>[0], on: On, config: Record<
 		await $.ui.mount({ plugin: "cc-prompt-translate", surface: "terminal", component: "AssistantMessage", props: { text, isFirstOfReply: true } });
 		return drawn;
 	};
-	return { calls, finish, draw };
+	const badge = async (text: string) => {
+		const mounted = await $.ui.mount({ plugin: "cc-prompt-translate", surface: "terminal", component: "AssistantMessage", props: { text, isFirstOfReply: true } });
+		return mounted.find({ type: "Text", text: /Přeloženo/ } as never);
+	};
+	return { calls, finish, draw, badge };
 }
+
+test("a translated answer is drawn under the coloured badge; an English one without it", async ($, on) => {
+	const s = await answerSession($, on, {});
+	await s.finish(EN_ANSWER);
+	const found = (await s.badge(EN_ANSWER)) as { props?: Record<string, unknown> } | undefined;
+	expect(found, "badge drawn").toBeDefined();
+	expect(found?.props?.inverse, "badge is a coloured block").toBe(true);
+	expect(await s.badge("Something untranslated."), "no badge without a translation").toBeUndefined();
+});
 
 test("a turn no prompt started (background-task notification): the answer is translated and drawn", async ($, on) => {
 	const s = await answerSession($, on, {});
 	await s.finish(EN_ANSWER);
 	expect(s.calls, "no prompt call, one answer call").toEqual(["answer"]);
-	expect(await s.draw(EN_ANSWER), "drawn in Czech with the marker").toBe(`🌐 *Přeloženo:*\n\n${CZ_ANSWER}`);
+	expect(await s.draw(EN_ANSWER), "drawn in Czech").toBe(CZ_ANSWER);
 });
 
 test("a turn no prompt started: translateResponses off leaves the answer English", async ($, on) => {

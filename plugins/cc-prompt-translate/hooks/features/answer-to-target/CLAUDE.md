@@ -9,8 +9,8 @@ anglicky, nic jiného se nerozbije.
 
 ## Co dělá
 
-- `turn.complete` (`register.ts`) — jen hlavní agent (ne subagenti): vezme a vynuluje `pending`; s `pending` rozhoduje jeho `translateResponses`, bez něj (tah začalo oznámení úlohy na pozadí, ne prompt) rozhoduje `config` (`enabled && translateResponses`, `targetLanguage`); překlad spustí na pozadí přes `$.clock.after(0, …)`, tah na něj nečeká.
-- `ui.render AssistantMessage` — místo anglického textu vykreslí překlad z `finals` (podle `textKey`) se značkou nad ním (`label.ts`: „🌐 *Přeloženo:*“ v cílovém jazyce, jinak „Translated“), aby člověk viděl, že překládá plugin; souhrny (`isSummary`) nechá. Značka je jen na obrazovce, ve `finals` ani v archivu není.
+- `turn.complete` (`register.tsx`) — jen hlavní agent (ne subagenti): vezme a vynuluje `pending`; s `pending` rozhoduje jeho `translateResponses`, bez něj (tah začalo oznámení úlohy na pozadí, ne prompt) rozhoduje `config` (`enabled && translateResponses`, `targetLanguage`); překlad spustí na pozadí přes `$.clock.after(0, …)`, tah na něj nečeká.
+- `ui.render AssistantMessage` — místo anglického textu vykreslí překlad z `finals` (podle `textKey`) pod barevným odznakem (`label.ts`: „🌐 Přeloženo“ v cílovém jazyce, jinak „Translated“; vlastní strom `Box` nad řádkem z `next`), aby člověk viděl, že překládá plugin; souhrny (`isSummary`) nechá. Značka je jen na obrazovce, ve `finals` ani v archivu není.
 - `session.end` — zahodí `pending`, který žádný tah nedokončí.
 - `startAnswerToTarget` — obnoví `finals` z archivu a dopřeloží odpověď, kterou přerušil reload (`recoverMissedAnswer`).
 - Překládá se jen finální odpověď (`reason === "answer"`), text mezi voláními nástrojů zůstává anglicky.

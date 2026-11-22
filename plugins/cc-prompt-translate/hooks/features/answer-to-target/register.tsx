@@ -22,7 +22,7 @@ import { translate } from "../../shared/translation/translate";
 import { logEvent } from "../../shared/usage-log";
 import type { OriginalRecord, PendingTranslation } from "../../shared/types";
 import { canCheck, isAlreadyCzechOrSlovak } from "./already-target";
-import { withLabel } from "./label";
+import { translatedLabel } from "./label";
 
 // Atoms are declared in every file that reads them (the validator's scan reads literals).
 const pendingAtom = atom({ plugin: "cc-prompt-translate", key: "pending" } as const, null as PendingTranslation | null);
@@ -109,8 +109,18 @@ export function registerAnswerToTarget(on: On): void {
 		if (e.props.isSummary) return next(e);
 		const translated = (await read($, finalsAtom))[textKey(e.props.text)];
 		if (!translated) return next(e);
+		const row = await next({ ...e, props: { ...e.props, text: translated } });
 		const { targetLanguage } = await getConfig($);
-		return next({ ...e, props: { ...e.props, text: withLabel(translated, targetLanguage) } });
+		const { Box, Text } = $.ui.resolve(e);
+		// A coloured badge above the reply, so a translation is never mistaken for the model's own text.
+		return (
+			<Box flexDirection="column">
+				<Box paddingLeft={2}>
+					<Text bold inverse color="success">{` ${translatedLabel(targetLanguage)} `}</Text>
+				</Box>
+				{row}
+			</Box>
+		);
 	});
 
 	on("session.end", async ($, e, next) => {

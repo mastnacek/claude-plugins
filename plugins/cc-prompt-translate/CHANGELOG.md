@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.4
+
+### Changed
+- The marker is a coloured badge (bold, inverse, success colour, coloured `🌐️`) drawn above the reply instead of
+  italic markdown, so it stands out from the text.
+
 ## 0.9.3
 
 ### Added
