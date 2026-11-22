@@ -1,0 +1,105 @@
+# Klíč odpovědí pro orchestraci (verze 0, schváleno uživatelem 2026-11-22).
+# Situace -> správné chování -> čím se to dokládá. Hodnotí se jednou na úkol (při
+# `spai set <ID> done`). check: script (ověří skript z přepisu), llm (úsudek), human.
+# Strop 20 řádků; řádek, který jde vynutit hookem nebo skriptem, z klíče odchází.
+# Měnit jen se souhlasem uživatele (hodnocení nese sha klíče).
+
+[[row]]
+id = "K01"
+who = "orchestrator"
+trigger = "task changes user-visible behaviour"
+required = "the brief (SPAI body) has a ## SMOKE section: live scenario through the full chain with made-up data"
+evidence = "SPAI record body contains '## SMOKE' with steps and expected results"
+check = "script"
+source = "SPAI-012, failures 2026-11-20..22"
+added = "2026-11-22"
+
+[[row]]
+id = "K02"
+who = "orchestrator"
+trigger = "agent reported done"
+required = "orchestrator runs the full GATE itself after the agent's last turn, every command exit 0"
+evidence = "orchestrator transcript: Bash call with the GATE commands after the agent's final message, before git merge"
+check = "script"
+source = "SPAI-004"
+added = "2026-11-22"
+
+[[row]]
+id = "K03"
+who = "orchestrator"
+trigger = "agent reported done and the brief has ## SMOKE"
+required = "SMOKE scenario run live (orchestrator or tester) and OK before git merge"
+evidence = "orchestrator or tester transcript: live run of the real binary / installed plugin with the scenario, before git merge"
+check = "llm"
+source = "SPAI-012; misses: SPAI-033 names, SPAI-037 images, SPAI-034 rekey"
+added = "2026-11-22"
+
+[[row]]
+id = "K04"
+who = "orchestrator"
+trigger = "before merging an agent worktree"
+required = "git status and git diff --stat checked; only ALLOWED_PATHS changed"
+evidence = "orchestrator transcript: git status/diff --stat in the worktree before merge"
+check = "script"
+source = "SPAI-004"
+added = "2026-11-22"
+
+[[row]]
+id = "K05"
+who = "orchestrator"
+trigger = "a review finds a defect in an agent's result"
+required = "the defect is sent back with spai log and a reproducer; not fixed silently by the orchestrator"
+evidence = "spai log entry on the task with the repro; agent prompted again"
+check = "llm"
+source = "herdr-orchestrace.md 'Výsledek ověř sám'"
+added = "2026-11-22"
+
+[[row]]
+id = "K06"
+who = "orchestrator"
+trigger = "sending a brief to an agent"
+required = "message says 'Read SPAI-NNN @proj (spai show ... --json) and carry it out fully now'; task set to working"
+evidence = "herdr agent prompt text; spai set <ID> working before"
+check = "script"
+source = "SPAI-006"
+added = "2026-11-22"
+
+[[row]]
+id = "K07"
+who = "orchestrator"
+trigger = "new hook, guard or permission rule shipped"
+required = "tested in a live session (including that it does not block work on its own fix) and a documented way to disable it for the fix session"
+evidence = "live session test in transcript; README/CLAUDE.md names the off-switch"
+check = "llm"
+source = "SPAI-025 (guard blocked its own fix)"
+added = "2026-11-22"
+
+[[row]]
+id = "K08"
+who = "coder"
+trigger = "agent claims done"
+required = "GATE run after the last file change without masking exit codes; every criterion has evidence; NOT VERIFIED listed"
+evidence = "coder transcript: last Edit/Write before the final GATE call; report has criterion -> evidence lines"
+check = "script"
+source = "coder.md rule 8"
+added = "2026-11-22"
+
+[[row]]
+id = "K09"
+who = "coder"
+trigger = "change spans several hooks/slices or a pipeline"
+required = "a test through the whole chain, not only the slice in isolation"
+evidence = "a new test that registers the full chain (e.g. register.tsx order) or an end-to-end CLI test"
+check = "llm"
+source = "SPAI-037 (images), SPAI-033 (import -> mask)"
+added = "2026-11-22"
+
+[[row]]
+id = "K10"
+who = "orchestrator"
+trigger = "sending a slash command (/exit) into a pane from Git Bash"
+required = "MSYS_NO_PATHCONV=1 is set"
+evidence = "Bash call text"
+check = "script"
+source = "SPAI-005"
+added = "2026-11-22"
