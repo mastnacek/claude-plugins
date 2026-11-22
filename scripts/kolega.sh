@@ -68,12 +68,17 @@ if [[ "$agent" == agy ]]; then
 else
   # Startovní dialogy vlastního panelu (důvěra složce, --add-dir) odklikne skript sám.
   # Čeká, dokud není vidět výzva Claude Code; dialog pozná i podle „Adding:“ / „No, exit“
-  # (možnost „Yes, add it“ bývá odrolovaná mimo obrazovku). Volba Yes je pod No: Down, Enter.
-  for _ in $(seq 1 20); do
-    sleep 3
+  # (možnost „Yes, add it“ bývá odrolovaná mimo obrazovku). Pořadí voleb nepředpokládá:
+  # Enter jen tehdy, když je podsvícená volba Yes („❯ … Yes“); jinak posune výběr o jednu dolů.
+  for _ in $(seq 1 30); do
+    sleep 2
     screen="$(herdr pane read "$kolega" --source visible --lines 40 2>/dev/null || true)"
     if grep -q -E "Yes, add it|trust this folder|Yes, I trust|Adding: |No, exit" <<<"$screen"; then
-      herdr pane send-keys "$kolega" Down >/dev/null; herdr pane send-keys "$kolega" Enter >/dev/null
+      if grep -q -E "❯[^a-zA-Z]*Yes" <<<"$screen"; then
+        herdr pane send-keys "$kolega" Enter >/dev/null
+      else
+        herdr pane send-keys "$kolega" Down >/dev/null
+      fi
       continue
     fi
     grep -q -E "Try \"|for shortcuts|/effort" <<<"$screen" && break

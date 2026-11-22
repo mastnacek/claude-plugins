@@ -36,6 +36,19 @@ if [[ -z "$sid" || -z "$cwd" ]]; then
   exit 1
 fi
 transcript="$projects/$(slug "$cwd")/$sid.jsonl"
+# Po restartu agenta v panelu herdr chvíli hlásí ID předchozího sezení (SPAI-022): přepis
+# nového sezení vzniká až s prvním promptem. Volej proto task-link.sh až PO odeslání zadání;
+# skript počká (nejvýš 30 s), dokud v adresáři projektu nebude přepis novější než ten
+# z herdr, a vezme nejnovější. Jinak zůstane přepis podle ID z herdr.
+dir_t="$projects/$(slug "$cwd")"
+for _ in $(seq 1 15); do
+  newest="$(ls -t "$dir_t"/*.jsonl 2>/dev/null | head -1 || true)"
+  if [[ -n "$newest" && "$newest" != "$transcript" && ( ! -e "$transcript" || "$newest" -nt "$transcript" ) ]]; then
+    transcript="$newest"; sid="$(basename "$newest" .jsonl)"; break
+  fi
+  [[ -e "$transcript" && "$transcript" -nt "$0" ]] && [[ $(( $(date +%s) - $(stat -c %Y "$transcript") )) -lt 60 ]] && break
+  sleep 2
+done
 "$spai_bin" log "$id" "session $sid pane $pane transcript $transcript" --project "$project" --source orchestrator
 
 orch=""

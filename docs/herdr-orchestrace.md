@@ -72,7 +72,7 @@ Každé zadání agentovi je **záznam SPAI** v backlogu hlavního repa (ne work
 2. **Odeslání:** `spai set <ID> working`, pak agentovi jen
    „Read SPAI-012 @<projekt> (`spai show SPAI-012 --project <hlavní repo> --json`) and carry it out fully now.“
    Jen „Do SPAI-012: spai show …“ nestačí — Haiku si záznam jen přečte.
-   Hned po odeslání `scripts/task-link.sh <ID> <hlavní repo> <panel>` zapíše do logu úkolu
+   Hned po odeslání (až po promptu, ne před ním) `scripts/task-link.sh <ID> <hlavní repo> <panel>` zapíše do logu úkolu
    sezení a přepis agenta i přepis orchestrátora (env `CLAUDE_SESSION`, jinak nejnovější
    `*.jsonl` v adresáři projektu aktuální složky). Z nich pak `scripts/workflow-grade.py <ID>
    --project <hlavní repo>` ohodnotí řádky klíče `check = "script"` a zapíše
