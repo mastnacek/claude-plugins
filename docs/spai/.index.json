@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "lastUpdated": "2026-11-20 18:03:23",
-  "lastId": "SPAI-015",
+  "lastUpdated": "2026-11-22 17:54:29",
+  "lastId": "SPAI-017",
   "records": [
     {
       "id": "SPAI-002",
@@ -206,6 +206,39 @@
       "project": "claude",
       "projectPath": "D:/01_programovani/claude",
       "file": "2026-11-20-SPAI-015-animated-pixel-art-robot-for-the-kolega-watcher.md"
+    },
+    {
+      "id": "SPAI-016",
+      "title": "Design review: verifier/coach loop for our herdr orchestration (answer key, kolega as verifier, new coach role)",
+      "type": "Todo",
+      "status": "done",
+      "symbol": "x",
+      "timestamp": "2026-11-22 17:32:11",
+      "tags": [
+        "agent",
+        "fable",
+        "workflow",
+        "design"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-22-SPAI-016-design-review-verifiercoach-loop-for-our-herdr.md"
+    },
+    {
+      "id": "SPAI-017",
+      "title": "Workflow grading: link tasks to transcripts and a script that checks the key rows check=script",
+      "type": "Todo",
+      "status": "done",
+      "symbol": "x",
+      "timestamp": "2026-11-22 17:41:32",
+      "tags": [
+        "agent",
+        "coder",
+        "workflow"
+      ],
+      "project": "claude",
+      "projectPath": "D:/01_programovani/claude",
+      "file": "2026-11-22-SPAI-017-workflow-grading-link-tasks-to-transcripts-and-a.md"
     }
   ]
 }
