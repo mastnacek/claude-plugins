@@ -72,7 +72,10 @@ Každý poznatek je **jeden záznam SPAI v domovském backlogu** (`--project C:/
 2. **Potvrzený existující poznatek** nezakládej znovu. Připiš důkaz:
    `spai log <ID> "strengthened: session <id> <cesta>:<řádek> \"<citace>\"" --project C:/Users/jaroslav`
 3. **Nový poznatek:**
-   `spai add "<řádek>\n<tělo>" --project C:/Users/jaroslav --source kolega --json`
+   `spai add '<řádek>` ⏎ `<tělo>' --project C:/Users/jaroslav --source kolega --json`
+   - text je **jeden argument v jednoduchých uvozovkách se skutečnými konci řádků** (Enter),
+     ne `\n`: `\n` v uvozovkách zůstane doslova a celé tělo skončí v titulku bez štítků
+     a bez překladu. Apostrof v textu nahraď `’`. Titulek je jen první řádek, krátká věta;
    - první řádek začíná `- ` (poznámka: pozorování nebo vzorec) nebo `? ` (nápad: otevřená
      otázka, kterou stojí za to ověřit); pak věta s tím, co se děje, a na konci štítky;
    - štítky: `:kolega:insight:` + druh `:pattern:` nebo `:observation:` + úroveň `:fundamental:`
