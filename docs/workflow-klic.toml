@@ -1,4 +1,5 @@
-# Klíč odpovědí pro orchestraci (verze 0, schváleno uživatelem 2026-11-22).
+# Klíč odpovědí pro orchestraci (verze 1, schváleno uživatelem 2026-11-22: K03 a K07 upřesněny
+# podle referenčního hodnocení Fable, SPAI-023).
 # Situace -> správné chování -> čím se to dokládá. Hodnotí se jednou na úkol (při
 # `spai set <ID> done`). check: script (ověří skript z přepisu), llm (úsudek), human.
 # Strop 20 řádků; řádek, který jde vynutit hookem nebo skriptem, z klíče odchází.
@@ -28,7 +29,7 @@ added = "2026-11-22"
 id = "K03"
 who = "orchestrator"
 trigger = "agent reported done and the brief has ## SMOKE"
-required = "SMOKE scenario run live (orchestrator or tester) and OK before git merge"
+required = "every functional SMOKE step run live (orchestrator or tester) and OK before git merge; a pure no-regression step may be covered implicitly by other live use, but the report must say how"
 evidence = "orchestrator or tester transcript: live run of the real binary / installed plugin with the scenario, before git merge"
 check = "llm"
 source = "SPAI-012; misses: SPAI-033 names, SPAI-037 images, SPAI-034 rekey"
@@ -67,7 +68,7 @@ added = "2026-11-22"
 [[row]]
 id = "K07"
 who = "orchestrator"
-trigger = "new hook, guard or permission rule shipped"
+trigger = "a new hook, guard or permission rule is merged in this task (counts for the task in which it is merged, also when the orchestrator adds it mid-task)"
 required = "tested in a live session (including that it does not block work on its own fix) and a documented way to disable it for the fix session"
 evidence = "live session test in transcript; README/CLAUDE.md names the off-switch"
 check = "llm"
