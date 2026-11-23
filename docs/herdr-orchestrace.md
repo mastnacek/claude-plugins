@@ -62,8 +62,9 @@ Najednou nejvýš jeden programátor, jeden tester a jeden revizor.
 - **Sloučení a úklid jsou dva kroky** (SPAI-020, kolegův poznatek SPAI-004 @jaroslav):
   1. Sloučení: commit ve worktree, `git merge --no-ff`, brána v hlavním checkoutu, `git log`.
   2. Úklid až potom a v tomto pořadí: **nejdřív ukonči sezení agenta ve worktree** (`/exit` přes
-     `MSYS_NO_PATHCONV=1 herdr pane send-text`, nebo ho rovnou spusť znovu v jiném worktree),
-     pak `git worktree remove` + `git worktree prune` + `git branch -d`. Běžící sezení drží
+     `MSYS_NO_PATHCONV=1 herdr pane send-text`) **a přesuň shell panelu jinam**
+     (`herdr pane run <panel> "cd D:/01_programovani/claude"`): pracovní složku drží i shell,
+     ne jen sezení. Pak `git worktree remove` + `git worktree prune` + `git branch -d`. Běžící sezení drží
      složku a Windows ji nesmaže („Permission denied“); zbytek smaž `rm -rf`, až proces skončí.
 - Sdílený `CARGO_TARGET_DIR` klame bránu (přeskočí překlad jiného stromu): ve worktree vlastní target.
 
