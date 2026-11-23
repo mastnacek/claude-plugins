@@ -27,7 +27,23 @@ Hledej hlavně:
 - kde se **lidé a agenti nepochopili** (zadání, překlad, nejasná věta) a jak to vyšlo najevo;
 - kde se **čeká** nebo běží naprázdno (smyčky, opakované dotazy, zablokované dialogy);
 - kde **pravidlo, hook nebo nástroj** zasáhl jinak, než kdo čekal (zamítnutí, falešný poplach);
-- co **opakovaně funguje** a stojí za udržení (také vzorec, také s důkazy).
+- co **opakovaně funguje** a stojí za udržení (také vzorec, také s důkazy);
+- kde se **zbytečně pálí tokeny a kontext** (oddíl níž, štítek `:tokens:`).
+
+### Tokeny a kontext
+
+Jednou za sezení (a znovu, když přepis výrazně naroste) spusť
+`python D:/01_programovani/claude/scripts/kolega-read.py <přepis> --tokens`. Vypíše základ
+prvního tahu (kontext před jakoukoli prací: systémový prompt, pluginy, skilly, MCP), vrchol
+kontextu, 10 největších výsledků nástrojů a opakovaná stejná čtení. Při běžném čtení rozsahu
+nese každá odpověď modelu `[tok ctx=… out=…]` a výsledek nástroje `(N chars)`.
+Poznatek zapiš, když je plýtvání **opakované nebo velké**:
+- výsledek nástroje nad ~10 000 znaků, který šel celý do kontextu (celý soubor, log bez `tail`,
+  dlouhý `git diff`, výpis seznamu), a co ho způsobilo;
+- tentýž soubor nebo příkaz čtený víckrát bez změny mezi tím;
+- kontext, který roste rychle a vede ke kompakci, a čím;
+- základ prvního tahu: kolik stojí sezení „naprázdno“ (číslo z `--tokens`, ne odhad).
+Důkaz je řádek přepisu a číslo z výstupu skriptu; navrhovat úsporu nemusíš, „Ověřit“ stačí.
 
 Drobnosti (překlep, jeden pomalý příkaz) vynech. Málo zásadních poznatků je víc než mnoho
 drobných.

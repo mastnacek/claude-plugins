@@ -26,7 +26,7 @@ HOOK_DIR = sys.argv[1]
 HOME = (os.environ.get("KOLEGA_HOME") or os.path.expanduser("~")).replace("\\", "/").rstrip("/")
 ALLOWED = ("Read/Grep/Glob only inside ~/.claude/projects and ~/.pi/agent/sessions; Bash only pipelines of "
            "rg grep jq head tail wc ls sed -n cat sort uniq cut, 'python <repo>/scripts/kolega-read.py "
-           "<transcript> <from> <to> [--chars N]' and 'spai add|log|similar|show|list|search --project "
+           "<transcript> <from> <to> [--chars N] or <transcript> --tokens' and 'spai add|log|similar|show|list|search --project "
            + HOME + "'; no redirection, expansion or other commands")
 
 
@@ -292,9 +292,12 @@ def chk_sed(args):
 def chk_python(args):
     if not args or canon_arg(args[0]) != SCRIPT_N:
         deny("python: only the kolega-read.py script of this repo is allowed")
-    rest, pos, i = args[1:], [], 0
+    rest, pos, i, tokens = args[1:], [], 0, False
     while i < len(rest):
-        if rest[i] == "--chars":
+        if rest[i] == "--tokens":
+            tokens = True
+            i += 1
+        elif rest[i] == "--chars":
             if i + 1 >= len(rest) or not re.fullmatch(r"\d+", rest[i + 1]):
                 deny("kolega-read.py: --chars needs a number")
             i += 2
@@ -303,8 +306,11 @@ def chk_python(args):
         else:
             pos.append(rest[i])
             i += 1
-    if len(pos) != 3 or not all(re.fullmatch(r"\d+", x) for x in pos[1:]):
-        deny("kolega-read.py: usage <transcript> <from> <to> [--chars N]")
+    if tokens:
+        if len(pos) != 1:
+            deny("kolega-read.py: usage <transcript> --tokens")
+    elif len(pos) != 3 or not all(re.fullmatch(r"\d+", x) for x in pos[1:]):
+        deny("kolega-read.py: usage <transcript> <from> <to> [--chars N] | <transcript> --tokens")
     check(pos[0])
 
 

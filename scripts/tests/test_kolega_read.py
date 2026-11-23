@@ -90,6 +90,28 @@ class KolegaRead(unittest.TestCase):
         self.assertNotIn("secret", out)
         self.assertIn("toolResult bash is_error", out)
 
+    def test_tokens_summary_and_per_line_usage(self):
+        u1 = {"input_tokens": 10, "cache_read_input_tokens": 1000, "cache_creation_input_tokens": 90, "output_tokens": 5}
+        u2 = {"input_tokens": 20, "cache_read_input_tokens": 3000, "cache_creation_input_tokens": 0, "output_tokens": 7}
+        read = {"type": "tool_use", "id": "t1", "name": "Read", "input": {"file_path": "/x/a.txt"}}
+        read2 = {"type": "tool_use", "id": "t2", "name": "Read", "input": {"file_path": "/x/a.txt"}}
+        p = self.fixture([
+            {"type": "assistant", "message": {"role": "assistant", "usage": u1, "content": [read]}},
+            {"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "Y" * 5000}]}},
+            {"type": "assistant", "message": {"role": "assistant", "usage": u2, "content": [read2]}},
+            {"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t2", "content": "Z" * 50}]}},
+        ])
+        out = subprocess.run([sys.executable, str(SCRIPT), p, "--tokens"], capture_output=True, text=True, encoding="utf-8",
+                             env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn("baseline (first turn context): 1100 tokens at line 1", out.stdout)
+        self.assertIn("peak context: 3020 tokens at line 3", out.stdout)
+        self.assertIn("5000  2  Read  file_path=/x/a.txt", out.stdout)
+        self.assertIn("2x  /x/a.txt", out.stdout)
+        code, text, _ = run(p, 1, 2)
+        self.assertIn("1: assistant [tok ctx=1100 out=5]", text)
+        self.assertIn("RESULT (5000 chars)", text)
+
     def test_unparsable_line_and_bad_usage(self):
         p = self.fixture(["{broken", {"type": "mode"}])
         rc, out, _ = run(p, 1, 2)
